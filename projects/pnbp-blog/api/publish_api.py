@@ -1,10 +1,13 @@
 import os
+import datetime
 
 import fastapi
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from fastapi import File, UploadFile
 
 router = fastapi.APIRouter()
+
 
 PUB_PATH = 'templates/blog/'
 IMG_PATH = 'static/imgs/'
@@ -43,11 +46,46 @@ async def publishment_post(pub_submittal: Publishment):
 @router.post('/api/image', name='add_img', status_code=201)
 async def image_post(file: UploadFile = File(...)):
 	# file.filename = f'{name}.jpg'
-	contents = await file.read()
-
+	contents = await file.read()	
 	with open(os.path.join(IMG_PATH, file.filename), 'wb') as f:
 		f.write(contents)
 
 	return {"filename": file.filename}
+
+
+@router.get('/api/publishments')
+async def publishments_get() -> list:
+	pub_names = os.listdir(PUB_PATH)
+	pub_data = []
+	for p in pub_names:
+		mod_date = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(PUB_PATH, p)))
+		pub_data.append({'pub_name': p, 'mod_date': mod_date})
+
+	return pub_data
+
+
+@router.get('/api/images')
+async def images_get() -> list:
+	img_names = os.listdir(IMG_PATH)
+	img_data = []
+	for n in img_names:
+		mod_date = datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(IMG_PATH, n)))
+		img_data.append({'img_name': n, 'mod_date': mod_date})
+
+	return img_data
+
+
+@router.delete('/api/publishment/{pub_name}')
+async def publishment_delete(pub_name: str):
+	""" """
+	pub_names = os.listdir(PUB_PATH)
+	if pub_name in pub_names:
+		os.remove(os.path.join(PUB_PATH, pub_name))
+		return {'pub_name': pub_name}
+	# else:
+		
+
+	# return pub_data
+
 
 

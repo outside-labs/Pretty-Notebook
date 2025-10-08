@@ -1,0 +1,78 @@
+{% extends 'shared/layout.html' %}
+
+{% block content %}
+
+<div class="container">
+
+<!-- 	<button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">
+	    PROGRAMMING
+	  </button>
+
+	<div class="collapse" id="collapseExample">
+	  <div class="card card-body">
+	    Some placeholder content for the collapse component. This panel is hidden by default but revealed when the user activates the relevant trigger.
+	  </div>
+	</div> -->
+	<div class="row">
+		<div class="col-sm">
+		  <div id="menu1">
+		  <div class="list-group">
+		  	<button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="false" aria-controls="collapse1">
+		    	<a href="#" class="list-group-item active bg-primary" data-bs-toggle="collapse" data-bs-target="#sm1" data-parent="#menu1"><strong>PROGRAMMING</strong></a>
+			</button>
+		    <div id="sm1" class="sublinks collapse">
+			  <a href="#" class="list-group-item list-group-item-action"> Cras justo odio </a>
+			  <a href="#" class="list-group-item list-group-item-action">Dapibus ac facilisis in </a>
+			  <a href="#" class="list-group-item list-group-item-action disabled">Morbi leo risus </a>
+			</div>
+		  </div>
+		  </div>
+		</div>
+		<div class="col-sm">
+		  <div id="menu2">
+		  <div class="list-group">
+		  	<button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2">
+				<a href="#" class="list-group-item active bg-secondary" data-bs-toggle="collapse" data-bs-target="#sm2" data-parent="#menu2"><strong>TECHNOLOGY</strong></a>
+			</button>
+			<div id="sm2" class="sublinks collapse">
+			  <a href="#" class="list-group-item list-group-item-action">Cras justo odio</a>
+			  <a href="#" class="list-group-item list-group-item-action">Dapibus ac facilisis in</a>
+			  <a href="#" class="list-group-item list-group-item-action disabled">Morbi leo risus Morbi leo risus Morbi leo risus Morbi leo risus</a>
+			</div>
+		  </div>
+		  </div>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-sm">
+		  <div id="menu3">
+		  <div class="list-group">
+		  	<button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse3" aria-expanded="false" aria-controls="collapse3">
+		    	<a href="#" class="list-group-item active bg-success" data-bs-toggle="collapse" data-bs-target="#sm3" data-parent="#menu3"><strong>TRAINING (& NUTRITION)</strong></a>
+			</button>
+		    <div id="sm3" class="sublinks collapse">
+			  <a href="#" class="list-group-item list-group-item-action"> Cras justo odio </a>
+			  <a href="#" class="list-group-item list-group-item-action">Dapibus ac facilisis in </a>
+			  <a href="#" class="list-group-item list-group-item-action disabled">Morbi leo risus </a>
+			</div>
+		  </div>
+		  </div>
+		</div>
+		<div class="col-sm">
+		  <div id="menu4">
+		  <div class="list-group">
+		  	<button class="btn" type="button" data-bs-toggle="collapse" data-bs-target="#collapse4" aria-expanded="false" aria-controls="collapse4">
+		    	<a href="#" class="list-group-item active bg-info" data-bs-toggle="collapse" data-bs-target="#sm4" data-parent="#menu4"><strong>WORLD</strong></a>
+		    </button>
+		    <div id="sm4" class="sublinks collapse">
+			  <a href="#" class="list-group-item list-group-item-action"> Cras justo odio </a>
+			  <a href="#" class="list-group-item list-group-item-action">Dapibus ac facilisis in </a>
+			  <a href="#" class="list-group-item list-group-item-action disabled">Morbi leo risus </a>
+			</div>
+		  </div>
+		  </div>
+		</div>
+	</div>
+
+
+{% endblock %}
