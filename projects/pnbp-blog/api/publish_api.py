@@ -81,11 +81,8 @@ async def publishment_delete(pub_name: str):
 	pub_names = os.listdir(PUB_PATH)
 	if pub_name in pub_names:
 		os.remove(os.path.join(PUB_PATH, pub_name))
-		return {'pub_name': pub_name}
-	# else:
-		
 
-	# return pub_data
+		return {'pub_name': pub_name}
 
 
 

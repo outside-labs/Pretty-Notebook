@@ -7,18 +7,24 @@ from fastapi import Form
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 
+from jinja2.exceptions import TemplateNotFound
 
-QUOTES = open('static/quotes.json', 'r')
-QUOTES = json.load(QUOTES)
+
+
+def _get_random_quote():
+	QUOTES = open('static/quotes.json', 'r')
+	QUOTES = json.load(QUOTES)
+	return random.choice(QUOTES)
+
 
 templates = Jinja2Templates('templates')
 router = fastapi.APIRouter()
 
 
 @router.get('/', include_in_schema=False)
-async def index(request: Request):
-	quote = random.choice(QUOTES)
-	return templates.TemplateResponse('home/index.html', {'request': request, 'quote': quote})
+async def home(request: Request):
+	quote = _get_random_quote()
+	return templates.TemplateResponse('home/home.html', {'request': request, 'quote': quote})
 
 
 @router.get('/about', include_in_schema=False)
@@ -33,7 +39,11 @@ async def contact(request: Request):
 
 @router.get('/{content}', include_in_schema=False)
 async def content(request: Request, content: str):
-	return templates.TemplateResponse(f'blog/{content}.html', {'request': request})
+	try:
+		return templates.TemplateResponse(f'blog/{content}.html', {'request': request})
+	except TemplateNotFound:
+		return templates.TemplateResponse(f'home/404.html', {'request': request, 'unavailable_content': content})
+
 
 
 @router.get('/favicon.ico', include_in_schema=False)
