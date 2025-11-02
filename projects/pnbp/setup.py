@@ -10,6 +10,7 @@ setup(
 	entry_points='''
 		[console_scripts]
 		obsidian-collect-all=obsidian:obsidian_collect_all
+		obsidian-delete-empty=obsidian:delete_all_empty
 		obsidian-commit-local=obsidian:commit_local_html
 		obsidian-commit-remote=obsidian:commit_remote_api
 	''',
