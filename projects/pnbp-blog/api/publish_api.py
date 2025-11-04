@@ -4,13 +4,17 @@ import datetime
 import fastapi
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from fastapi import File, UploadFile
+from fastapi import File, UploadFile, Depends
+
+from .auth_api import oauth2_scheme
+
 
 router = fastapi.APIRouter()
 
 
 PUB_PATH = 'templates/blog/'
 IMG_PATH = 'static/imgs/'
+
 
 class Publishment(BaseModel):
 	name: str
@@ -34,7 +38,7 @@ async def add_publishment(name: str, content: str) -> Publishment:
 	return pub
 
 
-@router.post('/api/publishment', name='add_pub', status_code=201, response_model=Publishment) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
+@router.post('/api/publishment', name='add_pub', status_code=201, response_model=Publishment, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
 async def publishment_post(pub_submittal: Publishment):
 	
 	n = pub_submittal.name
@@ -43,7 +47,7 @@ async def publishment_post(pub_submittal: Publishment):
 	return await add_publishment(n, c)
 
 
-@router.post('/api/image', name='add_img', status_code=201)
+@router.post('/api/image', name='add_img', status_code=201, dependencies=[Depends(oauth2_scheme)])
 async def image_post(file: UploadFile = File(...)):
 	# file.filename = f'{name}.jpg'
 	contents = await file.read()	
@@ -53,7 +57,7 @@ async def image_post(file: UploadFile = File(...)):
 	return {"filename": file.filename}
 
 
-@router.get('/api/publishments')
+@router.get('/api/publishments', dependencies=[Depends(oauth2_scheme)])
 async def publishments_get() -> list:
 	pub_names = os.listdir(PUB_PATH)
 	pub_data = []
@@ -64,7 +68,7 @@ async def publishments_get() -> list:
 	return pub_data
 
 
-@router.get('/api/images')
+@router.get('/api/images', dependencies=[Depends(oauth2_scheme)])
 async def images_get() -> list:
 	img_names = os.listdir(IMG_PATH)
 	img_data = []
@@ -75,7 +79,7 @@ async def images_get() -> list:
 	return img_data
 
 
-@router.delete('/api/publishment/{pub_name}')
+@router.delete('/api/publishment/{pub_name}', dependencies=[Depends(oauth2_scheme)])
 async def publishment_delete(pub_name: str):
 	""" """
 	pub_names = os.listdir(PUB_PATH)
@@ -83,6 +87,12 @@ async def publishment_delete(pub_name: str):
 		os.remove(os.path.join(PUB_PATH, pub_name))
 
 		return {'pub_name': pub_name}
+
+
+
+@router.get('/api/testdepends', dependencies=[Depends(oauth2_scheme)])
+async def test_depends(x: str):
+	return {'test': f'success {x}'}
 
 
 

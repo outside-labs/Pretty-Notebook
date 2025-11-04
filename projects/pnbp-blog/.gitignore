@@ -10,3 +10,4 @@
 *.py[co]
 
 **/migrations/0*.py
+templates/blog/**

@@ -1,7 +1,3 @@
-import json
-from pathlib import Path
-import asyncio
-
 import fastapi
 import uvicorn
 from starlette.staticfiles import StaticFiles
@@ -26,7 +22,8 @@ def configure():
 
 
 def configure_routing():
-	api.mount('/static', StaticFiles(directory='static'), name='static') #mounting routes
+	"""mounting routes"""
+	api.mount('/static', StaticFiles(directory='static'), name='static') 
 	api.include_router(home.router)
 	api.include_router(publish_api.router)
 	api.include_router(auth_api.router)

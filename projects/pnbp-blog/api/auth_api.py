@@ -1,3 +1,5 @@
+import uuid 
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
@@ -10,11 +12,17 @@ from passlib.hash import bcrypt
 
 import jwt
 
-JWT_SECRET = 'myjwtsecret' # <- be better.
+from decouple import config
+
+
+JWT_SECRET = config('JWT_SECRET')
+JWT_ALGO = config('JWT_ALGO')
 
 router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+
+
 
 async def authenticate_user(username: str, password: str):
 	user = await User.get(username=username)
@@ -31,8 +39,16 @@ async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()): # fo
 		# return {'error': 'invalid credentials'}
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
 
-	user_obj = await User_pydantic.from_tortoise_orm(user)
-	token = jwt.encode(payload=user_obj.dict(), key=JWT_SECRET) # <- you don't want your password hash in the payload
+	user_obj = await User_Pydantic.from_tortoise_orm(user)
+
+	new_uuid = str(uuid.uuid4())
+	await User.filter(id=user_obj.id).update(**{'tok_uuid': new_uuid})
+
+	payload = user_obj.dict().copy()
+	print(payload)
+	del payload['password_hash'] # <- you don't want your password hash in the payload
+	payload['tok_uuid'] = new_uuid
+	token = jwt.encode(payload=payload, key=JWT_SECRET)
 
 	return {'access_token': token, 'token_type': 'bearer'}
 
@@ -42,34 +58,36 @@ class User(Model):
 	id = fields.IntField(pk=True)
 	username = fields.CharField(max_length=50, unique=True)
 	password_hash = fields.CharField(max_length=128)
+	tok_uuid = fields.TextField(default=str(uuid.uuid4()))
 
 	def verify_password(self, password):
 		return bcrypt.verify(password, self.password_hash)
 
 
 
-User_pydantic = pydantic_model_creator(User, name='User')
+User_Pydantic = pydantic_model_creator(User, name='User')
 UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude_readonly=True)
 
-@router.post('/api/users', response_model=User_pydantic)
-async def create_user(user: UserIn_Pydantic): # form_data depends on OAuth2PasswordRequestForm
+@router.post('/api/users', response_model=User_Pydantic)
+async def create_user(user: UserIn_Pydantic):
 	user_obj = User(username=user.username, password_hash=bcrypt.hash(user.password_hash))
 	await user_obj.save()
-	return await User_pydantic.from_tortoise_orm(user_obj)
+	return await User_Pydantic.from_tortoise_orm(user_obj)
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
 	try:
-		payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256']) #<- is their default algorithm
-		user = User.get(id=payload.get('id'))
+		payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+		user = await User.get(id=payload.get('id'))
+
 	except:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
 
-	return await User_pydantic.from_tortoise_orm(user) # convert to pydantic, user isnt being passed directly, token is being passed
+	return await User_Pydantic.from_tortoise_orm(user) # convert to pydantic, user isnt being passed directly, token is being passed
 
 
-@router.get('/api/users/me', response_model=User_pydantic)
-async def get_user(user: User_pydantic = Depends(get_current_user)): # form_data depends on OAuth2PasswordRequestForm
+@router.get('/api/users/me', response_model=User_Pydantic)
+async def get_user(user: User_Pydantic = Depends(get_current_user)):
 	return user
 
 
