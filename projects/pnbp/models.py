@@ -29,6 +29,10 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'm
 		:param str mtime: the local md most recent modification date
 			-> used against remote blog api to determine if POST required
 		"""
+		for i, t in enumerate(tags):
+			# t = 
+			tags[i] = f'#{t}'
+
 		return super().__new__(cls, name, md, links, tags, urls, mtime)
 
 	def __init__(self, *args, **kwargs):
@@ -39,9 +43,22 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'm
 		"""
 		self.md_out = '' 	
 
+	def __str__(self):
+		""" """
+		return self.name
+
+	@property
+	def slugname(self):
+		""" My Note Name -> my-note-name
+		"""
+		_name = re.sub(r'[^a-zA-Z\s_-]+', '', self.name)
+		_name = _name.lower().replace(' ', '-').replace('_', '-')
+		slugname = "-".join([w for w in _name.split('-') if w])
+		return slugname
+
 	@property
 	def sections(self):
-		""" """
+		"""	"""
 		return [x.strip() for x in self.md.split('---')]
 
 	@property
@@ -53,7 +70,9 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'm
 		return self.sections[0]
 
 	def save(self, nb):
-		""" """
+		""" save note to .md file on NOTE_PATH,
+			if provided self.md_out has been updated.
+		"""
 		if not isinstance(self.md_out, str):
 			print('this')
 			raise TypeError(f'ObsidianNote.md_out must be a str, not {type(self.md_out)}')
@@ -61,6 +80,35 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'm
 		if self.md_out:
 			with open(os.path.join(nb.NOTE_PATH, self.name+'.md'), 'w') as nf:
 				nf.write(self.md_out)
+
+	def is_tagged(self, tag: str)->bool:
+		""" 
+		:param tag: the #tag in question
+		"""
+		tag = f"#{tag.lstrip('#')}" #failsafe
+
+		if tag in self.tags:
+			return True
+		return False
+
+	def is_linked(self, link: str="", at_all=False)->bool:
+		""" 
+		"""
+		if at_all and self.links:
+			return True
+
+		if not link and not at_all:
+			raise ValueError("Did you mean to call is_linked(at_all=True)?\nOtherwise, provide is_linked(link='internal-link-looking-for')")
+
+		if link in self.links:
+			return True
+
+		return False
+
+
+
+
+
 
 
 
@@ -115,7 +163,7 @@ class ObsidianNotebook:
 					n = ObsidianNote(
 						name=fname,
 						md=fo,
-						links=re.findall(self.OBS_INT_LNK, fo),
+						links=[m.strip() for m in re.findall(self.OBS_INT_LNK, fo)],
 						tags=re.findall(self.OBS_INT_TAG, fo),
 						urls=self.collect_urls(fo),
 						mtime=datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(self.NOTE_PATH, f)))
@@ -123,14 +171,58 @@ class ObsidianNotebook:
 
 					self.notes.update({fname: n})
 
+	def generate_note(self, name, md_out, overwrite=False):
+		""" """
+		name = name.strip()
+
+		if name in self.notes.keys() and not overwrite:
+			raise FileExistsError(f"Cannot generate a new note with name {name}.")
+ 
+		n = ObsidianNote(name=name, md='', links=[], tags=[], urls=[], mtime='')
+		n.md_out = md_out
+		n.save(self)
+		# self.open_md() # refresh -> new note n attrs fill live ^^
+
+	def get(self, name):
+		"""
+		:param name: name of the note
+		:returns: ObsidianNote instance or None
+		"""
+		name = name.rstrip('.md').rstrip('.html')
+		print(name)
+		if (note := self.notes.get(name)):
+			print(note)
+			return note
+
+		for n in self.notes.values():
+			if n.slugname == name:
+				return n
+
+		return None
+
 	def find(self, regex):
 		""" a user convenience method to effectively grep notebook
 		"""
 		print(f'regex: {regex}')
+
+		notes = []
 		for fn, n in self.notes.items():
 			p = re.compile(regex)
-			if p.search(n.md):
+			if (m := p.search(n.md)):
 				print(f'\t -> {fn}')
+				print(m)
+				print(f'found: {m}')
+				notes.append(n)
+
+		return notes
+
+	def find_and_replace(self, regex, replace):
+		""" be careful, use find first
+		"""
+		if (ntc := self.find(regex)):
+			for n in ntc:
+				n.md_out = re.sub(regex, replace, n.md)
+				n.save(self)
 
 	def collect_urls(self, note)->list:
 		""" a regex search mtd 
@@ -181,7 +273,7 @@ class ObsidianNotebook:
 		""" apply all the regex method changes to 
 			a single note
 
-		:param note: 
+		:param note: the note content itself (n.md)
 		"""
 		nout = self.replace_imglinks(note)
 		nout = self.replace_obslinks(nout)
@@ -189,7 +281,7 @@ class ObsidianNotebook:
 		nout = self.replace_mermaid(nout)
 		nout = self.replace_nakedhref(nout)
 
-		nout = md.markdown(nout, extensions=['fenced_code', 'nl2br', 'markdown.extensions.tables'], use_pygments=True)
+		nout = md.markdown(nout, extensions=['fenced_code',	'nl2br', 'markdown.extensions.tables'], use_pygments=True)
 
 		return nout
 
@@ -204,7 +296,7 @@ class ObsidianNotebook:
 		for n in self.notes.values():
 			if re.search(self.COMMIT_TAG, n.md):
 				nout = self.convert_to_html(note=n.md)
-				of = open(os.path.join(self.HTML_PATH, f"{n.name.replace('_', '-').replace(' ', '-').lower()}.html"), 'w')
+				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
 				of.write(nout) #https://python-markdown.github.io/extensions/fenced_code_blocks/
 				of.close()
 
@@ -286,6 +378,7 @@ class ObsidianNotebook:
 		r = requests.delete(f'{self.API_BASE}/api/publishment/{rname}', headers=h)
 		print(f'(removed) {r.json()["pub_name"]} -> {r}')
 
+
 	def post_commits_to_blog_api(self):
 		""" the main method
 		"""
@@ -302,11 +395,12 @@ class ObsidianNotebook:
 		post_names = []
 		for n in self.notes.values():
 			to_post = False
-			rname = n.name.lower().replace('_', '-').replace(' ', '-')+'.html'
+			fname = n.slugname + '.html'
+			# rname = n.name.lower().replace('_', '-').replace(' ', '-')+'.html'
 			if re.search(self.COMMIT_TAG, n.md):
-				post_names.append(rname)
-				if rname in pub_pub_names:
-					if pub_pub_data[rname] < n.mtime: # change has occured 
+				post_names.append(fname)
+				if fname in pub_pub_names:
+					if pub_pub_data[fname] < n.mtime: # change has occured 
 						to_post = True
 				else: # it's newly #public
 					to_post = True
@@ -314,7 +408,7 @@ class ObsidianNotebook:
 			if to_post:
 				nout = self.convert_to_html(note=n.md)
 				r = requests.post(f'{self.API_BASE}/api/publishment',
-					json={"name": n.name.replace('_', '-').replace(' ', '-').lower(), "content": nout},
+					json={"name": n.slugname, "content": nout}, # n.name.replace('_', '-').replace(' ', '-').lower()
 					headers=h
 					)
 				
@@ -338,6 +432,24 @@ class ObsidianNotebook:
 		for p in pub_pub_names:
 			if p not in post_names:
 				self.delete_unlisted_post(p)
+
+	def blog_settings_post(self):
+
+		with open(os.path.join(self.NOTE_PATH, 'blog-settings.json'), 'r') as f:
+			h = self.get_headers()
+			# print(json.load(f)
+			r = requests.post(f'{self.API_BASE}/api/layout', json=json.load(f), headers=h)
+			print(r)
+
+
+
+
+
+
+
+
+
+
 
 
 
