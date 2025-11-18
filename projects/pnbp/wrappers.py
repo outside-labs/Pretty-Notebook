@@ -40,5 +40,20 @@ def pass_nb(func):
 
 
 
+def arrow_call(func):
+	""" 
+	"""
+	@wraps(func)
+	def inner(*args, **kwargs):
+		print(f'-> {func.__name__}')
+		return func(*args, **kwargs)
+	return inner
+
+
+@arrow_call
+def myfavfunc():
+	return 'Hello World'
+
+# myfavfunc()
 
 

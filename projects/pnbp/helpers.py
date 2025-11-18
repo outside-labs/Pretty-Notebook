@@ -35,6 +35,14 @@ def md_nakedhref_repl(matchobj):
 	"""
 	return f"[{matchobj.group(1)}]({matchobj.group(1)})"
 
+def comment_unescape(matchobj):
+	""" where tags are escaped by int_tag_repl,
+		regex \#comment -> #comment
+		within html code blocks
+	"""
+	_code = matchobj.group(2).replace('\#', '#')
+
+	return f'<code class="{matchobj.group(1)}">{_code}</code>'
 
 
 """ tasks re.sub str replacement functions

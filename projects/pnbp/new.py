@@ -1,7 +1,106 @@
+import os
+import subprocess
+import datetime
 import re
 from string import ascii_uppercase
 
 from models import ObsidianNotebook
+from wrappers import arrow_call
+
+def str_strip_link(matchobj):
+	""" """
+	return f'[[{matchobj.group(1).strip()}]]'
+
+
+def _fix_link_spacing(nb=None):
+	""" [[ LINK ]] -> [[LINK]]
+		useful for finiky apps like 1Writer
+	"""
+	p = re.compile(nb.OBS_INT_LNK)
+
+	for n in nb.notes.values():
+		if n.name == 'test1':
+			n.md_out = p.sub(str_strip_link, n.md)
+			n.save(nb)
+
+
+def _add_leading_newline(nb=None):
+	""" 
+		useful for finiky apps like 1Writer
+		where without, can't see header
+	"""
+	for n in nb.notes.values():
+		if n.name == 'test1':
+			if not n.md.startswith('\n'):
+				n.md_out = '\n' + n.md
+				n.save(nb)
+
+
+def _collect_all_stats(nb=None):
+	pass
+
+def _fix_tags_collect(nb=None):
+	# nb.MD_CODE
+	# nb.OBS_INT_TAG
+	p = re.compile(nb.MD_CODE)
+	for n in nb.notes.values():
+		if n.name == 'test1':
+			print(p.findall(n.md))
+
+			for t in n.tags:
+				pass
+
+
+""" -> tasks """
+def _parse_today_note(nb=None):
+	n = nb.get('TODAY')
+	# print(n.sections)
+	td = datetime.datetime.today().date()
+	td = datetime.datetime.strftime(td, '%Y-%m-%d')
+	print(td)
+	for s in n.sections:
+		# print(s)
+		if s.strip().startswith(td):
+			j = '\n'.join([x for x in s.split('\n') if not x.startswith('-')])
+			print(j) #journal content
+			# for x in :
+			# 	if x.startswith('-'):
+			# 		pass
+
+			# print(s)
+
+@arrow_call
+def _git_commit_notebook(nb=None):
+	"""
+	"""
+	# print(subprocess.run(['cd', nb.NOTE_PATH], capture_output=True)) doesn't hold, even with the function...
+	st = subprocess.run(['git', '-C', nb.NOTE_PATH, 'status'], capture_output=True)
+	print(st)
+
+	if st.stderr == b'fatal: not a git repository (or any of the parent directories): .git\n':
+		print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'init'], capture_output=True))
+
+	lt = datetime.datetime.strftime(datetime.datetime.now(), '%X')
+	ld = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
+
+	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'add', '-A'], capture_output=True))
+	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'commit', '-m' , f'Automated commit @ {lt} on {ld}'], capture_output=True))
+
+
+
+
+def _nb_get_help():
+	""" show the cli.py --help message 
+	"""
+	loc_p = os.path.dirname(__file__)
+	cli_p = os.path.join(loc_p, 'cli.py')
+	# print(lp)
+	# no need to print as running the file runs the command
+	subprocess.run(['python3', cli_p, '--help'])
+
+
+# _nb_get_help()
+
 
 
 #@pass_nb
@@ -41,8 +140,8 @@ def _collect_public_graph(nb=None):
 
 
 
-nb = ObsidianNotebook()
-_collect_public_graph(nb)
+# nb = ObsidianNotebook()
+# _collect_public_graph(nb)
 
 
 def _create_link_graph(name: str, nb=None): # , tag: str=""
@@ -86,16 +185,20 @@ def _create_link_graph(name: str, nb=None): # , tag: str=""
 	nb.generate_note(f'flat-link-graph-{name}', outstr, overwrite=True)
 
 
-nb = ObsidianNotebook()
+# nb = ObsidianNotebook()
+# _fix_link_spacing(nb)
+# _add_leading_newline(nb)
+# _fix_tags_collect(nb)
+# _parse_today_note(nb)
+# _git_commit_notebook(nb)
 
-_create_link_graph('PYTHON', nb)
+# _create_link_graph('PYTHON', nb)
 
 
-
-for n in nb.notes.values():
-	# print(n.name)
-	if n.is_tagged('public'):
-		print(n.name)
+# for n in nb.notes.values():
+# 	# print(n.name)
+# 	if n.is_tagged('public'):
+# 		print(n.name)
 		
 		# _create_link_graph(n.name, nb)
 

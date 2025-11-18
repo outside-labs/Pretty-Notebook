@@ -8,12 +8,16 @@ from models import ObsidianNotebook
 import commands as cmds
 import tasks
 # from tasks import _obsidian_task_settle
+from new import _nb_get_help
 
 
 @click.group()
 def cli():
 	pass
 
+@cli.command()
+def nb_get_help():
+	_nb_get_help()
 
 """ obsidian-blog api connection:
 """

@@ -1,3 +1,4 @@
+import datetime
 import os
 import subprocess
 import re
@@ -5,7 +6,7 @@ from functools import wraps
 import inspect
 
 from models import ObsidianNotebook
-from wrappers import pass_nb
+from wrappers import pass_nb, arrow_call
 
 
 """ commands writing collections to specific notebook files:
@@ -180,14 +181,31 @@ def _collect_all_tags(nb=None):
 	"""
 	"""
 	ns = []
-	for fn, n in nb.notes.items():
-		fn_w = f'[[{fn}]] '
+	
+	ns.append(', '.join([t for t in nb.tags]))
+	
+	ns.append('--- ')
 
-		if n.tags:
-			for t in n.tags:
-				fn_w += f' #{t}'
-			ns.append(fn_w)
+	for t in nb.tags:
+		t_w = f'{t} - '
+		for n in nb.get_tagged(t):
+			if not n.name == 'all tags':
+				t_w += f' [[{n.name}]], '
 
+		ns.append(t_w.rstrip(', '))
+
+	ns.append('--- ')
+
+	for n in nb.notes.values():
+		if not n.name == 'all tags':
+			fn_w = f'[[{n.name}]] - '
+
+			if n.tags:
+				for t in n.tags:
+					fn_w += f' #{t}, '
+
+				ns.append(fn_w.rstrip(', '))
+	
 	with open(os.path.join(nb.NOTE_PATH, 'all tags.md'), 'w') as f:
 		f.write('\n'.join(str(ft) for ft in ns))
 
@@ -201,7 +219,26 @@ def _collect_git_diff(nb=None):
 	with open(os.path.join(nb.NOTE_PATH, 'all diff.md'), 'w') as f:
 		f.write(ns)
 
+@arrow_call
+@pass_nb
+def _git_commit_notebook(nb=None):
+	"""
+	"""
+	# print(subprocess.run(['cd', nb.NOTE_PATH], capture_output=True)) doesn't hold, even with the function...
+	st = subprocess.run(['git', '-C', nb.NOTE_PATH, 'status'], capture_output=True)
+	print(st)
 
+	if st.stderr == b'fatal: not a git repository (or any of the parent directories): .git\n':
+		print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'init'], capture_output=True))
+
+	lt = datetime.datetime.strftime(datetime.datetime.now(), '%X')
+	ld = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
+
+	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'add', '-A'], capture_output=True))
+	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'commit', '-m' , f'Automated commit @ {lt} on {ld}'], capture_output=True))
+
+
+@arrow_call
 @pass_nb
 def _obsidian_collect_all(nb=None):
 	""" perform all collect- commands in succession
@@ -209,7 +246,7 @@ def _obsidian_collect_all(nb=None):
 	for k, func in globals().items():
 		if k.startswith('_collect') and inspect.isfunction(func):
 			print(f'{func.__name__} -->')
-			func(nb)
+			func(nb) #call each function with the nb instance passed
 
 
 

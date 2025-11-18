@@ -11,29 +11,47 @@ import markdown as md
 import requests
 
 from helpers import (int_link_repl, int_img_repl, int_tag_repl,
-						md_mermaid_repl, md_nakedhref_repl,
+						md_mermaid_repl, md_nakedhref_repl, comment_unescape,
 						_convert_datetime)
+
 
 
 # ObsidianNote = namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'mtime'])
 
-class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'mtime'])):
+class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks', 'mtime'])):
 
-	def __new__(cls, name, md, links, tags, urls, mtime):
+	def __new__(cls, name, md, links, tags, urls, cblocks, mtime):
 		"""
 		:param str name: the filename stripped of .md
 		:param str md: the in mem note context read from file
 		:param list links: all regex found [[links]] 's in md
 		:param list tags: all regex found #tag 's in md
 		:param list urls: all regex found http/https links in md
+		:param list cblocks: all regex found ```backtick code blocks```
 		:param str mtime: the local md most recent modification date
 			-> used against remote blog api to determine if POST required
 		"""
-		for i, t in enumerate(tags):
-			# t = 
-			tags[i] = f'#{t}'
+		all_tags = [f'#{t}' for t in tags]
 
-		return super().__new__(cls, name, md, links, tags, urls, mtime)
+		_tags = list(set(all_tags.copy()))
+		_remove = defaultdict(int)
+		for t in _tags:
+			for l in urls:
+				if (num_occur := len(re.findall(t, l))):
+					_remove[t] += num_occur
+			for b in cblocks:
+				if (num_occur := len(re.findall(t, b))):
+					_remove[t] += num_occur
+
+		for tag, occ in _remove.items():
+			for x in range(occ):
+				if tag in all_tags:
+					all_tags.remove(tag)
+		
+		tags = list(set(all_tags)) # only legitimate #tag's remain
+		urls = list(set(urls)) # <- doing here so that duplicate urls don't create tags
+
+		return super().__new__(cls, name, md, links, tags, urls, cblocks, mtime)
 
 	def __init__(self, *args, **kwargs):
 		""" 
@@ -51,7 +69,7 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'm
 	def slugname(self):
 		""" My Note Name -> my-note-name
 		"""
-		_name = re.sub(r'[^a-zA-Z\s_-]+', '', self.name)
+		_name = re.sub(r'[^a-zA-Z1-9\s_-]+', '', self.name)
 		_name = _name.lower().replace(' ', '-').replace('_', '-')
 		slugname = "-".join([w for w in _name.split('-') if w])
 		return slugname
@@ -166,10 +184,13 @@ class ObsidianNotebook:
 						links=[m.strip() for m in re.findall(self.OBS_INT_LNK, fo)],
 						tags=re.findall(self.OBS_INT_TAG, fo),
 						urls=self.collect_urls(fo),
+						cblocks=re.findall(self.MD_CODE, fo),
 						mtime=datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(self.NOTE_PATH, f)))
 						)
 
 					self.notes.update({fname: n})
+
+		self.notes = dict(sorted(self.notes.items()))
 
 	def generate_note(self, name, md_out, overwrite=False):
 		""" """
@@ -178,7 +199,7 @@ class ObsidianNotebook:
 		if name in self.notes.keys() and not overwrite:
 			raise FileExistsError(f"Cannot generate a new note with name {name}.")
  
-		n = ObsidianNote(name=name, md='', links=[], tags=[], urls=[], mtime='')
+		n = ObsidianNote(name=name, md='', links=[], tags=[], urls=[], cblocks=[], mtime='')
 		n.md_out = md_out
 		n.save(self)
 		# self.open_md() # refresh -> new note n attrs fill live ^^
@@ -199,6 +220,26 @@ class ObsidianNotebook:
 				return n
 
 		return None
+
+	def get_tagged(self, tag):
+		""" """
+		t_notes = []
+		for n in self.notes.values():
+			if n.is_tagged(tag):
+				t_notes.append(n)
+
+		return t_notes
+
+	@property
+	def tags(self)->list:
+		""" """
+		ts = []
+		for n in self.notes.values():
+			for t in n.tags:
+				ts.append(t)
+
+		return sorted(list(set(ts)))
+	
 
 	def find(self, regex):
 		""" a user convenience method to effectively grep notebook
@@ -241,8 +282,11 @@ class ObsidianNotebook:
 		for l in p.findall(note):
 			ext_links.append(l.rstrip('.').rstrip(')'))
 
-		return list(set(ext_links))
+		# return list(set(ext_links))
+		return ext_links
 	
+	"""
+	"""
 	def replace_imglinks(self, note):
 		""" a regex replace mtd """
 		p = re.compile(self.OBS_IMG_LNK)
@@ -268,6 +312,11 @@ class ObsidianNotebook:
 		p = re.compile(self.HTTP_NAKED_LNK)
 		return p.sub(md_nakedhref_repl, note)
 
+	def fix_blocked_comments(self, note):
+		""" a regex replace mtd """
+		p = re.compile(r'<code class="(.+)">((.|\n)*)</code>')
+		return p.sub(comment_unescape, note)
+
 
 	def convert_to_html(self, note):
 		""" apply all the regex method changes to 
@@ -282,6 +331,8 @@ class ObsidianNotebook:
 		nout = self.replace_nakedhref(nout)
 
 		nout = md.markdown(nout, extensions=['fenced_code',	'nl2br', 'markdown.extensions.tables'], use_pygments=True)
+
+		nout = self.fix_blocked_comments(nout)
 
 		return nout
 
