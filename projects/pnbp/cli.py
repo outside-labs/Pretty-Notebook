@@ -1,3 +1,5 @@
+import os 
+import subprocess
 import sys
 import inspect
 
@@ -5,19 +7,37 @@ import click
 
 from models import ObsidianNotebook
 
-import commands as cmds
-import tasks
-# from tasks import _obsidian_task_settle
-from new import _nb_get_help
+import commands.cleanup as clea
+import commands.commit as comm
+import commands.collect as coll
+import commands.tasks as tasks
 
 
 @click.group()
 def cli():
 	pass
 
+
+""" 
+"""
+def _nb_get_help():
+	""" show the cli.py --help message 
+	"""
+	# providing access to the full installed --help list ...
+	# note how documentation strings don't
+	# pass into the command when built below
+	loc_p = os.path.dirname(__file__)
+	cli_p = os.path.join(loc_p, 'cli.py')
+	# no need to print as running the file runs the command
+	subprocess.run(['python3', cli_p, '--help'])
+
+
 @cli.command()
 def nb_get_help():
 	_nb_get_help()
+
+
+
 
 """ obsidian-blog api connection:
 """
@@ -27,6 +47,7 @@ def commit_local_html():
 		(for local debugging when running remote server 
 		and not a concurrent localhost instance...)
 	"""
+	# ^^ docstring == help message
 	nb = ObsidianNotebook()
 	nb.write_commits_to_local_html()
 
@@ -42,7 +63,8 @@ def commit_remote_api():
 
 
 
-""" 
+""" building click.commands out of 
+	the (imported above) local /commands/ package
 """
 def _create_command(func):
 	""" effectively writes a 
@@ -51,44 +73,51 @@ def _create_command(func):
 				_outer_act_cmd()
 		```	
 	where I had issues passing live parameters 
-	and chaining command calls in click otherwise
+	and chaining command calls in click otherwise.
+
+	Has the nice feature of passing docstring when called this way too.
 	"""
 	func.__name__ = func.__name__.lstrip('_')
 	cmd = cli.command()
 	return cmd(func)
 
+def create_command(func):
+	""" actually instantiates the command
+		-> required to also setattr() here for setup.py / 
+		pip install to recognize dynamically created commands
+		(specifically, setattr-ed after built)
+	"""
+	c = _create_command(func)
+	setattr(sys.modules[__name__], func.__name__.lstrip('_'), c)
 
 
 def create_all_commands():
 	""" main function for building imported module commands 
-		and tacking them onto the click.group()
+		and tacking them onto the click.group(), & module local() name cli
 	"""
-	print('debug...')
+	# print('debug...')
 
-	# print(cmds)
-	# looking into imports from commands.py
-	for k,v in cmds.__dict__.items(): 
+	# print(coll)
+	# looking into imports from commands/collect.py
+	for k,v in coll.__dict__.items(): 
 		if inspect.isfunction(v) and k.startswith('_'):
 			# print(k) # _func's name...
-			c = _create_command(v)
-			# -> required to also setattr() here for setup.py / 
-			# pip install to recognize dynamically created commands
-			setattr(sys.modules[__name__], v.__name__.lstrip('_'), c)
-
+			create_command(v)
 
 	# print(tasks)
 	for k,v in tasks.__dict__.items():
 		if inspect.isfunction(v) and k.startswith('_'):
 			pass
-			# print(k)
-			# c = _create_command(v)
-			# setattr(sys.modules[__name__].lstrip('_'), c)
-
 	# -> actually, lets be picky:
-	c = _create_command(tasks._obsidian_task_settle)
+	create_command(tasks._obsidian_task_settle)
 
-	setattr(sys.modules[__name__], v.__name__.lstrip('_'), c)
+	# print(comm)
+	create_command(comm._git_commit_notebook)
 
+	# print(clea)
+	create_command(clea._fix_link_spacing)
+	create_command(clea._remove_leading_newline)
+	create_command(clea._add_leading_newline)
 
 
 

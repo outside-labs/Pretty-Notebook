@@ -1,9 +1,7 @@
-import datetime
 import os
-import subprocess
 import re
-from functools import wraps
 import inspect
+import subprocess
 
 from models import ObsidianNotebook
 from wrappers import pass_nb, arrow_call
@@ -11,20 +9,9 @@ from wrappers import pass_nb, arrow_call
 
 """ commands writing collections to specific notebook files:
 """
-@pass_nb
-def _collect_subl_projs(nb=None):
-	""" notebook/example.sublime_project -> sublime-project.md
-	"""
-	projs = []
-	for fn in os.listdir(nb.NOTE_PATH):
-		if fn.endswith('.sublime-project'):
-			projs.append(fn)
-
-	obsidianmd = "\n\n".join([f'![[{p}]]' for p in projs])
-
-	with open(os.path.join(nb.NOTE_PATH, 'sublime-project.md'), 'w') as f:
-		f.write(obsidianmd)
-
+def _collect_all_stats(nb=None):
+	""" """
+	pass
 
 @pass_nb
 def _collect_all_notes(nb=None):
@@ -210,32 +197,29 @@ def _collect_all_tags(nb=None):
 		f.write('\n'.join(str(ft) for ft in ns))
 
 
+# @pass_nb
+# def _collect_git_diff(nb=None):
+# 	""" not worth having -> parse it later?
+# 	"""
+# 	ns = subprocess.run(['git', 'diff', '-C', nb.NOTE_PATH], capture_output=True).stdout.decode('utf-8').strip()
+
+# 	with open(os.path.join(nb.NOTE_PATH, 'all diff.md'), 'w') as f:
+# 		f.write(ns)
+
+
 @pass_nb
-def _collect_git_diff(nb=None):
-	""" not worth having -> parse it later?
+def _collect_subl_projs(nb=None):
+	""" notebook/example.sublime_project -> sublime-project.md
 	"""
-	ns = subprocess.run(['git', 'diff', '-C', nb.NOTE_PATH], capture_output=True).stdout.decode('utf-8').strip()
+	projs = []
+	for fn in os.listdir(nb.NOTE_PATH):
+		if fn.endswith('.sublime-project'):
+			projs.append(fn)
 
-	with open(os.path.join(nb.NOTE_PATH, 'all diff.md'), 'w') as f:
-		f.write(ns)
+	obsidianmd = "\n\n".join([f'![[{p}]]' for p in projs])
 
-@arrow_call
-@pass_nb
-def _git_commit_notebook(nb=None):
-	"""
-	"""
-	# print(subprocess.run(['cd', nb.NOTE_PATH], capture_output=True)) doesn't hold, even with the function...
-	st = subprocess.run(['git', '-C', nb.NOTE_PATH, 'status'], capture_output=True)
-	print(st)
-
-	if st.stderr == b'fatal: not a git repository (or any of the parent directories): .git\n':
-		print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'init'], capture_output=True))
-
-	lt = datetime.datetime.strftime(datetime.datetime.now(), '%X')
-	ld = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
-
-	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'add', '-A'], capture_output=True))
-	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'commit', '-m' , f'Automated commit @ {lt} on {ld}'], capture_output=True))
+	with open(os.path.join(nb.NOTE_PATH, 'sublime-project.md'), 'w') as f:
+		f.write(obsidianmd)
 
 
 @arrow_call
@@ -246,8 +230,14 @@ def _obsidian_collect_all(nb=None):
 	for k, func in globals().items():
 		if k.startswith('_collect') and inspect.isfunction(func):
 			print(f'{func.__name__} -->')
-			func(nb) #call each function with the nb instance passed
+			func(nb) #call each function with the nb instance passed 
 
 
 
 
+
+
+if __name__ == '__main__':
+	pass
+	# nb = ObsidianNotebook()
+	# _collect_all_stats(nb)

@@ -16,7 +16,7 @@ for v in cli.__dict__.values():
 
 setup(
 	name='obsidian-local',
-	version='0.3.0',
+	version='0.4.0',
 	py_modules=['cli'],
 	install_requires=[
 		'Click',

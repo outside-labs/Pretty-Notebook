@@ -1,9 +1,9 @@
 import re
 import datetime
 
-from helpers import md_task_uncheck, md_reoccurring_task_uncheck
 from models import ObsidianNotebook
 from wrappers import pass_nb
+from helpers import md_task_uncheck, md_reoccurring_task_uncheck
 
 """
 	- #todo a task to record _complete and perm remove w/ #complete
@@ -188,5 +188,28 @@ def _obsidian_task_settle(nb=None):
 
 
 
+# @pass_nb
+def _parse_today_note(nb=None):
+	n = nb.get('TODAY')
+	# print(n.sections)
+	td = datetime.datetime.today().date()
+	td = datetime.datetime.strftime(td, '%Y-%m-%d')
+	print(td)
+	for s in n.sections:
+		# print(s)
+		if s.strip().startswith(td):
+			j = '\n'.join([x for x in s.split('\n') if not x.startswith('-')])
+			print(j) #journal content
+			# -> ^^ integrate w/ tasks!
+			# for x in n.md.splitlines():
+			# 	if x.startswith('-'):
+			# 		pass
+			# print(s)
+
+
+if __name__ == '__main__':
+	pass
+	# nb = ObsidianNotebook()
+	# _parse_today_note(nb)
 
 
