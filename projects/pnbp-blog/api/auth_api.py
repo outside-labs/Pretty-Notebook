@@ -15,16 +15,42 @@ import jwt
 from decouple import config
 
 
-JWT_SECRET = config('JWT_SECRET')
-JWT_ALGO = config('JWT_ALGO')
 
 router = APIRouter()
+
+JWT_SECRET = config('JWT_SECRET')
+JWT_ALGO = config('JWT_ALGO')
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
 
 
+class User(Model):
+	id = fields.IntField(pk=True)
+	username = fields.CharField(max_length=50, unique=True)
+	password_hash = fields.CharField(max_length=128)
+	tok_uuid = fields.TextField(default=str(uuid.uuid4()))
+
+	def verify_password(self, password):
+		return bcrypt.verify(password, self.password_hash)
+
+
+
+User_Pydantic = pydantic_model_creator(User, name='User')
+UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude_readonly=True)
+
+
+@router.post('/api/users', response_model=User_Pydantic)
+async def create_user(user: UserIn_Pydantic):
+	""" """
+	user_obj = User(username=user.username, password_hash=bcrypt.hash(user.password_hash))
+	await user_obj.save()
+	return await User_Pydantic.from_tortoise_orm(user_obj)
+
+
 async def authenticate_user(username: str, password: str):
+	""" 
+	"""
 	user = await User.get(username=username)
 	if not user:
 		return False
@@ -34,6 +60,7 @@ async def authenticate_user(username: str, password: str):
 
 @router.post('/token')
 async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()): # form_data depends on OAuth2PasswordRequestForm
+	""" """
 	user = await authenticate_user(username=form_data.username, password=form_data.password)
 	if not user:
 		# return {'error': 'invalid credentials'}
@@ -54,28 +81,9 @@ async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()): # fo
 
 
 
-class User(Model):
-	id = fields.IntField(pk=True)
-	username = fields.CharField(max_length=50, unique=True)
-	password_hash = fields.CharField(max_length=128)
-	tok_uuid = fields.TextField(default=str(uuid.uuid4()))
-
-	def verify_password(self, password):
-		return bcrypt.verify(password, self.password_hash)
-
-
-
-User_Pydantic = pydantic_model_creator(User, name='User')
-UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude_readonly=True)
-
-@router.post('/api/users', response_model=User_Pydantic)
-async def create_user(user: UserIn_Pydantic):
-	user_obj = User(username=user.username, password_hash=bcrypt.hash(user.password_hash))
-	await user_obj.save()
-	return await User_Pydantic.from_tortoise_orm(user_obj)
-
-
 async def get_current_user(token: str = Depends(oauth2_scheme)):
+	""" 
+	"""
 	try:
 		payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
 		user = await User.get(id=payload.get('id'))
@@ -85,23 +93,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 	return await User_Pydantic.from_tortoise_orm(user) # convert to pydantic, user isnt being passed directly, token is being passed
 
-
 @router.get('/api/users/me', response_model=User_Pydantic)
 async def get_user(user: User_Pydantic = Depends(get_current_user)):
+	""" """
 	return user
+
 
 
 @router.get('/api')
 async def api_index(token: str = Depends(oauth2_scheme)):
 	return {'the_token': token}
-
-
-# register_tortoise(
-# 	router,
-# 	db_url='sqlite://db.sqlite3',
-# 	modules={'models': ['auth_api']},
-# 	generate_schemas=True,
-# 	add_exception_handlers=True
-# 	)
 
 

@@ -9,11 +9,12 @@ from fastapi import File, UploadFile, Depends
 from .auth_api import oauth2_scheme
 
 
-router = fastapi.APIRouter()
 
+router = fastapi.APIRouter()
 
 PUB_PATH = 'templates/blog/'
 IMG_PATH = 'static/imgs/'
+
 
 
 class Publishment(BaseModel):
@@ -21,7 +22,10 @@ class Publishment(BaseModel):
 	content: str
 
 
+
 async def add_publishment(name: str, content: str) -> Publishment:
+	""" 
+	"""
 	extends = "{% extends 'shared/layout.html' %}\n\n"
 	start_block = '{% block content %}\n\n'
 	end_block = '\n\n{% endblock %}'
@@ -37,10 +41,9 @@ async def add_publishment(name: str, content: str) -> Publishment:
 
 	return pub
 
-
 @router.post('/api/publishment', name='add_pub', status_code=201, response_model=Publishment, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
 async def publishment_post(pub_submittal: Publishment):
-	
+	""" """
 	n = pub_submittal.name
 	c = pub_submittal.content
 
@@ -49,6 +52,7 @@ async def publishment_post(pub_submittal: Publishment):
 
 @router.post('/api/image', name='add_img', status_code=201, dependencies=[Depends(oauth2_scheme)])
 async def image_post(file: UploadFile = File(...)):
+	""" """
 	# file.filename = f'{name}.jpg'
 	contents = await file.read()	
 	with open(os.path.join(IMG_PATH, file.filename), 'wb') as f:
@@ -57,8 +61,10 @@ async def image_post(file: UploadFile = File(...)):
 	return {"filename": file.filename}
 
 
+
 @router.get('/api/publishments', dependencies=[Depends(oauth2_scheme)])
 async def publishments_get() -> list:
+	""" """
 	pub_names = os.listdir(PUB_PATH)
 	pub_data = []
 	for p in pub_names:
@@ -70,6 +76,7 @@ async def publishments_get() -> list:
 
 @router.get('/api/images', dependencies=[Depends(oauth2_scheme)])
 async def images_get() -> list:
+	""" """
 	img_names = os.listdir(IMG_PATH)
 	img_data = []
 	for n in img_names:
@@ -92,6 +99,7 @@ async def publishment_delete(pub_name: str):
 
 @router.get('/api/testdepends', dependencies=[Depends(oauth2_scheme)])
 async def test_depends(x: str):
+	""" """
 	return {'test': f'success {x}'}
 
 

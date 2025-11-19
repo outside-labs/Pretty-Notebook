@@ -3,14 +3,28 @@ import uvicorn
 from starlette.staticfiles import StaticFiles
 from tortoise.contrib.fastapi import register_tortoise
 
-from api import publish_api, auth_api
+from api import publish_api, auth_api, layout_api
 from views import home
+
 
 
 api = fastapi.FastAPI()
 
 
+
+def configure_routing():
+	""" mounting routes 
+	"""
+	api.mount('/static', StaticFiles(directory='static'), name='static') 
+	api.include_router(home.router)
+	api.include_router(publish_api.router)
+	api.include_router(auth_api.router)
+	api.include_router(layout_api.router)
+
+
 def configure():
+	""" main 
+	"""
 	configure_routing()
 	register_tortoise(
 		api,
@@ -21,12 +35,6 @@ def configure():
 		)
 
 
-def configure_routing():
-	"""mounting routes"""
-	api.mount('/static', StaticFiles(directory='static'), name='static') 
-	api.include_router(home.router)
-	api.include_router(publish_api.router)
-	api.include_router(auth_api.router)
 
 
 
@@ -36,3 +44,7 @@ if __name__ == '__main__':
 else:
 	configure() # <- a production necessary thing
 	# uvicorn main:api <- run server
+
+
+
+
