@@ -12,7 +12,7 @@ import requests
 
 from helpers import (int_link_repl, int_img_repl, int_tag_repl,
 						md_mermaid_repl, md_nakedhref_repl, comment_unescape,
-						_convert_datetime)
+						_convert_datetime, remove_link_mention)
 
 
 
@@ -50,6 +50,7 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'c
 		
 		tags = list(set(all_tags)) # only legitimate #tag's remain
 		urls = list(set(urls)) # <- doing here so that duplicate urls don't create tags
+		links = list(set(links))
 
 		return super().__new__(cls, name, md, links, tags, urls, cblocks, mtime)
 
@@ -92,12 +93,15 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'c
 			if provided self.md_out has been updated.
 		"""
 		if not isinstance(self.md_out, str):
-			print('this')
-			raise TypeError(f'ObsidianNote.md_out must be a str, not {type(self.md_out)}')
+			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
 
 		if self.md_out:
+			print(f'saving {self.name}...\n')
+			# print(f'--->\n{self.md_out}')
 			with open(os.path.join(nb.NOTE_PATH, self.name+'.md'), 'w') as nf:
 				nf.write(self.md_out)
+
+			return nb.open_note(self)
 
 	def is_tagged(self, tag: str)->bool:
 		""" 
@@ -123,6 +127,24 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'c
 
 		return False
 
+	def remove_links(self, links):
+		""" 
+		"""
+		ns = self.md
+		links = [l for l in links if not '.' in l] # keep images!
+		
+		for name in links:
+			p = re.compile(fr'(\[\[\s?)({name})(\s?\]\])')
+
+			if (ml := p.findall(ns)):
+				for m in ml:
+					print(f'[[{m[1]}]] --> ', m[1])
+
+			ns = p.sub(remove_link_mention, ns)
+
+		# print(ns)
+		self.md_out = ns
+
 
 
 
@@ -135,7 +157,7 @@ class ObsidianNotebook:
 	"""
 	OBS_INT_LNK = r'\[\[([^]]+)\]\]'
 	OBS_IMG_LNK = r'!\[\[([^]]+)\]\]'
-	OBS_INT_TAG = r'#([A-Za-z]+)' 
+	OBS_INT_TAG = r'[^\\]#([A-Za-z]+)' 
 
 	MD_CODE = r'```([^`]*)```'
 	MD_MERMAID = r'```mermaid([^`]*)```'
@@ -163,9 +185,37 @@ class ObsidianNotebook:
 
 		self.API_BASE = self.config.get('API_BASE')
 		self.API_TOKEN = self.config.get('API_TOKEN')
+		self.PUB_LNK_ONLY = self.config.get('PUB_LNK_ONLY')
 
 		self.notes = defaultdict()
 		self.open_md()
+
+	def __len__(self):
+		""" """
+		return len(self.notes.keys())
+
+	def open_note(self, f):
+		""" """
+		if isinstance(f, ObsidianNote):
+			f = f.name + '.md'
+
+		fname = f.split('.')[0]
+		with open(os.path.join(self.NOTE_PATH, f), 'r') as fo:
+			fo = fo.read()
+
+			n = ObsidianNote(
+				name=fname,
+				md=fo,
+				links=[m.strip() for m in re.findall(self.OBS_INT_LNK, fo)],
+				tags=re.findall(self.OBS_INT_TAG, fo),
+				urls=self.collect_urls(fo),
+				cblocks=re.findall(self.MD_CODE, fo),
+				mtime=datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(self.NOTE_PATH, f)))
+				)
+
+			self.notes.update({fname: n})
+
+		return n
 
 	def open_md(self):
 		""" open all files in the Obsidian Notebook path into memory
@@ -173,22 +223,8 @@ class ObsidianNotebook:
 			available at nb.notes
 		"""
 		for f in os.listdir(self.NOTE_PATH):
-			fname = f.split('.')[0]
 			if f.endswith('.md'):
-				with open(os.path.join(self.NOTE_PATH, f), 'r') as fo:
-					fo = fo.read()
-
-					n = ObsidianNote(
-						name=fname,
-						md=fo,
-						links=[m.strip() for m in re.findall(self.OBS_INT_LNK, fo)],
-						tags=re.findall(self.OBS_INT_TAG, fo),
-						urls=self.collect_urls(fo),
-						cblocks=re.findall(self.MD_CODE, fo),
-						mtime=datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(self.NOTE_PATH, f)))
-						)
-
-					self.notes.update({fname: n})
+				self.open_note(f)
 
 		self.notes = dict(sorted(self.notes.items()))
 
@@ -201,18 +237,21 @@ class ObsidianNotebook:
  
 		n = ObsidianNote(name=name, md='', links=[], tags=[], urls=[], cblocks=[], mtime='')
 		n.md_out = md_out
-		n.save(self)
-		# self.open_md() # refresh -> new note n attrs fill live ^^
+		n.save(self) # ^^ although instantiated empty, live access to attrs on nb instance
 
 	def get(self, name):
 		"""
 		:param name: name of the note
 		:returns: ObsidianNote instance or None
 		"""
-		name = name.rstrip('.md').rstrip('.html')
-		print(name)
+		if isinstance(name, ObsidianNote):
+			n = name
+			return self.notes.get(n.name)
+
+		# name = name.rstrip('.md').rstrip('.html')
+		name = name.replace('.md', '').replace('.html', '')
+
 		if (note := self.notes.get(name)):
-			print(note)
 			return note
 
 		for n in self.notes.values():
@@ -225,7 +264,7 @@ class ObsidianNotebook:
 		""" """
 		t_notes = []
 		for n in self.notes.values():
-			if n.is_tagged(tag):
+			if n.is_tagged(tag) and not n.name == 'all tags': # janky
 				t_notes.append(n)
 
 		return t_notes
@@ -285,7 +324,8 @@ class ObsidianNotebook:
 		# return list(set(ext_links))
 		return ext_links
 	
-	"""
+	""" md->html str repl methods
+		coupled with fxn from helpers.py
 	"""
 	def replace_imglinks(self, note):
 		""" a regex replace mtd """
@@ -317,6 +357,21 @@ class ObsidianNotebook:
 		p = re.compile(r'<code class="(.+)">((.|\n)*)</code>')
 		return p.sub(comment_unescape, note)
 
+	def remove_nonpub_links(self, note):
+		""" """
+		remv = []
+		for name in note.links:
+			if (ln := self.get(name)):
+				if not ln.is_tagged(self.COMMIT_TAG):
+					remv.append(name)
+			else:
+				remv.append(name)
+
+		note.remove_links(remv)
+
+		return note.md_out
+
+
 
 	def convert_to_html(self, note):
 		""" apply all the regex method changes to 
@@ -324,6 +379,11 @@ class ObsidianNotebook:
 
 		:param note: the note content itself (n.md)
 		"""
+		if self.PUB_LNK_ONLY:
+			note = self.remove_nonpub_links(note)
+		else:
+			note = note.md
+
 		nout = self.replace_imglinks(note)
 		nout = self.replace_obslinks(nout)
 		nout = self.replace_obstags(nout)
@@ -346,7 +406,7 @@ class ObsidianNotebook:
 		print(f'\nlocal commit: {self.HTML_PATH}')
 		for n in self.notes.values():
 			if re.search(self.COMMIT_TAG, n.md):
-				nout = self.convert_to_html(note=n.md)
+				nout = self.convert_to_html(note=n)
 				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
 				of.write(nout) #https://python-markdown.github.io/extensions/fenced_code_blocks/
 				of.close()
@@ -457,7 +517,7 @@ class ObsidianNotebook:
 					to_post = True
 
 			if to_post:
-				nout = self.convert_to_html(note=n.md)
+				nout = self.convert_to_html(note=n)
 				r = requests.post(f'{self.API_BASE}/api/publishment',
 					json={"name": n.slugname, "content": nout}, # n.name.replace('_', '-').replace(' ', '-').lower()
 					headers=h
@@ -485,7 +545,7 @@ class ObsidianNotebook:
 				self.delete_unlisted_post(p)
 
 	def blog_settings_post(self):
-
+		""" """
 		with open(os.path.join(self.NOTE_PATH, 'blog-settings.json'), 'r') as f:
 			h = self.get_headers()
 			# print(json.load(f)

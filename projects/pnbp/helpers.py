@@ -44,9 +44,20 @@ def comment_unescape(matchobj):
 
 	return f'<code class="{matchobj.group(1)}">{_code}</code>'
 
+
+""" cleanup re.sub str replacement functions
+"""
 def str_strip_link(matchobj):
 	""" """
 	return f'[[{matchobj.group(1).strip()}]]'
+
+def add_link_mention(matchobj):
+	""" """
+	return f'{matchobj.group(1)}[[{matchobj.group(2)}]]{matchobj.group(3)}'
+
+def remove_link_mention(matchobj):
+	""" """
+	return matchobj.group(2)
 
 
 """ tasks re.sub str replacement functions

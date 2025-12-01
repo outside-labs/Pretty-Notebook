@@ -5,12 +5,15 @@ import inspect
 
 import click
 
-from models import ObsidianNotebook
+from models import ObsidianNotebook, ObsidianNote
+from wrappers import arrow_call
 
 import commands.cleanup as clea
 import commands.commit as comm
 import commands.collect as coll
 import commands.tasks as tasks
+import commands.new as new
+
 
 
 @click.group()
@@ -79,6 +82,11 @@ def _create_command(func):
 	"""
 	func.__name__ = func.__name__.lstrip('_')
 	cmd = cli.command()
+
+	if 'note' in inspect.signature(func).parameters.keys():
+		func = click.option('--note', type=str, help='the name of a note', required=True)(func)
+	func = arrow_call(func)
+
 	return cmd(func)
 
 def create_command(func):
@@ -118,6 +126,8 @@ def create_all_commands():
 	create_command(clea._fix_link_spacing)
 	create_command(clea._remove_leading_newline)
 	create_command(clea._add_leading_newline)
+	create_command(clea._link_unlinked_mentions)
+	create_command(clea._remove_nonexistant_links)
 
 
 

@@ -20,6 +20,7 @@ setup(
 	py_modules=['cli'],
 	install_requires=[
 		'Click',
+		'requests'
 	],
 	entry_points=entry_points,
 )

@@ -25,8 +25,12 @@ def _git_commit_notebook(nb=None):
 	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'commit', '-m' , f'Automated commit @ {lt} on {ld}'], capture_output=True))
 
 
-
-
+# @pass_nb
+# def _collect_git_diff(nb=None):
+# 	""" not worth having -> parse it later?
+# 	"""
+# 	ns = subprocess.run(['git', 'diff', '-C', nb.NOTE_PATH], capture_output=True).stdout.decode('utf-8').strip()
+# 	nb.generate_note('all diff', ns, overwrite=True)
 
 
 

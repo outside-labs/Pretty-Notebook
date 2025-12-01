@@ -1,7 +1,7 @@
 import re
 import datetime
 
-from models import ObsidianNotebook
+from models import ObsidianNotebook, ObsidianNote
 from wrappers import pass_nb
 from helpers import md_task_uncheck, md_reoccurring_task_uncheck
 
@@ -55,14 +55,14 @@ def record_complete_tasks(c_tasks:list=[], nb=None):
 
 
 @pass_nb
-def _uncheck_complete_tasks(nb=None):
+def _uncheck_complete_tasks(note: ObsidianNote=None, nb=None):
 	""" - [x] taskname 
 		-> _complete
 		-> - [ ] taskname 
 	"""
 	p = re.compile(TASK_COMPLETE)
 
-	ns = nb.notes['housekeeping'].md.splitlines()
+	ns = note.md.splitlines()
 
 	complete_tasks = []
 	for i, li in enumerate(ns):
@@ -73,16 +73,17 @@ def _uncheck_complete_tasks(nb=None):
 	if complete_tasks:
 		record_complete_tasks(complete_tasks, nb)
 
-		nb.notes['housekeeping'].md_out = '\n'.join(ns)
-		nb.notes['housekeeping'].save(nb)
+		note.md_out = '\n'.join(ns)
+		note.save(nb)
 
 
 @pass_nb
-def _complete_complete_tasks(nb=None):
+def _complete_complete_tasks(note: ObsidianNote=None, nb=None):
 	""" #todo #complete -> _complete && delete
 	"""
+	ns = note.md.splitlines()
+
 	p = re.compile(COMPL_TAG)
-	ns = nb.notes['TODOS'].md.splitlines()
 
 	complete_tasks = []
 	for i, li in enumerate(ns):
@@ -90,26 +91,30 @@ def _complete_complete_tasks(nb=None):
 			complete_tasks.append(li)
 
 	if complete_tasks:
-		record_complete_tasks(complete_tasks)
+		record_complete_tasks(complete_tasks, nb=nb)
 
-		_md_out = nb.notes['TODOS'].md
+		_md_out = note.md
 		for t in complete_tasks:
-			_md_out = re.sub(t, '', _md_out)
+			# print("**********\n",t, _md_out)
+			# print(re.findall(t, _md_out))
+			# _md_out = re.sub(t, '', _md_out) # this was working.. -> 
+			_md_out = _md_out.replace(t, '') # more explicit 
+			# print("-------->\n", _md_out)
 
-		nb.notes['TODOS'].md_out = _md_out
-		nb.notes['TODOS'].save(nb)
+		note.md_out = _md_out
+		note.save(nb)
 
 
 @pass_nb
-def _reset_reoccurring_tasks(nb=None):
+def _reset_reoccurring_param_tasks(note: ObsidianNote=None, nb=None):
 	""" - [x] taskname (var1: x, )
 		-> _complete
 		-> - [ ] taskname (var1: , )
 	"""
-	ns = nb.notes['DAILY'].md.splitlines()
-
 	p = re.compile(TASK_COMPLETE)
 	p2 = re.compile(TASK_VARS)
+
+	ns = note.md.splitlines()
 
 	complete_tasks = []
 	for i, li in enumerate(ns):
@@ -155,7 +160,7 @@ def _reset_reoccurring_tasks(nb=None):
 
 			# -> format _complete task
 			complete_out = ''.join([f'{k}:{v}, ' for k,v in d.items()]).strip()
-			complete_out = f'{_key} ({complete_out})'
+			complete_out = f'- [x] {_key} ({complete_out})'
 			print('complete_out', complete_out)
 
 			complete_in = li # carrying w/ us for str.replace() below
@@ -165,12 +170,13 @@ def _reset_reoccurring_tasks(nb=None):
 	if complete_tasks:
 		# -> reset task & vars
 		# -> record to _complete
-		_md_out = nb.notes['DAILY'].md
+		_md_out = note.md
 		for t in complete_tasks:
 			c_in, c_out, r_out = t
 			_md_out = _md_out.replace(c_in, r_out)
-			nb.notes['DAILY'].md_out = _md_out
-		nb.notes['DAILY'].save(nb)
+		
+		note.md_out = _md_out
+		note.save(nb)
 		
 		record_complete_tasks([t[1] for t in complete_tasks], nb)
 
@@ -182,29 +188,63 @@ def _reset_reoccurring_tasks(nb=None):
 def _obsidian_task_settle(nb=None):
 	""" all the task things
 	"""
-	_uncheck_complete_tasks(nb)
-	_complete_complete_tasks(nb)
-	_reset_reoccurring_tasks(nb)
+	tasked = [n for n in nb.get_tagged('#tasks')]
+	print([n.name for n in tasked])
+
+	for n in tasked:
+		_reset_reoccurring_param_tasks(nb.get(n), nb) # fresh get from notes dict
+		_uncheck_complete_tasks(nb.get(n), nb) # ensuring our note n being passed
+		_complete_complete_tasks(nb.get(n), nb) # is holding curr saved .md
 
 
+@pass_nb
+def _collect_tasks_note(nb=None):
+	""" if #tasks -> [[tasks]]
+	"""
+	tasked = [n for n in nb.get_tagged('#tasks')]
+	ns = '\n'.join([f'[[{n.name}]]' for n in tasked])
+	nb.generate_note('tasks', md_out=ns, overwrite=True)
+
+"""
+"""
+# def _add_today(nb=None, td:str):
+# 	""" """
+# 	pass
+
+# _DATE_STR = r'\d{4}-\d{2}-\d{2}'
 
 # @pass_nb
 def _parse_today_note(nb=None):
+	""" """
 	n = nb.get('TODAY')
 	# print(n.sections)
 	td = datetime.datetime.today().date()
 	td = datetime.datetime.strftime(td, '%Y-%m-%d')
 	print(td)
+
+	has_today = False
 	for s in n.sections:
 		# print(s)
 		if s.strip().startswith(td):
+			has_today = True
 			j = '\n'.join([x for x in s.split('\n') if not x.startswith('-')])
 			print(j) #journal content
-			# -> ^^ integrate w/ tasks!
+			# -> ^^ what do w/ - ?
 			# for x in n.md.splitlines():
 			# 	if x.startswith('-'):
 			# 		pass
 			# print(s)
+
+	if not has_today:
+		i = 0 if not n.header else 1
+		ns = n.sections.copy()
+		ns.insert(i, td)
+		n.md_out = '\n\n--- \n'.join(ns)
+		n.save(nb)
+
+
+
+
 
 
 if __name__ == '__main__':
