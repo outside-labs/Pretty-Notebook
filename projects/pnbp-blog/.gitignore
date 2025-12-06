@@ -10,7 +10,7 @@
 *.py[co]
 
 **/migrations/0*.py
-**templates/blog/*.html
+*templates/blog/**
 **static/imgs/**
 
 .env

@@ -10,17 +10,16 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
 
-    <!-- highlight JS CSS (Code syntax) -->
+    <!-- (Code syntax) highlight CSS -->
     <link rel="stylesheet"
-          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_style }}.min.css">
+          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css">
     
     <title>Hello, world!</title>
   </head>
-
   <body>
 
     <!-- Navigation -->
-    {% include 'shared/navbar_new.html' %}
+    {% include 'shared/navbar.html' %}
 
 
     <!-- Page Content -->   
@@ -35,33 +34,26 @@
 
      <!-- Footer Content -->
     <footer style="padding-top: 650px;">
-      <nav class="navbar navbar-expand-sm sticky-bottom {% if darkmode %} navbar-dark bg-dark {% else %} navbar-light bg-light {% endif %}">
+      <nav class="navbar sticky-bottom navbar-light bg-light">
         <div class="container-fluid">
-            {{ footer | safe }}
+            <p><small>mail to:</small><button type="button" class="btn btn-link"><small>self&commat;linked.page</small></button>
+             &nbsp;| <small>powered by <a href="https://www.python.org/">Python</a>&nbsp;,&nbsp;<a href="https://fastapi.tiangolo.com/">FastAPI</a>&nbsp;,&nbsp;<a href="https://getbootstrap.com/">Bootstrap</a>&nbsp;,&nbsp;and&nbsp;</a><a href="https://obsidian.md/">Obsidian</a>&nbsp;via&nbsp;<a href="https://daringfireball.net/projects/markdown/">markdown</a>.</small></p>
          </div>
          </nav>
     </footer>
 
-    <!-- JavaScript -->
-    <!-- Bootstrap Bundle with Popper -->
+
+    <!-- Optional JavaScript; choose one of the two! -->
+    <!-- Option 1: Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
 
     <!-- Mermaid JS -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000, 'theme': 'default'});</script>
+    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000});</script>
 
-    <!-- highlight JS (Code syntax) -->
+    <!-- (Code syntax) highlight JS -->
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
     <script>hljs.highlightAll();</script>
-    {% if darkmode %}
-     <style>
-       body {
-      color: white;
-      background-color: black;
-       }
-     </style>
-    {% endif %}
 
   </body>
-
 </html>

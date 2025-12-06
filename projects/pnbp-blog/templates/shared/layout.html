@@ -9,13 +9,21 @@
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <!--  -->
+    <link href="{{ url_for('static', path='/css/bootstrap-icons.css') }}" rel="stylesheet">
 
-    <!-- (Code syntax) highlight CSS -->
+    <!-- highlight JS CSS (Code syntax) -->
+    {% if darkmode %}
     <link rel="stylesheet"
-          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css">
+          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_dark }}.min.css">
+    {% else %}
+    <link rel="stylesheet"
+          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_light }}.min.css">
+    {% endif %}
     
     <title>Hello, world!</title>
   </head>
+
   <body>
 
     <!-- Navigation -->
@@ -25,6 +33,7 @@
     <!-- Page Content -->   
     <div class="flex-wrapper" style="padding-top: 10px;">
       <div class="container">
+
        {% block content %}
 
 
@@ -34,26 +43,37 @@
 
      <!-- Footer Content -->
     <footer style="padding-top: 650px;">
-      <nav class="navbar sticky-bottom navbar-light bg-light">
+      <nav class="navbar navbar-expand-sm sticky-bottom {% if darkmode %} navbar-dark bg-dark {% else %} navbar-light bg-light {% endif %}">
         <div class="container-fluid">
-            <p><small>mail to:</small><button type="button" class="btn btn-link"><small>self&commat;linked.page</small></button>
-             &nbsp;| <small>powered by <a href="https://www.python.org/">Python</a>&nbsp;,&nbsp;<a href="https://fastapi.tiangolo.com/">FastAPI</a>&nbsp;,&nbsp;<a href="https://getbootstrap.com/">Bootstrap</a>&nbsp;,&nbsp;and&nbsp;</a><a href="https://obsidian.md/">Obsidian</a>&nbsp;via&nbsp;<a href="https://daringfireball.net/projects/markdown/">markdown</a>.</small></p>
+            {{ FOOTER | safe }}
          </div>
          </nav>
     </footer>
 
-
-    <!-- Optional JavaScript; choose one of the two! -->
-    <!-- Option 1: Bootstrap Bundle with Popper -->
+    <!-- JavaScript -->
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
 
     <!-- Mermaid JS -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000});</script>
-
-    <!-- (Code syntax) highlight JS -->
+    {% if darkmode %}
+    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000, 'theme': '{{ merm_dark }}'});</script>
+    {% else %}
+    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000, 'theme': '{{ merm_light }}'});</script>
+    {% endif %}
+    
+    <!-- highlight JS (Code syntax) -->
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
     <script>hljs.highlightAll();</script>
+    {% if darkmode %}
+     <style>
+       body {
+      color: white;
+      background-color: black;
+       }
+     </style>
+    {% endif %}
 
   </body>
+
 </html>

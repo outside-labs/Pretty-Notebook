@@ -1,6 +1,7 @@
 import os
 import datetime
 import json
+import asyncio
 
 import fastapi
 from fastapi import Depends
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 
 from .auth_api import oauth2_scheme
 
+import aiofiles
 
 
 router = fastapi.APIRouter()
@@ -16,11 +18,17 @@ router = fastapi.APIRouter()
 
 
 class ObsidianBlogLayout(BaseModel):
+	""" """
 	NAV_BRAND: str
-	footer: str
-	hljs_style: str
-	nav_pages: dict
+	NAV_PAGES: dict
+	FOOTER: str
+
 	darkmode: bool 
+	hljs_light: str
+	hljs_dark: str
+	merm_light: str 
+	merm_dark: str
+	
 
 
 async def render_nav(pages: dict):
@@ -57,15 +65,40 @@ async def render_nav(pages: dict):
 	return _nav_pages
 
 
-async def update_layout(NAV_BRAND: str, footer: str, hljs_style: str, nav_pages: dict, darkmode: bool):
+
+async def _open_layout():
+	""" """
+	async with aiofiles.open('blog-settings.json', mode='r') as f:
+		_cont = await f.read()
+		_cont = json.loads(_cont)
+
+	return _cont
+
+async def _get_layout_content():
+	""" """
+	async with aiofiles.open('blog-settings.json', mode='r') as f:
+		_cont = await f.read()
+		# _cont = json.load(f)
+		_cont = json.loads(_cont)
+		_cont['NAV_PAGES'] = await render_nav(_cont['NAV_PAGES'])
+
+	return _cont
+
+
+
+async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, darkmode: bool, 
+							hljs_light: str, hljs_dark: str, merm_light: str, merm_dark: str):
 	""" 
 	"""
 	lout = dict(
 		NAV_BRAND=NAV_BRAND,
-		footer=footer,
-		hljs_style=hljs_style,
-		nav_pages=nav_pages,
-		darkmode=darkmode
+		NAV_PAGES=NAV_PAGES,
+		FOOTER=FOOTER,
+		darkmode=darkmode,
+		hljs_light=hljs_light,
+		hljs_dark=hljs_dark,
+		merm_light=merm_light,
+		merm_dark=merm_dark
 		)
 	
 	with open(os.path.join(f'blog-settings.json'), 'w') as pf:
@@ -75,13 +108,19 @@ async def update_layout(NAV_BRAND: str, footer: str, hljs_style: str, nav_pages:
 
 
 @router.post('/api/layout', name='update_lout', status_code=201, response_model=ObsidianBlogLayout, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
-async def layout_post(lout_sub: ObsidianBlogLayout):
+async def layout_post(lout_in: ObsidianBlogLayout):
 	""" """
-	n = lout_sub.NAV_BRAND
-	f = lout_sub.footer
-	h = lout_sub.hljs_style
-	np = lout_sub.nav_pages
-	dm = lout_sub.darkmode
-	return await update_layout(n, f, h, np, dm)
+	nb = lout_in.NAV_BRAND
+	np = lout_in.NAV_PAGES
+	f = lout_in.FOOTER
+	dm = lout_in.darkmode
+	hll = lout_in.hljs_light
+	hld = lout_in.hljs_dark
+	mml = lout_in.merm_light
+	mmd = lout_in.merm_dark
+	return await update_layout(nb, np, f, dm, hll, hld, mml, mmd)
+
+
+
 
 
