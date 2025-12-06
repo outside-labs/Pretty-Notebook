@@ -66,19 +66,18 @@ async def render_nav(pages: dict):
 
 
 
-async def _open_layout():
+# async def _open_layout():
+# 	""" """
+# 	async with aiofiles.open('blog-settings.json', mode='r') as f:
+# 		_cont = await f.read()
+# 		_cont = json.loads(_cont)
+
+# 	return _cont
+
+async def get_layout_content():
 	""" """
 	async with aiofiles.open('blog-settings.json', mode='r') as f:
 		_cont = await f.read()
-		_cont = json.loads(_cont)
-
-	return _cont
-
-async def _get_layout_content():
-	""" """
-	async with aiofiles.open('blog-settings.json', mode='r') as f:
-		_cont = await f.read()
-		# _cont = json.load(f)
 		_cont = json.loads(_cont)
 		_cont['NAV_PAGES'] = await render_nav(_cont['NAV_PAGES'])
 
