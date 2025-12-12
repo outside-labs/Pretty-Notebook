@@ -2,9 +2,11 @@ import os
 import datetime
 
 import fastapi
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel
 from fastapi import File, UploadFile, Depends
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+
+from pydantic import BaseModel
+
 
 from .auth_api import oauth2_scheme
 
