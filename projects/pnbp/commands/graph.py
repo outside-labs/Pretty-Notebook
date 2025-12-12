@@ -1,6 +1,6 @@
 from string import ascii_uppercase
 
-from models import ObsidianNotebook
+from models import PysidianNotebook
 from wrappers import pass_nb
 
 
@@ -110,7 +110,7 @@ def _create_link_graph(name: str='', nb=None):
 
 if __name__ == '__main__':
 	pass
-	# nb = ObsidianNotebook()
+	# nb = PysidianNotebook()
 	# _create_tag_graph('jots', nb)
 	# _create_link_graph('TODAY', nb)
 

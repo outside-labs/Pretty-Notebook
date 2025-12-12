@@ -12,13 +12,13 @@ import requests
 
 from helpers import (int_link_repl, int_img_repl, int_tag_repl,
 						md_mermaid_repl, md_nakedhref_repl, comment_unescape,
-						_convert_datetime, remove_link_mention)
+						_convert_datetime, remove_link_mention, add_header_attr_list)
 
 
 
-# ObsidianNote = namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'mtime'])
+# PysidianNote = namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'mtime'])
 
-class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks', 'mtime'])):
+class PysidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks', 'mtime'])):
 
 	def __new__(cls, name, md, links, tags, urls, cblocks, mtime):
 		"""
@@ -152,18 +152,18 @@ class ObsidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'c
 
 
 
-class ObsidianNotebook:
+class PysidianNotebook:
 	""" class owned common regex patterns
 	"""
-	OBS_INT_LNK = r'\[\[([^]]+)\]\]'
-	OBS_IMG_LNK = r'!\[\[([^]]+)\]\]'
-	OBS_INT_TAG = r'[^\\]#([A-Za-z]+)' 
+	MDS_INT_LNK = r'\[\[([^]]+)\]\]' 
+	MDS_IMG_LNK = r'!\[\[([^]]+)\]\]'
+	MDS_INT_TAG = r'([^\\)/>\'\w])#([A-Za-z]+)' 
 
 	MD_CODE = r'```([^`]*)```'
 	MD_MERMAID = r'```mermaid([^`]*)```'
 
 	MD_EXT_LINK = r'\[([^]]+)\]\(([^)]+)\)'
-	HTTP_NAKED_LNK = r'[^\(](https?://[^;,\s\]\*]+)'
+	HTTP_NAKED_LNK = r'([^\(])(https?://[^;,\s\]\*]+)'
 
 	COMMIT_TAG = '#public'
 
@@ -196,18 +196,18 @@ class ObsidianNotebook:
 
 	def open_note(self, f):
 		""" """
-		if isinstance(f, ObsidianNote):
+		if isinstance(f, PysidianNote):
 			f = f.name + '.md'
 
 		fname = f.split('.')[0]
 		with open(os.path.join(self.NOTE_PATH, f), 'r') as fo:
 			fo = fo.read()
 
-			n = ObsidianNote(
+			n = PysidianNote(
 				name=fname,
 				md=fo,
-				links=[m.strip() for m in re.findall(self.OBS_INT_LNK, fo)],
-				tags=re.findall(self.OBS_INT_TAG, fo),
+				links=[m.strip() for m in re.findall(self.MDS_INT_LNK, fo)],
+				tags=[m[1] for m in re.findall(self.MDS_INT_TAG, fo)],
 				urls=self.collect_urls(fo),
 				cblocks=re.findall(self.MD_CODE, fo),
 				mtime=datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(self.NOTE_PATH, f)))
@@ -218,8 +218,8 @@ class ObsidianNotebook:
 		return n
 
 	def open_md(self):
-		""" open all files in the Obsidian Notebook path into memory
-			as a list of dicts e.g. {"my note name": ObsidianNote}
+		""" open all files in the intsidian Notebook path into memory
+			as a list of dicts e.g. {"my note name": PysidianNote}
 			available at nb.notes
 		"""
 		for f in os.listdir(self.NOTE_PATH):
@@ -235,16 +235,16 @@ class ObsidianNotebook:
 		if name in self.notes.keys() and not overwrite:
 			raise FileExistsError(f"Cannot generate a new note with name {name}.")
  
-		n = ObsidianNote(name=name, md='', links=[], tags=[], urls=[], cblocks=[], mtime='')
+		n = PysidianNote(name=name, md='', links=[], tags=[], urls=[], cblocks=[], mtime='')
 		n.md_out = md_out
 		n.save(self) # ^^ although instantiated empty, live access to attrs on nb instance
 
 	def get(self, name):
 		"""
 		:param name: name of the note
-		:returns: ObsidianNote instance or None
+		:returns: PysidianNote instance or None
 		"""
-		if isinstance(name, ObsidianNote):
+		if isinstance(name, PysidianNote):
 			n = name
 			return self.notes.get(n.name)
 
@@ -319,7 +319,7 @@ class ObsidianNotebook:
 
 		p = re.compile(self.HTTP_NAKED_LNK)
 		for l in p.findall(note):
-			ext_links.append(l.rstrip('.').rstrip(')'))
+			ext_links.append(l[1].rstrip('.').rstrip(')'))
 
 		# return list(set(ext_links))
 		return ext_links
@@ -329,17 +329,17 @@ class ObsidianNotebook:
 	"""
 	def replace_imglinks(self, note):
 		""" a regex replace mtd """
-		p = re.compile(self.OBS_IMG_LNK)
+		p = re.compile(self.MDS_IMG_LNK)
 		return p.sub(int_img_repl, note)
 
-	def replace_obslinks(self, note):
+	def replace_intlinks(self, note):
 		""" a regex replace mtd """
-		p = re.compile(self.OBS_INT_LNK)
+		p = re.compile(self.MDS_INT_LNK)
 		return p.sub(int_link_repl, note)
 
-	def replace_obstags(self, note):
+	def replace_smdtags(self, note):
 		""" a regex replace mtd """
-		p = re.compile(self.OBS_INT_TAG)
+		p = re.compile(self.MDS_INT_TAG)
 		return p.sub(int_tag_repl, note)
 
 	def replace_mermaid(self, note):
@@ -371,7 +371,35 @@ class ObsidianNotebook:
 
 		return note.md_out
 
+	def add_header_ids(self, note):
+		""" """
+		p = re.compile(r'(#{1,6}\s)(.*)')
 
+		return p.sub(add_header_attr_list, note)
+
+	def replace_strikethrough(self, note):
+		""" """
+		p = re.compile(r'(~~)(.*)(~~)')
+		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
+
+		return p.sub(strike_repl, note)
+
+	def replace_eqhighlight(self, note):
+		""" """
+		p = re.compile(r'(==)(.*)(==)')
+		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
+
+		return p.sub(eqhl_repl, note)
+
+	def adjust_externallinks(self, note):
+		""" """
+		_ext_icon = '<i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>'
+		_add_attrs = 'rel="nofollow" target="_blank"'
+
+		p = re.compile(r'<a href="(.*)">(.*)</a>') # taking advantage of our repl internal linked href='' vs ""
+		extlnk_repl = lambda m: f'<a {_add_attrs} href="{m.group(1)}">{m.group(2)}</a> {_ext_icon}'
+
+		return p.sub(extlnk_repl, note)
 
 	def convert_to_html(self, note):
 		""" apply all the regex method changes to 
@@ -385,14 +413,19 @@ class ObsidianNotebook:
 			note = note.md
 
 		nout = self.replace_imglinks(note)
-		nout = self.replace_obslinks(nout)
-		nout = self.replace_obstags(nout)
+		nout = self.replace_intlinks(nout)
+		nout = self.replace_smdtags(nout)
 		nout = self.replace_mermaid(nout)
 		nout = self.replace_nakedhref(nout)
 
-		nout = md.markdown(nout, extensions=['fenced_code',	'nl2br', 'markdown.extensions.tables'], use_pygments=True)
+		nout = self.add_header_ids(nout)
+
+		nout = md.markdown(nout, extensions=['fenced_code',	'nl2br', 'markdown.extensions.tables', 'attr_list', 'footnotes'], use_pygments=True)
 
 		nout = self.fix_blocked_comments(nout)
+		nout = self.replace_strikethrough(nout)
+		nout = self.replace_eqhighlight(nout)
+		nout = self.adjust_externallinks(nout)
 
 		return nout
 
@@ -413,7 +446,7 @@ class ObsidianNotebook:
 
 				print(f'\t{n.name} ---> {self.HTML_PATH}')
 
-	""" obsidian-blog api connection methods:
+	""" pysidian/blog api connection methods:
 	"""
 	def get_headers(self):
 		""" """
@@ -439,14 +472,14 @@ class ObsidianNotebook:
 
 	def get_authed_user(self):
 		""" """
-		h = nb.get_headers()
+		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api/users/me', headers=h)
 		print(r)
 		print(r.json())
 
 	def get_api_home(self):
 		""" """
-		h = nb.get_headers()
+		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api', headers=h)
 		# print(r.text)
 		# print(r.json())
@@ -525,7 +558,7 @@ class ObsidianNotebook:
 				
 				print(f'\t{n.name} -> {r}')
 
-				for img in re.findall(self.OBS_IMG_LNK, n.md):
+				for img in re.findall(self.MDS_IMG_LNK, n.md):
 					if not img in pub_img_names:
 						try:
 							f = open(os.path.join(self.IMG_PATH, img), 'rb')
@@ -551,6 +584,42 @@ class ObsidianNotebook:
 			# print(json.load(f)
 			r = requests.post(f'{self.API_BASE}/api/layout', json=json.load(f), headers=h)
 			print(r)
+
+	def create_api_user(self, username):
+		""" """
+		password_1 = getpass()
+		password_2 = getpass()
+		if not password_1 == password_2:
+			print('passwords do not match...')
+			self.create_api_user(username)
+
+		u = {
+			"username": username,
+			"password_hash": password_1
+			}
+
+		h = self.get_headers()
+		# del h['authorization']
+		h['authorization'] = 'Bearer pancakebatter'
+		print(h)
+		r = requests.post(f'{self.API_BASE}/api/users', json=u, headers=h)
+		print(r)
+		print(r.text)
+		print(r.json())
+	
+	def reset_api_password(self):
+		""" """
+		p_1 = getpass() # a11assa11
+		p_2 = getpass()
+		if not p_1 == p_1:
+			print('passwords do not match...')
+			self.reset_api_password()
+
+		p = {"password_hash": p_1}
+		h = self.get_headers()
+		r = requests.post(f'{self.API_BASE}/api/users/me', json=p, headers=h)
+		print(r)
+		print(r.json())
 
 
 

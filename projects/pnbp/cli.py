@@ -5,7 +5,7 @@ import inspect
 
 import click
 
-from models import ObsidianNotebook, ObsidianNote
+from models import PysidianNotebook
 from wrappers import arrow_call
 
 import commands.cleanup as clea
@@ -42,7 +42,7 @@ def nb_get_help():
 
 
 
-""" obsidian-blog api connection:
+""" pysidian/blog api connection:
 """
 @cli.command()
 def commit_local_html():
@@ -51,17 +51,25 @@ def commit_local_html():
 		and not a concurrent localhost instance...)
 	"""
 	# ^^ docstring == help message
-	nb = ObsidianNotebook()
+	nb = PysidianNotebook()
 	nb.write_commits_to_local_html()
 
 
 @cli.command()
 def commit_remote_api():
 	""" if note contains #public, -> 
-		selective update POST to obsidian-blog api
+		selective update POST to pysidian/blog api
 		{API_BASE}/api/publishment
 	"""
-	nb = ObsidianNotebook()
+	nb = PysidianNotebook()
+	nb.post_commits_to_blog_api()
+
+@cli.command()
+def commit_local_api():
+	""" commit -> localhost pysidian/blog/ instance
+	""" # a convenience command
+	nb = PysidianNotebook()
+	nb.API_BASE = 'http://127.0.0.1:8000'
 	nb.post_commits_to_blog_api()
 
 
@@ -117,7 +125,7 @@ def create_all_commands():
 		if inspect.isfunction(v) and k.startswith('_'):
 			pass
 	# -> actually, lets be picky:
-	create_command(tasks._obsidian_task_settle)
+	create_command(tasks._nb_task_settle)
 
 	# print(comm)
 	create_command(comm._git_commit_notebook)
@@ -128,6 +136,7 @@ def create_all_commands():
 	create_command(clea._add_leading_newline)
 	create_command(clea._link_unlinked_mentions)
 	create_command(clea._remove_nonexistant_links)
+	create_command(new._test_path)
 
 
 

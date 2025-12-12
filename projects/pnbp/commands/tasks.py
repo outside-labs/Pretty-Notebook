@@ -1,7 +1,7 @@
 import re
 import datetime
 
-from models import ObsidianNotebook, ObsidianNote
+from models import PysidianNotebook, PysidianNote
 from wrappers import pass_nb
 from helpers import md_task_uncheck, md_reoccurring_task_uncheck
 
@@ -55,7 +55,7 @@ def record_complete_tasks(c_tasks:list=[], nb=None):
 
 
 @pass_nb
-def _uncheck_complete_tasks(note: ObsidianNote=None, nb=None):
+def _uncheck_complete_tasks(note: PysidianNote=None, nb=None):
 	""" - [x] taskname 
 		-> _complete
 		-> - [ ] taskname 
@@ -78,7 +78,7 @@ def _uncheck_complete_tasks(note: ObsidianNote=None, nb=None):
 
 
 @pass_nb
-def _complete_complete_tasks(note: ObsidianNote=None, nb=None):
+def _complete_complete_tasks(note: PysidianNote=None, nb=None):
 	""" #todo #complete -> _complete && delete
 	"""
 	ns = note.md.splitlines()
@@ -106,7 +106,7 @@ def _complete_complete_tasks(note: ObsidianNote=None, nb=None):
 
 
 @pass_nb
-def _reset_reoccurring_param_tasks(note: ObsidianNote=None, nb=None):
+def _reset_reoccurring_param_tasks(note: PysidianNote=None, nb=None):
 	""" - [x] taskname (var1: x, )
 		-> _complete
 		-> - [ ] taskname (var1: , )
@@ -185,7 +185,7 @@ def _reset_reoccurring_param_tasks(note: ObsidianNote=None, nb=None):
 """ commands -> cli
 """
 @pass_nb
-def _obsidian_task_settle(nb=None):
+def _nb_task_settle(nb=None):
 	""" all the task things
 	"""
 	tasked = [n for n in nb.get_tagged('#tasks')]
@@ -204,6 +204,7 @@ def _collect_tasks_note(nb=None):
 	tasked = [n for n in nb.get_tagged('#tasks')]
 	ns = '\n'.join([f'[[{n.name}]]' for n in tasked])
 	nb.generate_note('tasks', md_out=ns, overwrite=True)
+
 
 """
 """
@@ -249,7 +250,7 @@ def _parse_today_note(nb=None):
 
 if __name__ == '__main__':
 	pass
-	# nb = ObsidianNotebook()
+	# nb = PysidianNotebook()
 	# _parse_today_note(nb)
 
 

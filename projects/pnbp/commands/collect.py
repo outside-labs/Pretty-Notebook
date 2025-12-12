@@ -3,11 +3,11 @@ import re
 import inspect
 import subprocess
 
-from models import ObsidianNotebook
+from models import PysidianNotebook
 from wrappers import pass_nb, arrow_call
 
 from .tasks import _collect_tasks_note # _collect imports and local defs 
-from .graph import _collect_public_graph # get called automatically via obsidian_collect_all
+from .graph import _collect_public_graph # get called automatically via nb_collect_all
 
 
 """ commands writing collections to specific notebook files:
@@ -186,15 +186,15 @@ def _collect_subl_projs(nb=None):
 		if fn.endswith('.sublime-project'):
 			projs.append(fn)
 
-	obsidianmd = "\n\n".join([f'![[{p}]]' for p in projs])
+	nmd = "\n\n".join([f'![[{p}]]' for p in projs])
 
-	nb.generate_note('sublime-project', obsidianmd, overwrite=True)
+	nb.generate_note('sublime-project', nmd, overwrite=True)
 
 
 
 @arrow_call
 @pass_nb
-def _obsidian_collect_all(nb=None):
+def _nb_collect_all(nb=None):
 	""" perform all collect- commands in succession
 	"""
 	for k, func in globals().items():

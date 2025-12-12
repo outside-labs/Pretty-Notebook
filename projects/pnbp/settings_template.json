@@ -4,5 +4,6 @@
     "HTML_PATH": "/users/alice/oblog",
     "VENV_PATH": "/users/alice/.envs/venv/",
     "API_BASE": "http://127.0.0.1:8000",
-    "API_TOKEN": "some-big-long-string-thing-that-aint-this-bruhs-who-parse"
+    "API_TOKEN": "some-big-long-string-thing-that-aint-this-bruhs-who-parse",
+    "PUB_LNK_ONLY": false
 }

@@ -1,6 +1,6 @@
 import re
 
-from models import ObsidianNotebook, ObsidianNote
+from models import PysidianNotebook, PysidianNote
 from wrappers import arrow_call, pass_nb
 from helpers import str_strip_link, add_link_mention
 
@@ -12,7 +12,7 @@ def _fix_link_spacing(nb=None):
 	""" [[ LINK ]] -> [[LINK]]
 		useful for finiky apps like 1Writer
 	"""
-	p = re.compile(nb.OBS_INT_LNK)
+	p = re.compile(nb.MDS_INT_LNK)
 
 	for n in nb.notes.values():
 		if n.name == 'test1':
@@ -48,7 +48,7 @@ def _remove_leading_newline(nb=None):
 """
 """
 @pass_nb
-def _link_unlinked_mentions(note:ObsidianNote, nb=None):
+def _link_unlinked_mentions(note:PysidianNote, nb=None):
 	""" ...this is my favorite note -> this is [[my favorite note]]
 	"""
 	n = note
@@ -96,7 +96,7 @@ def _link_unlinked_mentions(note:ObsidianNote, nb=None):
 
 
 @pass_nb
-def _remove_nonexistant_links(note=ObsidianNote, nb=None):
+def _remove_nonexistant_links(note=PysidianNote, nb=None):
 	""" [[A Fake Note]] link -> A Fake Note link 
 	"""
 	remv = []

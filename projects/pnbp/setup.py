@@ -15,7 +15,7 @@ for v in cli.__dict__.values():
 
 
 setup(
-	name='obsidian-local',
+	name='pysidian-local',
 	version='0.4.0',
 	py_modules=['cli'],
 	install_requires=[
@@ -26,7 +26,7 @@ setup(
 )
 
 # setup(
-# 	name='obsidian-local',
+# 	name='pysidian-local',
 # 	version='0.3.0',
 # 	py_modules=['cli'],
 # 	install_requires=[
@@ -34,10 +34,10 @@ setup(
 # 	],
 # 	entry_points='''
 # 		[console_scripts]
-# 		obsidian-collect-all=cli:obsidian_collect_all
-# 		obsidian-delete-empty=cli:delete_all_empty
-# 		obsidian-commit-local=cli:commit_local_html
-# 		obsidian-commit-remote=cli:commit_remote_api
-# 		obsidian-task-settle=cli:obsidian_task_settle
+# 		nb-collect-all=cli:nb_collect_all
+# 		delete-all-empty=cli:delete_all_empty
+# 		commit-local-html=cli:commit_local_html
+# 		commit-remote-api=cli:commit_remote_api
+# 		nb-task-settle=cli:nb_task_settle
 # 	''',
 # )

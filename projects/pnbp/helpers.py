@@ -5,12 +5,16 @@ import datetime
 	re.sub str replacement functions
 """
 def int_link_repl(matchobj):
-	""" regex replacement function for [[]] internal Obsidian links -> mysite.com/single-slug
+	""" regex replacement function for [[]] internal wiki links -> mysite.com/single-slug
 	"""
-	return f"<a href='/{matchobj.group(1).strip().replace('_', '-').replace(' ', '-').lower()}'>{matchobj.group(1)}</a>"
+	href = matchobj.group(1).strip().replace('_', '-').replace(' ', '-').lower()
+	if not href.startswith('#'):
+		href = f'/{href}'
+
+	return f"<a href='{href}'>{matchobj.group(1)}</a>"
 
 def int_img_repl(matchobj):
-	""" regex replacement function for ![[]] internal Obsidian links -> mysite.com/single-slug
+	""" regex replacement function for ![[]] internal image links -> mysite.com/single-slug
 		todo: accept clean ( .png | .jpg ||)
 	"""
 	return f"""<img class="img-fluid" src='static/imgs/{matchobj.group(1)}'>"""
@@ -20,7 +24,7 @@ def int_tag_repl(matchobj):
 		# space means md header1
 		-> \\#tag
 	"""
-	return f"\\#{matchobj.group(1)}"
+	return f"{matchobj.group(1)}\\#{matchobj.group(2)}"
 
 def md_mermaid_repl(matchobj):
 	""" required "scripts" in blog/static/layout.html 
@@ -33,7 +37,7 @@ def md_nakedhref_repl(matchobj):
 		markdown syntax so that on md -> html, these links are 
 		then rendered clickable on md.markdown()
 	"""
-	return f"[{matchobj.group(1)}]({matchobj.group(1)})"
+	return f"{matchobj.group(1)}[{matchobj.group(2)}]({matchobj.group(2)})"
 
 def comment_unescape(matchobj):
 	""" where tags are escaped by int_tag_repl,
@@ -43,6 +47,13 @@ def comment_unescape(matchobj):
 	_code = matchobj.group(2).replace('\#', '#')
 
 	return f'<code class="{matchobj.group(1)}">{_code}</code>'
+
+def add_header_attr_list(matchobj):
+	""" """
+	slugged = matchobj.group(2).strip().replace('_', '-').replace(' ', '-').lower()
+	attr_list = '{: ' + f'id="{slugged}"' + ' }'
+
+	return f'{matchobj.group(1)}{matchobj.group(2)} {attr_list}'
 
 
 """ cleanup re.sub str replacement functions

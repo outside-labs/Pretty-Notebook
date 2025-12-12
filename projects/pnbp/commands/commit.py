@@ -1,7 +1,7 @@
 import datetime
 import subprocess
 
-from models import ObsidianNotebook
+# from models import PysidianNotebook
 from wrappers import pass_nb, arrow_call
 
 
