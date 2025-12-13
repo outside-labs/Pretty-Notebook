@@ -21,7 +21,7 @@ router = APIRouter()
 JWT_SECRET = config('JWT_SECRET')
 JWT_ALGO = config('JWT_ALGO')
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/token')
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token', auto_error=False)
 
 
@@ -87,9 +87,11 @@ async def authenticate_user(username: str, password: str):
 		return False
 	return user
 
-@router.post('/token')
+@router.post('/api/token')
 async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()): # form_data depends on OAuth2PasswordRequestForm
 	""" Generate Token """
+	print(form_data)
+
 	user = await authenticate_user(username=form_data.username, password=form_data.password)
 	if not user:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
