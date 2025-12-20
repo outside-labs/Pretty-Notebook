@@ -1,11 +1,7 @@
 import re
 
 import requests
-
 from bs4 import BeautifulSoup
-
-# from models import PysidianNotebook
-# nb = PysidianNotebook()
 
 h = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36"}
 

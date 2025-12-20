@@ -3,12 +3,12 @@ import re
 import inspect
 import subprocess
 
-from models import PysidianNotebook
-from wrappers import pass_nb, arrow_call
+# from pnbp.models import Notebook
+from pnbp.wrappers import pass_nb, arrow_call
 
 from .tasks import _collect_tasks_note # _collect imports and local defs 
 from .graph import _collect_public_graph # get called automatically via nb_collect_all
-
+from .subl import _collect_subl_projs
 
 """ commands writing collections to specific notebook files:
 """
@@ -177,18 +177,7 @@ def _collect_all_tags(nb=None):
 		)
 
 
-@pass_nb
-def _collect_subl_projs(nb=None):
-	""" notebook/example.sublime_project -> sublime-project.md
-	"""
-	projs = []
-	for fn in os.listdir(nb.NOTE_PATH):
-		if fn.endswith('.sublime-project'):
-			projs.append(fn)
 
-	nmd = "\n\n".join([f'![[{p}]]' for p in projs])
-
-	nb.generate_note('sublime-project', nmd, overwrite=True)
 
 
 

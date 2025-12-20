@@ -1,8 +1,8 @@
 import re
 
-from models import PysidianNotebook, PysidianNote
-from wrappers import arrow_call, pass_nb
-from helpers import str_strip_link, add_link_mention
+from pnbp.models import Note
+from pnbp.wrappers import arrow_call, pass_nb
+from pnbp.helpers import str_strip_link, add_link_mention
 
 
 """
@@ -48,7 +48,7 @@ def _remove_leading_newline(nb=None):
 """
 """
 @pass_nb
-def _link_unlinked_mentions(note:PysidianNote, nb=None):
+def _link_unlinked_mentions(note:Note, nb=None):
 	""" ...this is my favorite note -> this is [[my favorite note]]
 	"""
 	n = note
@@ -96,7 +96,7 @@ def _link_unlinked_mentions(note:PysidianNote, nb=None):
 
 
 @pass_nb
-def _remove_nonexistant_links(note=PysidianNote, nb=None):
+def _remove_nonexistant_links(note=Note, nb=None):
 	""" [[A Fake Note]] link -> A Fake Note link 
 	"""
 	remv = []

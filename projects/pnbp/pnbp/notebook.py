@@ -1,158 +1,22 @@
 import os
 import re
-import subprocess
 import json
 import datetime
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 from getpass import getpass
 # from pathlib import Path
 
 import markdown as md
 import requests
 
-from helpers import (int_link_repl, int_img_repl, int_tag_repl,
+from .note import Note
+from .helpers import (int_link_repl, int_img_repl, int_tag_repl,
 						md_mermaid_repl, md_nakedhref_repl, comment_unescape,
-						_convert_datetime, remove_link_mention, add_header_attr_list)
+						_convert_datetime, add_header_attr_list)
 
 
 
-# PysidianNote = namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'mtime'])
-
-class PysidianNote(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks', 'mtime'])):
-
-	def __new__(cls, name, md, links, tags, urls, cblocks, mtime):
-		"""
-		:param str name: the filename stripped of .md
-		:param str md: the in mem note context read from file
-		:param list links: all regex found [[links]] 's in md
-		:param list tags: all regex found #tag 's in md
-		:param list urls: all regex found http/https links in md
-		:param list cblocks: all regex found ```backtick code blocks```
-		:param str mtime: the local md most recent modification date
-			-> used against remote blog api to determine if POST required
-		"""
-		all_tags = [f'#{t}' for t in tags]
-
-		_tags = list(set(all_tags.copy()))
-		_remove = defaultdict(int)
-		for t in _tags:
-			for l in urls:
-				if (num_occur := len(re.findall(t, l))):
-					_remove[t] += num_occur
-			for b in cblocks:
-				if (num_occur := len(re.findall(t, b))):
-					_remove[t] += num_occur
-
-		for tag, occ in _remove.items():
-			for x in range(occ):
-				if tag in all_tags:
-					all_tags.remove(tag)
-		
-		tags = list(set(all_tags)) # only legitimate #tag's remain
-		urls = list(set(urls)) # <- doing here so that duplicate urls don't create tags
-		links = list(set(links))
-
-		return super().__new__(cls, name, md, links, tags, urls, cblocks, mtime)
-
-	def __init__(self, *args, **kwargs):
-		""" 
-		:param md_out: safety first, make it hard to overwrite any note file
-			-> set self.md_out = "as example, correct as is string instance"
-			-> update file via self.save()
-		"""
-		self.md_out = '' 	
-
-	def __str__(self):
-		""" """
-		return self.name
-
-	@property
-	def slugname(self):
-		""" My Note Name -> my-note-name
-		"""
-		_name = re.sub(r'[^a-zA-Z1-9\s_-]+', '', self.name)
-		_name = _name.lower().replace(' ', '-').replace('_', '-')
-		slugname = "-".join([w for w in _name.split('-') if w])
-		return slugname
-
-	@property
-	def sections(self):
-		"""	"""
-		return [x.strip() for x in self.md.split('---')]
-
-	@property
-	def header(self):
-		""" """
-		if not re.match(r'^Links', self.sections[0]):
-			return None
-
-		return self.sections[0]
-
-	def save(self, nb):
-		""" save note to .md file on NOTE_PATH,
-			if provided self.md_out has been updated.
-		"""
-		if not isinstance(self.md_out, str):
-			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
-
-		if self.md_out:
-			print(f'saving {self.name}...\n')
-			# print(f'--->\n{self.md_out}')
-			with open(os.path.join(nb.NOTE_PATH, self.name+'.md'), 'w') as nf:
-				nf.write(self.md_out)
-
-			return nb.open_note(self)
-
-	def is_tagged(self, tag: str)->bool:
-		""" 
-		:param tag: the #tag in question
-		"""
-		tag = f"#{tag.lstrip('#')}" #failsafe
-
-		if tag in self.tags:
-			return True
-		return False
-
-	def is_linked(self, link: str="", at_all=False)->bool:
-		""" 
-		"""
-		if at_all and self.links:
-			return True
-
-		if not link and not at_all:
-			raise ValueError("Did you mean to call is_linked(at_all=True)?\nOtherwise, provide is_linked(link='internal-link-looking-for')")
-
-		if link in self.links:
-			return True
-
-		return False
-
-	def remove_links(self, links):
-		""" 
-		"""
-		ns = self.md
-		links = [l for l in links if not '.' in l] # keep images!
-		
-		for name in links:
-			p = re.compile(fr'(\[\[\s?)({name})(\s?\]\])')
-
-			if (ml := p.findall(ns)):
-				for m in ml:
-					print(f'[[{m[1]}]] --> ', m[1])
-
-			ns = p.sub(remove_link_mention, ns)
-
-		# print(ns)
-		self.md_out = ns
-
-
-
-
-
-
-
-
-class PysidianNotebook:
+class Notebook:
 	""" class owned common regex patterns
 	"""
 	MDS_INT_LNK = r'\[\[([^]]+)\]\]' 
@@ -169,7 +33,7 @@ class PysidianNotebook:
 
 	def __init__(self):
 
-		self.conf_file = os.path.join(os.path.dirname(__file__), 'settings.json')
+		self.conf_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'settings.json')
 		# conf_file = Path(__file__).parent / 'settings.json' # same thing
 		# with conf_file.open() as cf:
 
@@ -187,6 +51,8 @@ class PysidianNotebook:
 		self.API_TOKEN = self.config.get('API_TOKEN')
 		self.PUB_LNK_ONLY = self.config.get('PUB_LNK_ONLY')
 
+		self.VENV_PATH = self.config.get('VENV_PATH') # see commands/subl.py
+
 		self.notes = defaultdict()
 		self.open_md()
 
@@ -196,14 +62,14 @@ class PysidianNotebook:
 
 	def open_note(self, f):
 		""" """
-		if isinstance(f, PysidianNote):
+		if isinstance(f, Note):
 			f = f.name + '.md'
 
 		fname = f.split('.')[0]
 		with open(os.path.join(self.NOTE_PATH, f), 'r') as fo:
 			fo = fo.read()
 
-			n = PysidianNote(
+			n = Note(
 				name=fname,
 				md=fo,
 				links=[m.strip() for m in re.findall(self.MDS_INT_LNK, fo)],
@@ -219,7 +85,7 @@ class PysidianNotebook:
 
 	def open_md(self):
 		""" open all files in the intsidian Notebook path into memory
-			as a list of dicts e.g. {"my note name": PysidianNote}
+			as a list of dicts e.g. {"my note name": Note}
 			available at nb.notes
 		"""
 		for f in os.listdir(self.NOTE_PATH):
@@ -235,16 +101,16 @@ class PysidianNotebook:
 		if name in self.notes.keys() and not overwrite:
 			raise FileExistsError(f"Cannot generate a new note with name {name}.")
  
-		n = PysidianNote(name=name, md='', links=[], tags=[], urls=[], cblocks=[], mtime='')
+		n = Note(name=name, md='', links=[], tags=[], urls=[], cblocks=[], mtime='')
 		n.md_out = md_out
 		n.save(self) # ^^ although instantiated empty, live access to attrs on nb instance
 
 	def get(self, name):
 		"""
 		:param name: name of the note
-		:returns: PysidianNote instance or None
+		:returns: Note instance or None
 		"""
-		if isinstance(name, PysidianNote):
+		if isinstance(name, Note):
 			n = name
 			return self.notes.get(n.name)
 
@@ -446,7 +312,7 @@ class PysidianNotebook:
 
 				print(f'\t{n.name} ---> {self.HTML_PATH}')
 
-	""" pysidian/blog api connection methods:
+	""" ../blog/ api connection methods:
 	"""
 	def get_headers(self):
 		""" """
@@ -458,8 +324,10 @@ class PysidianNotebook:
 		p = getpass()
 		h = self.get_headers()
 		h.update({'Content-Type': 'application/x-www-form-urlencoded'})
-		r = requests.post(f'{self.API_BASE}/token', data={'username': u, 'password': p}, headers=h)
+		r = requests.post(f'{self.API_BASE}/api/token', data={'username': u, 'password': p}, headers=h)
 		print(r)
+		print(r.text)
+		print(r.json())
 		if r.status_code == 200:
 			self.API_TOKEN = r.json()['access_token']
 
@@ -491,6 +359,7 @@ class PysidianNotebook:
 		"""
 		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api/publishments', headers=h)
+		print(r)
 		pub_data = r.json()
 
 		nameMtime = {}
@@ -600,7 +469,7 @@ class PysidianNotebook:
 
 		h = self.get_headers()
 		# del h['authorization']
-		h['authorization'] = 'Bearer pancakebatter'
+		# h['authorization'] = 'Bearer pancakebatter'
 		print(h)
 		r = requests.post(f'{self.API_BASE}/api/users', json=u, headers=h)
 		print(r)
@@ -620,29 +489,3 @@ class PysidianNotebook:
 		r = requests.post(f'{self.API_BASE}/api/users/me', json=p, headers=h)
 		print(r)
 		print(r.json())
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if __name__ == '__main__':
-	pass
-
-
-
-
-
-
-
-

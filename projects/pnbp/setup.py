@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_namespace_packages
 
 from click import Command
 
@@ -15,29 +15,16 @@ for v in cli.__dict__.values():
 
 
 setup(
-	name='pysidian-local',
-	version='0.4.0',
+	name='pysidian',
+	version='0.6.0',
 	py_modules=['cli'],
 	install_requires=[
 		'Click',
+		'markdown',
 		'requests'
 	],
 	entry_points=entry_points,
+	package_dir={"pnbp": "pnbp"},
+	packages=find_namespace_packages(),
 )
 
-# setup(
-# 	name='pysidian-local',
-# 	version='0.3.0',
-# 	py_modules=['cli'],
-# 	install_requires=[
-# 		'Click',
-# 	],
-# 	entry_points='''
-# 		[console_scripts]
-# 		nb-collect-all=cli:nb_collect_all
-# 		delete-all-empty=cli:delete_all_empty
-# 		commit-local-html=cli:commit_local_html
-# 		commit-remote-api=cli:commit_remote_api
-# 		nb-task-settle=cli:nb_task_settle
-# 	''',
-# )

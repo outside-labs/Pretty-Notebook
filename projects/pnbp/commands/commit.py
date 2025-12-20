@@ -1,8 +1,11 @@
 import datetime
 import subprocess
+import os
 
-# from models import PysidianNotebook
-from wrappers import pass_nb, arrow_call
+import click 
+
+# from pnbp.models import Notebook
+from pnbp.wrappers import pass_nb, arrow_call
 
 
 
@@ -32,6 +35,26 @@ def _git_commit_notebook(nb=None):
 # 	ns = subprocess.run(['git', 'diff', '-C', nb.NOTE_PATH], capture_output=True).stdout.decode('utf-8').strip()
 # 	nb.generate_note('all diff', ns, overwrite=True)
 
+
+@click.option('--path', default='.', help='File path to project directory')
+def _init_git_ignore(path):
+	""" write .gitignore w/ essentials to curr directory or --path specified
+	"""
+	defaultTxt = """.DS_Store
+**__pycache__/**
+*.sqlite3
+*.sublime-*
+*.pkl
+*.py[co]
+**/migrations/0*.py
+*egg-info/**
+settings.json
+.env
+	"""
+	with open(os.path.join(path, '.gitignore'), 'w') as gitignore:
+		gitignore.write(defaultTxt)
+		
+	click.echo(f'.gitignore --> {path}')
 
 
 

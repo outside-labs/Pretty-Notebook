@@ -2,8 +2,9 @@
 import re 
 import os
 
-from models import PysidianNotebook, PysidianNote
-from wrappers import arrow_call, pass_nb
+from pnbp.models import Notebook, Note
+from pnbp.wrappers import arrow_call, pass_nb
+
 import click
 
 """ just a clean place to build 
@@ -22,10 +23,9 @@ def _symlink_shared(nb=None):
 	shared = [n for n in nb.notes.values() if n.is_linked('shared')]
 	for n in shared:
 		# if tag in usernames <- 
-		u = 'caw5'
+		u = 'foobaru'
+		x = subprocess.run(['ln', '-s', os.path.join(nb.NOTE_PATH, 'shared', u, ), nb.NOTE_PATH], capture_output=True)
 
-		# x = subprocess.run(['ln', '-s', os.path.join(nb.NOTE_PATH, 'shared', u, ), nb.NOTE_PATH], capture_output=True)
-	pass
 
 
 
@@ -33,7 +33,7 @@ def _symlink_shared(nb=None):
 
 if __name__ == '__main__':
 	pass
-	# nb = PysidianNotebook()
+	# nb = Notebook()
 
 
 

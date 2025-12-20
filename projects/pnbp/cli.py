@@ -5,14 +5,15 @@ import inspect
 
 import click
 
-from models import PysidianNotebook
-from wrappers import arrow_call
+from pnbp.models import Notebook
+from pnbp.wrappers import arrow_call
 
-import commands.cleanup as clea
-import commands.commit as comm
-import commands.collect as coll
-import commands.tasks as tasks
-import commands.new as new
+from commands import cleanup as clea
+from commands import commit as comm
+from commands import collect as coll
+from commands import tasks
+from commands import new
+from commands import subl
 
 
 
@@ -42,7 +43,7 @@ def nb_get_help():
 
 
 
-""" pysidian/blog api connection:
+""" ../blog/ api connection:
 """
 @cli.command()
 def commit_local_html():
@@ -51,24 +52,24 @@ def commit_local_html():
 		and not a concurrent localhost instance...)
 	"""
 	# ^^ docstring == help message
-	nb = PysidianNotebook()
+	nb = Notebook()
 	nb.write_commits_to_local_html()
 
 
 @cli.command()
 def commit_remote_api():
 	""" if note contains #public, -> 
-		selective update POST to pysidian/blog api
+		selective update POST to ../blog/ api
 		{API_BASE}/api/publishment
 	"""
-	nb = PysidianNotebook()
+	nb = Notebook()
 	nb.post_commits_to_blog_api()
 
 @cli.command()
 def commit_local_api():
-	""" commit -> localhost pysidian/blog/ instance
+	""" commit -> localhost ../blog/ instance
 	""" # a convenience command
-	nb = PysidianNotebook()
+	nb = Notebook()
 	nb.API_BASE = 'http://127.0.0.1:8000'
 	nb.post_commits_to_blog_api()
 
@@ -129,6 +130,7 @@ def create_all_commands():
 
 	# print(comm)
 	create_command(comm._git_commit_notebook)
+	create_command(comm._init_git_ignore)
 
 	# print(clea)
 	create_command(clea._fix_link_spacing)
@@ -137,6 +139,8 @@ def create_all_commands():
 	create_command(clea._link_unlinked_mentions)
 	create_command(clea._remove_nonexistant_links)
 	create_command(new._test_path)
+
+	create_command(subl._subl_init)
 
 
 

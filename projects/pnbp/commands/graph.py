@@ -1,7 +1,7 @@
 from string import ascii_uppercase
 
-from models import PysidianNotebook
-from wrappers import pass_nb
+from pnbp.models import Notebook
+from pnbp.wrappers import pass_nb
 
 
 
@@ -110,7 +110,7 @@ def _create_link_graph(name: str='', nb=None):
 
 if __name__ == '__main__':
 	pass
-	# nb = PysidianNotebook()
+	# nb = Notebook()
 	# _create_tag_graph('jots', nb)
 	# _create_link_graph('TODAY', nb)
 

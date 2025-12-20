@@ -1,9 +1,9 @@
 import re
 import datetime
 
-from models import PysidianNotebook, PysidianNote
-from wrappers import pass_nb
-from helpers import md_task_uncheck, md_reoccurring_task_uncheck
+from pnbp.models import Notebook, Note
+from pnbp.wrappers import pass_nb
+from pnbp.helpers import md_task_uncheck, md_reoccurring_task_uncheck
 
 """
 	- #todo a task to record _complete and perm remove w/ #complete
@@ -55,7 +55,7 @@ def record_complete_tasks(c_tasks:list=[], nb=None):
 
 
 @pass_nb
-def _uncheck_complete_tasks(note: PysidianNote=None, nb=None):
+def _uncheck_complete_tasks(note: Note=None, nb=None):
 	""" - [x] taskname 
 		-> _complete
 		-> - [ ] taskname 
@@ -78,7 +78,7 @@ def _uncheck_complete_tasks(note: PysidianNote=None, nb=None):
 
 
 @pass_nb
-def _complete_complete_tasks(note: PysidianNote=None, nb=None):
+def _complete_complete_tasks(note: Note=None, nb=None):
 	""" #todo #complete -> _complete && delete
 	"""
 	ns = note.md.splitlines()
@@ -106,7 +106,7 @@ def _complete_complete_tasks(note: PysidianNote=None, nb=None):
 
 
 @pass_nb
-def _reset_reoccurring_param_tasks(note: PysidianNote=None, nb=None):
+def _reset_reoccurring_param_tasks(note: Note=None, nb=None):
 	""" - [x] taskname (var1: x, )
 		-> _complete
 		-> - [ ] taskname (var1: , )
@@ -250,7 +250,7 @@ def _parse_today_note(nb=None):
 
 if __name__ == '__main__':
 	pass
-	# nb = PysidianNotebook()
+	# nb = Notebook()
 	# _parse_today_note(nb)
 
 

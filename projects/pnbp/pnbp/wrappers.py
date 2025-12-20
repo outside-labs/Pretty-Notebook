@@ -1,14 +1,14 @@
 import inspect
 from functools import wraps
 
-from models import PysidianNotebook
+from .models import Notebook
 
 
 def pass_nb(func):
 	""" custom non-click pass_param decorator,
 		maily used to boilerplate each func rather than:
 		```if not nb:
-			nb = PysidianNotebook()```
+			nb = Notebook()```
 		the point of which is to not be re-opening all .md
 		unnecessarily when building commands that chain together.
 		will handle regardless if nb passed via arg or kwarg
@@ -30,15 +30,15 @@ def pass_nb(func):
 		# print('kwargs', kwargs)
 		nb = None # assume
 		for i, a in enumerate(args):
-			if isinstance(a, PysidianNotebook):
+			if isinstance(a, Notebook):
 				nb = args.pop(i)
 
 		if not 'nb' in kwargs.keys():
 			kwargs.update({'nb': nb})
 
-		if not isinstance(kwargs['nb'], PysidianNotebook):
+		if not isinstance(kwargs['nb'], Notebook):
 			print('fresh nb open by pass_ wrapping...')
-			kwargs['nb'] = PysidianNotebook()
+			kwargs['nb'] = Notebook()
 
 		if (note := kwargs.get('note')):
 			print('**', note)
