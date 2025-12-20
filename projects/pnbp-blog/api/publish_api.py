@@ -14,8 +14,8 @@ from .auth_api import oauth2_scheme
 
 router = fastapi.APIRouter()
 
-PUB_PATH = 'templates/blog/'
-IMG_PATH = 'static/imgs/'
+PUB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates', 'blog')
+IMG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'imgs')
 
 
 
@@ -43,6 +43,7 @@ async def add_publishment(name: str, content: str) -> Publishment:
 
 	return pub
 
+
 @router.post('/api/publishment', name='add_pub', status_code=201, response_model=Publishment, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
 async def publishment_post(pub_submittal: Publishment):
 	""" """
@@ -55,7 +56,6 @@ async def publishment_post(pub_submittal: Publishment):
 @router.post('/api/image', name='add_img', status_code=201, dependencies=[Depends(oauth2_scheme)])
 async def image_post(file: UploadFile = File(...)):
 	""" """
-	# file.filename = f'{name}.jpg'
 	contents = await file.read()	
 	with open(os.path.join(IMG_PATH, file.filename), 'wb') as f:
 		f.write(contents)
@@ -99,10 +99,9 @@ async def publishment_delete(pub_name: str):
 
 
 
-@router.get('/api/testdepends', dependencies=[Depends(oauth2_scheme)])
-async def test_depends(x: str):
-	""" """
-	return {'test': f'success {x}'}
+
+
+
 
 
 

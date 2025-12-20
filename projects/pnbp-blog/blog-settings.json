@@ -2,7 +2,7 @@
     "NAV_BRAND": "<i class='bi bi-globe2'></i><i class='bi bi-book-fill'></i> ",
     "NAV_PAGES": {
         "content": "/index/",
-        "about": "/obsidian-parser/",
+        "about": "/about/",
         "contact": [
             {
                 "github": "https://github.com/cbrun3"

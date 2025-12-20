@@ -19,7 +19,7 @@ router = fastapi.APIRouter()
 
 
 
-class ObsidianBlogLayout(BaseModel):
+class PNBPBlogLayout(BaseModel):
 	""" """
 	NAV_BRAND: str
 	NAV_PAGES: dict
@@ -67,15 +67,6 @@ async def render_nav(pages: dict):
 	return _nav_pages
 
 
-
-# async def _open_layout():
-# 	""" """
-# 	async with aiofiles.open('blog-settings.json', mode='r') as f:
-# 		_cont = await f.read()
-# 		_cont = json.loads(_cont)
-
-# 	return _cont
-
 async def get_layout_content():
 	""" """
 	async with aiofiles.open('blog-settings.json', mode='r') as f:
@@ -84,7 +75,6 @@ async def get_layout_content():
 		_cont['NAV_PAGES'] = await render_nav(_cont['NAV_PAGES'])
 
 	return _cont
-
 
 
 async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, darkmode: bool, 
@@ -108,8 +98,8 @@ async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, darkmode: 
 	return lout
 
 
-@router.post('/api/layout', name='update_lout', status_code=201, response_model=ObsidianBlogLayout, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
-async def layout_post(lout_in: ObsidianBlogLayout):
+@router.post('/api/layout', name='update_lout', status_code=201, response_model=PNBPBlogLayout, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
+async def layout_post(lout_in: PNBPBlogLayout):
 	""" """
 	nb = lout_in.NAV_BRAND
 	np = lout_in.NAV_PAGES
