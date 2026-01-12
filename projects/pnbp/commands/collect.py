@@ -3,18 +3,19 @@ import re
 import inspect
 import subprocess
 
-# from pnbp.models import Notebook
 from pnbp.wrappers import pass_nb, arrow_call
 
-from .tasks import _collect_tasks_note # _collect imports and local defs 
-from .graph import _collect_public_graph # get called automatically via nb_collect_all
-from .subl import _collect_subl_projs
+from .tasks import _collect_tasks_note 		# NOTE: all imported to and locally defined collect.py
+from .graph import _collect_public_graph 	# "_collect" fxns are called in _nb_collect_all (nb-collect-all)
+from .subl import _collect_subl_projs 		# and made avail individually (e.g. collect-tasks-note) automatically
+
+
 
 """ commands writing collections to specific notebook files:
 """
 @pass_nb
 def _collect_all_stats(nb=None):
-	""" ... 
+	""" ... stats (incl [[links]] to nb-collect-all "all *" entries)
 	"""
 	num_notes = len(nb)
 	cont = f'\nnum_notes = {num_notes}'
@@ -32,7 +33,8 @@ def _collect_all_stats(nb=None):
 
 @pass_nb
 def _collect_all_notes(nb=None):
-	""" all .md files linked -> notebook/all notes.md
+	""" all .md files linked 
+		-> nb/all notes.md
 	"""
 	nb.generate_note(
 		'all notes',
@@ -43,7 +45,7 @@ def _collect_all_notes(nb=None):
 
 @pass_nb
 def _collect_all_urls(nb=None):
-	""" all regex-ed http-based urls -> notebook/all urls.md
+	""" all regex-ed http-based urls -> nb/all urls.md
 	"""
 	all_urls = []
 	for n in nb.notes.values():
@@ -89,7 +91,8 @@ def _collect_terms(nb=None):
 
 @pass_nb
 def _collect_all_unlinked(nb=None):
-	""" if not a single [[]] found -> nb/all unlinked.md
+	""" if not a single [[]] found 
+		-> nb/all unlinked.md
 	"""
 	ns = "".join([f"[[{n.name}]]\n" for n in nb.notes.values() if not n.links])
 	ns = "all unlinked :\n\n --- \n\n " + ns
@@ -99,7 +102,8 @@ def _collect_all_unlinked(nb=None):
 
 @pass_nb
 def _collect_all_empty(nb=None):
-	""" if a note is created on path w/out context -> nb/all empty.md
+	""" if a note is created on path w/out context 
+		-> nb/all empty.md
 	"""
 	ns = "".join([f"[[{n.name}]]\n" for n in nb.notes.values() if len(n.md) < 4])
 	ns = "all empty :\n\n --- \n\n " + ns
@@ -122,7 +126,8 @@ def _delete_all_empty(nb=None):
 
 @pass_nb
 def _collect_all_unheadered(nb=None):
-	"""
+	""" if not "Links: ..." at the first line, 
+		-> nb/all unheadered.md
 	"""
 	ns = "".join([f"[[{n.name}]]\n" for n in nb.notes.values() if not n.header])
 	ns = "all unheadered :\n\n --- \n\n " + ns
@@ -132,7 +137,8 @@ def _collect_all_unheadered(nb=None):
 
 @pass_nb
 def _collect_all_moc(nb=None):
-	"""
+	""" "maps of content" via capitalization (e.g. [[PYTHON]]) 
+		-> nb/all MOC.md
 	"""
 	ns = "".join([f"[[{n.name}]]\n" for fn, n in nb.notes.items() if fn.isupper()])
 	ns = "all MOC :\n\n --- \n\n " + ns
@@ -142,7 +148,8 @@ def _collect_all_moc(nb=None):
 
 @pass_nb
 def _collect_all_tags(nb=None):
-	"""
+	""" a fancy generated note showing #tag per [[]] (and [[]] per #tag)
+		-> nb/all tags.md
 	"""
 	ns = []
 	
@@ -180,7 +187,8 @@ def _collect_all_tags(nb=None):
 
 
 
-
+"""
+"""
 @arrow_call
 @pass_nb
 def _nb_collect_all(nb=None):
@@ -190,6 +198,8 @@ def _nb_collect_all(nb=None):
 		if k.startswith('_collect') and inspect.isfunction(func):
 			print(f'{func.__name__} -->')
 			func(nb) #call each function with the nb instance passed 
+
+
 
 
 

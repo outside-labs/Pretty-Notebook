@@ -4,7 +4,6 @@ import subprocess
 
 import click
 
-# from pnbp.models import Notebook
 from pnbp.wrappers import pass_nb
 
 
@@ -12,7 +11,8 @@ from pnbp.wrappers import pass_nb
 @click.option('--path', default='.', help='File path to new project')
 @pass_nb
 def _subl_init(path, nb=None):
-	""" Command to initiate local Sublime Text project && symlink to main nb directory
+	""" Command to initiate local Sublime Text project 
+		&& symlink it to the main nb directory
 	"""
 	defaultJson = {
 		"folders":
@@ -42,12 +42,16 @@ def _subl_init(path, nb=None):
 	x = subprocess.run(['ln', '-s', os.path.join(path, f'{projname}.sublime-project'), nb.NOTE_PATH], capture_output=True)
 	click.echo(x)
 
+	_collect_subl_projs(nb)
+
 
 
 @pass_nb
 def _collect_subl_projs(nb=None):
-	""" notebook/example.sublime_project -> sublime-project.md
+	""" nb/example.sublime_project -> sublime-project.md
+		(via ![[example.sublime_project]])
 	"""
+
 	projs = []
 	for fn in os.listdir(nb.NOTE_PATH):
 		if fn.endswith('.sublime-project'):
@@ -56,4 +60,12 @@ def _collect_subl_projs(nb=None):
 	nmd = "\n\n".join([f'![[{p}]]' for p in projs])
 
 	nb.generate_note('sublime-project', nmd, overwrite=True)
+
+
+
+
+
+
+
+
 

@@ -15,8 +15,8 @@ for v in cli.__dict__.values():
 
 
 setup(
-	name='pysidian',
-	version='0.6.0',
+	name='pnbp',
+	version='0.7.0',
 	py_modules=['cli'],
 	install_requires=[
 		'Click',
@@ -27,4 +27,8 @@ setup(
 	package_dir={"pnbp": "pnbp"},
 	packages=find_namespace_packages(),
 )
+
+
+
+
 

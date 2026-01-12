@@ -4,7 +4,6 @@ import os
 
 import click 
 
-# from pnbp.models import Notebook
 from pnbp.wrappers import pass_nb, arrow_call
 
 
@@ -14,7 +13,6 @@ from pnbp.wrappers import pass_nb, arrow_call
 def _git_commit_notebook(nb=None):
 	""" commit to local git
 	"""
-	# print(subprocess.run(['cd', nb.NOTE_PATH], capture_output=True)) doesn't hold, even with the function...
 	st = subprocess.run(['git', '-C', nb.NOTE_PATH, 'status'], capture_output=True)
 	print(st)
 
@@ -36,6 +34,8 @@ def _git_commit_notebook(nb=None):
 # 	nb.generate_note('all diff', ns, overwrite=True)
 
 
+""" 
+"""
 @click.option('--path', default='.', help='File path to project directory')
 def _init_git_ignore(path):
 	""" write .gitignore w/ essentials to curr directory or --path specified

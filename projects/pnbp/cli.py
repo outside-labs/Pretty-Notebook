@@ -12,7 +12,6 @@ from commands import cleanup as clea
 from commands import commit as comm
 from commands import collect as coll
 from commands import tasks
-from commands import new
 from commands import subl
 
 
@@ -43,10 +42,10 @@ def nb_get_help():
 
 
 
-""" ../blog/ api connection:
+""" pnbp-blog api connection commands:
 """
 @cli.command()
-def commit_local_html():
+def nb_commit_html():
 	""" if note contains #public, -> HTML_PATH/.html 
 		(for local debugging when running remote server 
 		and not a concurrent localhost instance...)
@@ -57,17 +56,17 @@ def commit_local_html():
 
 
 @cli.command()
-def commit_remote_api():
+def nb_commit_remote():
 	""" if note contains #public, -> 
-		selective update POST to ../blog/ api
-		{API_BASE}/api/publishment
+		selective update POST to pnbp-blog api
+		@ {API_BASE}/api/publishment
 	"""
 	nb = Notebook()
 	nb.post_commits_to_blog_api()
 
 @cli.command()
-def commit_local_api():
-	""" commit -> localhost ../blog/ instance
+def nb_commit_local():
+	""" commit -> localhost pnbp-blog instance
 	""" # a convenience command
 	nb = Notebook()
 	nb.API_BASE = 'http://127.0.0.1:8000'
@@ -79,15 +78,18 @@ def commit_local_api():
 	the (imported above) local /commands/ package
 """
 def _create_command(func):
-	""" effectively writes a 
+	""" effectively writes a :
+
 		```@click.command()
 			def outer_act_cmd():
 				_outer_act_cmd()
 		```	
+
 	where I had issues passing live parameters 
 	and chaining command calls in click otherwise.
-
-	Has the nice feature of passing docstring when called this way too.
+	
+	As actively wrapping here (vs calling _outer_act_cmd()),
+	has the nice feature of passing the _cmd's docstring to the --help info.
 	"""
 	func.__name__ = func.__name__.lstrip('_')
 	cmd = cli.command()
@@ -99,10 +101,8 @@ def _create_command(func):
 	return cmd(func)
 
 def create_command(func):
-	""" actually instantiates the command
-		-> required to also setattr() here for setup.py / 
-		pip install to recognize dynamically created commands
-		(specifically, setattr-ed after built)
+	""" actually instantiating the command
+		and specifically setattr-ing here after built is necessary
 	"""
 	c = _create_command(func)
 	setattr(sys.modules[__name__], func.__name__.lstrip('_'), c)
@@ -112,33 +112,22 @@ def create_all_commands():
 	""" main function for building imported module commands 
 		and tacking them onto the click.group(), & module local() name cli
 	"""
-	# print('debug...')
-
-	# print(coll)
 	# looking into imports from commands/collect.py
 	for k,v in coll.__dict__.items(): 
 		if inspect.isfunction(v) and k.startswith('_'):
 			# print(k) # _func's name...
 			create_command(v)
 
-	# print(tasks)
-	for k,v in tasks.__dict__.items():
-		if inspect.isfunction(v) and k.startswith('_'):
-			pass
-	# -> actually, lets be picky:
 	create_command(tasks._nb_task_settle)
 
-	# print(comm)
 	create_command(comm._git_commit_notebook)
 	create_command(comm._init_git_ignore)
 
-	# print(clea)
 	create_command(clea._fix_link_spacing)
 	create_command(clea._remove_leading_newline)
 	create_command(clea._add_leading_newline)
 	create_command(clea._link_unlinked_mentions)
 	create_command(clea._remove_nonexistant_links)
-	create_command(new._test_path)
 
 	create_command(subl._subl_init)
 

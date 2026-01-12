@@ -61,7 +61,9 @@ class Notebook:
 		return len(self.notes.keys())
 
 	def open_note(self, f):
-		""" """
+		""" 
+		:param str f: the .md note to open
+		"""
 		if isinstance(f, Note):
 			f = f.name + '.md'
 
@@ -83,10 +85,10 @@ class Notebook:
 
 		return n
 
-	def open_md(self):
-		""" open all files in the intsidian Notebook path into memory
-			as a list of dicts e.g. {"my note name": Note}
-			available at nb.notes
+	def open_md(self)->dict:
+		""" open all .md files from the self.NOTE_PATH path
+			into memory as e.g. {"my note name": Note}
+			-> available at nb.notes
 		"""
 		for f in os.listdir(self.NOTE_PATH):
 			if f.endswith('.md'):
@@ -95,7 +97,11 @@ class Notebook:
 		self.notes = dict(sorted(self.notes.items()))
 
 	def generate_note(self, name, md_out, overwrite=False):
-		""" """
+		""" 
+		:param name: the name of the note (without ".md") to generate
+		:param md_out: the desired string to save to the notebook at "name.md"
+		:param overwrite: 
+		"""
 		name = name.strip()
 
 		if name in self.notes.keys() and not overwrite:
@@ -105,8 +111,9 @@ class Notebook:
 		n.md_out = md_out
 		n.save(self) # ^^ although instantiated empty, live access to attrs on nb instance
 
-	def get(self, name):
-		"""
+	def get(self, name)->Note:
+		""" access the notes dict directly 
+
 		:param name: name of the note
 		:returns: Note instance or None
 		"""
@@ -114,7 +121,6 @@ class Notebook:
 			n = name
 			return self.notes.get(n.name)
 
-		# name = name.rstrip('.md').rstrip('.html')
 		name = name.replace('.md', '').replace('.html', '')
 
 		if (note := self.notes.get(name)):
@@ -126,8 +132,11 @@ class Notebook:
 
 		return None
 
-	def get_tagged(self, tag):
-		""" """
+	def get_tagged(self, tag)->list:
+		""" 
+		:param tag: the #tag in question
+		:returns: a list of Note instances matching #tag
+		"""
 		t_notes = []
 		for n in self.notes.values():
 			if n.is_tagged(tag) and not n.name == 'all tags': # janky
@@ -137,7 +146,8 @@ class Notebook:
 
 	@property
 	def tags(self)->list:
-		""" """
+		""" a list of all found #tags in the Notebook instance
+		"""
 		ts = []
 		for n in self.notes.values():
 			for t in n.tags:
@@ -175,7 +185,7 @@ class Notebook:
 			for http/https links
 			available via each n.urls
 
-		:param note: 
+		:param note: the .md content of the Note
 		"""
 		ext_links = []
 
@@ -187,44 +197,65 @@ class Notebook:
 		for l in p.findall(note):
 			ext_links.append(l[1].rstrip('.').rstrip(')'))
 
-		# return list(set(ext_links))
 		return ext_links
 	
 	""" md->html str repl methods
 		coupled with fxn from helpers.py
 	"""
 	def replace_imglinks(self, note):
-		""" a regex replace mtd """
+		""" a regex replace mtd 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(self.MDS_IMG_LNK)
 		return p.sub(int_img_repl, note)
 
 	def replace_intlinks(self, note):
-		""" a regex replace mtd """
+		""" a regex replace mtd 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(self.MDS_INT_LNK)
 		return p.sub(int_link_repl, note)
 
 	def replace_smdtags(self, note):
-		""" a regex replace mtd """
+		""" a regex replace mtd 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(self.MDS_INT_TAG)
 		return p.sub(int_tag_repl, note)
 
 	def replace_mermaid(self, note):
-		""" a regex replace mtd """
+		""" a regex replace mtd 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(self.MD_MERMAID)
 		return p.sub(md_mermaid_repl, note)
 
 	def replace_nakedhref(self, note):
-		""" a regex replace mtd """
+		""" a regex replace mtd 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(self.HTTP_NAKED_LNK)
 		return p.sub(md_nakedhref_repl, note)
 
 	def fix_blocked_comments(self, note):
-		""" a regex replace mtd """
+		""" a regex replace mtd 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(r'<code class="(.+)">((.|\n)*)</code>')
 		return p.sub(comment_unescape, note)
 
 	def remove_nonpub_links(self, note):
-		""" """
+		""" if #public note with [[not public]] links,
+			remove them from html generation if nb.PUB_LNK_ONLY
+
+		:param note: the .md content of the Note
+		""" 
 		remv = []
 		for name in note.links:
 			if (ln := self.get(name)):
@@ -238,27 +269,40 @@ class Notebook:
 		return note.md_out
 
 	def add_header_ids(self, note):
-		""" """
+		""" providing access to sublink-ed via 
+			[[mynote#section2]] to html 
+
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(r'(#{1,6}\s)(.*)')
 
 		return p.sub(add_header_attr_list, note)
 
 	def replace_strikethrough(self, note):
-		""" """
+		""" ... 
+		
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(r'(~~)(.*)(~~)')
 		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
 
 		return p.sub(strike_repl, note)
 
 	def replace_eqhighlight(self, note):
-		""" """
+		""" ... 
+		
+		:param note: the .md content of the Note
+		"""
 		p = re.compile(r'(==)(.*)(==)')
 		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
 
 		return p.sub(eqhl_repl, note)
 
 	def adjust_externallinks(self, note):
-		""" """
+		""" adding external link symbol, nofollow, and _blank target
+
+		:param note: the .md content of the Note
+		"""
 		_ext_icon = '<i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>'
 		_add_attrs = 'rel="nofollow" target="_blank"'
 
@@ -271,7 +315,7 @@ class Notebook:
 		""" apply all the regex method changes to 
 			a single note
 
-		:param note: the note content itself (n.md)
+		:param note: the .md content of the Note
 		"""
 		if self.PUB_LNK_ONLY:
 			note = self.remove_nonpub_links(note)
@@ -298,7 +342,7 @@ class Notebook:
 
 	def write_commits_to_local_html(self):
 		""" a local debugging mtd 
-			-> HTML_PATH/.html ... 
+			-> self.HTML_PATH/.html ... 
 		"""
 		self.open_md() # fresh retrival 
 
@@ -307,19 +351,20 @@ class Notebook:
 			if re.search(self.COMMIT_TAG, n.md):
 				nout = self.convert_to_html(note=n)
 				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
-				of.write(nout) #https://python-markdown.github.io/extensions/fenced_code_blocks/
+				of.write(nout)
 				of.close()
 
 				print(f'\t{n.name} ---> {self.HTML_PATH}')
 
-	""" ../blog/ api connection methods:
+	""" pnbp-blog api connection methods:
 	"""
 	def get_headers(self):
-		""" """
+		""" the request headers """
 		return {'accept': 'application/json', 'authorization': f'Bearer {self.API_TOKEN}'}
 
 	def refresh_token(self):
-		""" """
+		""" request method to replace the authenticated user's bearer token 
+		"""
 		u = input('Username: ')
 		p = getpass()
 		h = self.get_headers()
@@ -339,27 +384,29 @@ class Notebook:
 				json.dump(config, cf, indent=4)
 
 	def get_authed_user(self):
-		""" """
+		""" request method to get the authenticated user's username 
+		"""
 		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api/users/me', headers=h)
 		print(r)
 		print(r.json())
 
 	def get_api_home(self):
-		""" """
+		""" request method to /api/ (testing auth) 
+		"""
 		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api', headers=h)
-		# print(r.text)
-		# print(r.json())
+		print(r.text)
+		print(r.json())
 
 	def get_pub_commits(self)->dict:
-		""" internal use
-			request a remote filepath check for the purpose of 
-			making smarter POST updates
+		""" (internal use)
+			request method for a remote filepath check 
+			for the purpose of making smarter POST updates
+			against current publishments.
 		"""
 		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api/publishments', headers=h)
-		print(r)
 		pub_data = r.json()
 
 		nameMtime = {}
@@ -370,9 +417,10 @@ class Notebook:
 		return nameMtime
 
 	def get_img_commits(self)->dict:
-		""" internal use
-			request a remote filepath check for the purpose of 
-			making smarter POST updates
+		""" (internal use)
+			request method for a remote filepath check
+			for the purpose of making smarter POST updates
+			against current imgs.
 		"""
 		h = self.get_headers()
 		r = requests.get(f'{self.API_BASE}/api/images', headers=h)
@@ -386,14 +434,17 @@ class Notebook:
 		return nameMtime
 
 	def delete_unlisted_post(self, rname):
-		""" """
+		""" (internal use)
+			request method to remove the HTML at filepath
+			of Note(s) made non- #public
+		"""
 		h = self.get_headers()
 		r = requests.delete(f'{self.API_BASE}/api/publishment/{rname}', headers=h)
 		print(f'(removed) {r.json()["pub_name"]} -> {r}')
 
 
 	def post_commits_to_blog_api(self):
-		""" the main method
+		""" the main POST method
 		"""
 		self.open_md() # fresh retrival
 		h = self.get_headers()
@@ -409,7 +460,6 @@ class Notebook:
 		for n in self.notes.values():
 			to_post = False
 			fname = n.slugname + '.html'
-			# rname = n.name.lower().replace('_', '-').replace(' ', '-')+'.html'
 			if re.search(self.COMMIT_TAG, n.md):
 				post_names.append(fname)
 				if fname in pub_pub_names:
@@ -421,7 +471,7 @@ class Notebook:
 			if to_post:
 				nout = self.convert_to_html(note=n)
 				r = requests.post(f'{self.API_BASE}/api/publishment',
-					json={"name": n.slugname, "content": nout}, # n.name.replace('_', '-').replace(' ', '-').lower()
+					json={"name": n.slugname, "content": nout},
 					headers=h
 					)
 				
@@ -435,8 +485,8 @@ class Notebook:
 								files={"filename": img, "file": f, "content_type": "image/jpeg"},
 								headers=h
 								)
-							
-							print(f'\t\t{img} -> {r}') # r.content = {"filename": "examp.jpeg"}
+
+							print(f'\t\t{img} -> {r}')
 						except FileNotFoundError:
 							print(f'\t\t{img} -> Broken image link!')
 					else:
@@ -447,15 +497,23 @@ class Notebook:
 				self.delete_unlisted_post(p)
 
 	def blog_settings_post(self):
-		""" """
-		with open(os.path.join(self.NOTE_PATH, 'blog-settings.json'), 'r') as f:
-			h = self.get_headers()
-			# print(json.load(f)
+		""" request method to POST layout update 
+			from self.NOTE_PATH/blog-settings.json 
+			(see https://github.com/prettynb/pnbp-blog/blob/master/blog-settings.json
+			for example)
+		"""
+		h = self.get_headers()
+
+		with open(os.path.join(self.NOTE_PATH, 'blog-settings.json'), 'r') as f:	
 			r = requests.post(f'{self.API_BASE}/api/layout', json=json.load(f), headers=h)
 			print(r)
 
-	def create_api_user(self, username):
-		""" """
+	def create_api_user(self, username=''):
+		""" request method to generate an pnbp-blog API user 
+		"""
+		if not username:
+			username = input('username: ')
+
 		password_1 = getpass()
 		password_2 = getpass()
 		if not password_1 == password_2:
@@ -468,18 +526,15 @@ class Notebook:
 			}
 
 		h = self.get_headers()
-		# del h['authorization']
-		# h['authorization'] = 'Bearer pancakebatter'
-		print(h)
 		r = requests.post(f'{self.API_BASE}/api/users', json=u, headers=h)
 		print(r)
-		print(r.text)
 		print(r.json())
 	
 	def reset_api_password(self):
-		""" """
-		p_1 = getpass() # a11assa11
-		p_2 = getpass()
+		""" request method to update the authed user's API password 
+		"""
+		p_1 = getpass()
+		p_2 = getpass()		
 		if not p_1 == p_1:
 			print('passwords do not match...')
 			self.reset_api_password()
@@ -489,3 +544,13 @@ class Notebook:
 		r = requests.post(f'{self.API_BASE}/api/users/me', json=p, headers=h)
 		print(r)
 		print(r.json())
+
+
+
+
+
+
+
+
+
+

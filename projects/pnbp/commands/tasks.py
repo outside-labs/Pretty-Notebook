@@ -7,17 +7,19 @@ from pnbp.helpers import md_task_uncheck, md_reoccurring_task_uncheck
 
 """
 	- #todo a task to record _complete and perm remove w/ #complete
-
+	- doesn't require todo tag to #complete
+	(&& -> record to nb/_complete.md under datestamp YYYY-MM-DD section)
 
 	- [x] my task item to record and reset to incomplete
-	-> record _complete
+	->
 	- [ ] my task item to record and reset to incomplete
-
+	(&& -> record to nb/_complete.md under datestamp YYYY-MM-DD section)
 
 	- [x] reoccuring parameterized task w/ (param1: 10units,param2:blahblah,)
-	-> record _complete
+	-> record _complete w/ param 
 	- [ ] reoccuring parameterized task w/ (param1: ,param2: ,)
-
+	(&& -> record to nb/_complete.md under datestamp YYYY-MM-DD section, with 
+	additional param "@" timestamp collected - [x] task (p1:hello,@:12:33:58))
 """
 TASK_INCOMPLETE = r'(^|\s)(-\s\[\s\]\s)(.*)'
 TASK_COMPLETE = r'(^|\s)(-\s\[x\]\s)(.*)'
@@ -29,7 +31,7 @@ COMPL_TAG = '#complete'
 @pass_nb
 def record_complete_tasks(c_tasks:list=[], nb=None):
 	""" 
-	:param list c_tasks: e.g. ['- [x] bathroom: shower', '- [x] bathroom: toilet(s)', '- [x] some fake task']
+	:param list c_tasks: e.g. ['- [x] clean room', '- [x] laundry', '- [x] some fake task']
 	"""
 	if c_tasks:
 		fin_item_str = '\n'.join(c_tasks)
@@ -56,9 +58,8 @@ def record_complete_tasks(c_tasks:list=[], nb=None):
 
 @pass_nb
 def _uncheck_complete_tasks(note: Note=None, nb=None):
-	""" - [x] taskname 
-		-> _complete
-		-> - [ ] taskname 
+	""" - [x] taskname -> - [ ] taskname 
+		(&& -> nb/_complete.md)
 	"""
 	p = re.compile(TASK_COMPLETE)
 
@@ -79,7 +80,8 @@ def _uncheck_complete_tasks(note: Note=None, nb=None):
 
 @pass_nb
 def _complete_complete_tasks(note: Note=None, nb=None):
-	""" #todo #complete -> _complete && delete
+	""" - todo #complete -> ... (remove line)
+		 (&& -> nb/_complete.md)
 	"""
 	ns = note.md.splitlines()
 
@@ -107,9 +109,8 @@ def _complete_complete_tasks(note: Note=None, nb=None):
 
 @pass_nb
 def _reset_reoccurring_param_tasks(note: Note=None, nb=None):
-	""" - [x] taskname (var1: x, )
-		-> _complete
-		-> - [ ] taskname (var1: , )
+	""" - [x] taskname (var1: x, ) -> - [ ] taskname (var1: , )
+		 (&& -> nb/_complete.md)
 	"""
 	p = re.compile(TASK_COMPLETE)
 	p2 = re.compile(TASK_VARS)
@@ -151,14 +152,13 @@ def _reset_reoccurring_param_tasks(note: Note=None, nb=None):
 			# ... -> exit to api
 			
 
-			# -> format reset task
+			# formatting reset task (e.g. ->"- [ ] taskname (var1: , )")
 			reset_out = ''.join([f'{k}: ,' for k in _keys])
 			reset_out = '(' + reset_out.strip(',') + ')'
 			_reset_out_str = p.sub(md_task_uncheck, li)
 			_reset_out_str = p2.sub(reset_out, _reset_out_str)
-			print('_reset_out_str', _reset_out_str)
 
-			# -> format _complete task
+			# -> format _complete task (w/ e.g. added timestamp "@:07:30") above
 			complete_out = ''.join([f'{k}:{v}, ' for k,v in d.items()]).strip()
 			complete_out = f'- [x] {_key} ({complete_out})'
 			print('complete_out', complete_out)
@@ -186,37 +186,36 @@ def _reset_reoccurring_param_tasks(note: Note=None, nb=None):
 """
 @pass_nb
 def _nb_task_settle(nb=None):
-	""" all the task things
+	""" #tasks -> nb/_complete.md
+		(1) collect and reset parameterized tasks
+		(2) ^^ for - [x] standard tasks
+		(3) ^^ and remove - bullet-only todos marked #complete
 	"""
 	tasked = [n for n in nb.get_tagged('#tasks')]
 	print([n.name for n in tasked])
 
 	for n in tasked:
-		_reset_reoccurring_param_tasks(nb.get(n), nb) # fresh get from notes dict
-		_uncheck_complete_tasks(nb.get(n), nb) # ensuring our note n being passed
-		_complete_complete_tasks(nb.get(n), nb) # is holding curr saved .md
+		_reset_reoccurring_param_tasks(nb.get(n), nb) 	# fresh get from nb.notes dict is
+		_uncheck_complete_tasks(nb.get(n), nb) 			# ensuring our note n being passed
+		_complete_complete_tasks(nb.get(n), nb) 		# is holding curr saved .md
 
 
 @pass_nb
 def _collect_tasks_note(nb=None):
 	""" if #tasks -> [[tasks]]
+		(link all notes containg "#tasks" to nb/tasks.md)
 	"""
 	tasked = [n for n in nb.get_tagged('#tasks')]
 	ns = '\n'.join([f'[[{n.name}]]' for n in tasked])
 	nb.generate_note('tasks', md_out=ns, overwrite=True)
 
 
+
 """
 """
-# def _add_today(nb=None, td:str):
-# 	""" """
-# 	pass
-
-# _DATE_STR = r'\d{4}-\d{2}-\d{2}'
-
 # @pass_nb
 def _parse_today_note(nb=None):
-	""" """
+	""" ... under development """
 	n = nb.get('TODAY')
 	# print(n.sections)
 	td = datetime.datetime.today().date()
@@ -246,11 +245,16 @@ def _parse_today_note(nb=None):
 
 
 
-
-
 if __name__ == '__main__':
 	pass
 	# nb = Notebook()
-	# _parse_today_note(nb)
+	# parse_today_note(nb)
+
+
+
+
+
+
+
 
 

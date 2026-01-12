@@ -64,7 +64,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks',
 		return slugname
 
 	@property
-	def sections(self):
+	def sections(self)->list:
 		"""	"""
 		return [x.strip() for x in self.md.split('---')]
 
@@ -79,6 +79,8 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks',
 	def save(self, nb):
 		""" save note to .md file on NOTE_PATH,
 			if provided self.md_out has been updated.
+
+		:param nb: the Notebook instance must be passed to save!
 		"""
 		if not isinstance(self.md_out, str):
 			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
@@ -92,17 +94,21 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks',
 			return nb.open_note(self)
 
 	def is_tagged(self, tag: str)->bool:
-		""" 
+		""" check if note.md contains a #tag
+
 		:param tag: the #tag in question
 		"""
 		tag = f"#{tag.lstrip('#')}" #failsafe
 
 		if tag in self.tags:
 			return True
+			
 		return False
 
 	def is_linked(self, link: str="", at_all=False)->bool:
-		""" 
+		""" check if note.md contains a [[link]]
+
+		:param link: the [[link]] in question
 		"""
 		if at_all and self.links:
 			return True
@@ -115,8 +121,10 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks',
 
 		return False
 
-	def remove_links(self, links):
-		""" 
+	def remove_links(self, links: list):
+		""" if [[my link]] in links, -> if my link in links
+
+		:param links: the [[link]] names to remove
 		"""
 		ns = self.md
 		links = [l for l in links if not '.' in l] # keep images!
@@ -130,5 +138,13 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'cblocks',
 
 			ns = p.sub(remove_link_mention, ns)
 
-		# print(ns)
 		self.md_out = ns
+
+
+
+
+
+
+
+
+

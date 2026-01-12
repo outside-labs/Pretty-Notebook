@@ -4,6 +4,7 @@ from functools import wraps
 from .models import Notebook
 
 
+
 def pass_nb(func):
 	""" custom non-click pass_param decorator,
 		maily used to boilerplate each func rather than:
@@ -13,21 +14,14 @@ def pass_nb(func):
 		unnecessarily when building commands that chain together.
 		will handle regardless if nb passed via arg or kwarg
 	"""
-	# callargs = inspect.getcallargs(func)
-	# print(func.__name__, callargs)
-
 	@wraps(func)
 	def inner(*args, **kwargs):
-		# print(inspect.getargspec(func))
-		# print(inspect.signature(func))
-
+		
 		if not 'nb' in inspect.signature(func).parameters.keys(): # why being wrapped?
 			raise TypeError(f"@pass_nb decorator expecting keyword argument 'nb' on func '{func.__name__}'")
 
 		args = list(args) # convert from tuple to manip
 
-		# print('args', args)
-		# print('kwargs', kwargs)
 		nb = None # assume
 		for i, a in enumerate(args):
 			if isinstance(a, Notebook):
@@ -59,7 +53,7 @@ def pass_nb(func):
 
 
 def arrow_call(func):
-	""" 
+	""" simple decorator printing "-> func" when func()
 	"""
 	@wraps(func)
 	def inner(*args, **kwargs):
@@ -68,10 +62,10 @@ def arrow_call(func):
 	return inner
 
 
-@arrow_call
-def myfavfunc():
-	return 'Hello World'
 
-# myfavfunc()
+
+
+
+
 
 

@@ -3,7 +3,7 @@ from string import ascii_uppercase
 from pnbp.models import Notebook
 from pnbp.wrappers import pass_nb
 
-
+import click 
 
 """ -> graph 
 	e.g. 
@@ -113,12 +113,10 @@ if __name__ == '__main__':
 	# nb = Notebook()
 	# _create_tag_graph('jots', nb)
 	# _create_link_graph('TODAY', nb)
-
-
 	# _create_link_graph('PYTHON', nb)
 
 	# for n in nb.notes.values():
 	# 	# print(n.name)
 	# 	if n.is_tagged('public'):
 	# 		print(n.name)
-			# _create_link_graph(n.name, nb)
+			# _create_link_graph(n.name, nb)	
