@@ -9,10 +9,7 @@ from pydantic import BaseModel
 
 import aiofiles
 
-
 from .auth_api import oauth2_scheme
-
-
 
 
 router = fastapi.APIRouter()
@@ -34,6 +31,8 @@ class PNBPBlogLayout(BaseModel):
 
 
 async def render_nav(pages: dict):
+	""" pre-converting NAV_PAGES dict to html 
+	"""
 	_nav_pages = ""
 	
 	for k,v in pages.items():
@@ -67,6 +66,7 @@ async def render_nav(pages: dict):
 	return _nav_pages
 
 
+
 async def get_layout_content():
 	""" """
 	async with aiofiles.open('blog-settings.json', mode='r') as f:
@@ -77,10 +77,10 @@ async def get_layout_content():
 	return _cont
 
 
+
 async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, darkmode: bool, 
 							hljs_light: str, hljs_dark: str, merm_light: str, merm_dark: str):
-	""" 
-	"""
+	""" """
 	lout = dict(
 		NAV_BRAND=NAV_BRAND,
 		NAV_PAGES=NAV_PAGES,
@@ -98,9 +98,11 @@ async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, darkmode: 
 	return lout
 
 
-@router.post('/api/layout', name='update_lout', status_code=201, response_model=PNBPBlogLayout, dependencies=[Depends(oauth2_scheme)]) # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
+
+@router.post('/api/layout', name='update_lout', status_code=201, response_model=PNBPBlogLayout, dependencies=[Depends(oauth2_scheme)])
 async def layout_post(lout_in: PNBPBlogLayout):
-	""" """
+	""" Post Layout 
+	"""
 	nb = lout_in.NAV_BRAND
 	np = lout_in.NAV_PAGES
 	f = lout_in.FOOTER
@@ -109,7 +111,12 @@ async def layout_post(lout_in: PNBPBlogLayout):
 	hld = lout_in.hljs_dark
 	mml = lout_in.merm_light
 	mmd = lout_in.merm_dark
+
 	return await update_layout(nb, np, f, dm, hll, hld, mml, mmd)
+
+
+
+
 
 
 

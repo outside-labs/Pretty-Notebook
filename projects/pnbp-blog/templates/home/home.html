@@ -2,16 +2,7 @@
 
 {% block content %}
 
-
-<div class="container-fluid">
-	<div id="quote" class="alert alert-{% if darkmode %}dark{% else %}dark{% endif %} dark alert-dismissible fade show" role="alert">
-		<blockquote class="blockquote text-left">
-			<h6 class="mb-0 text-{% if darkmode %}dark{% else %}dark{% endif %}"><i>“{{quote.quote}}”</i></h6>
-		</blockquote>
-		<footer class="blockquote-footer">{{quote.author}} | <a title="Source Title" href="{{quote.site_link}}">{{quote.site_name}}</a></footer>
-		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-	</div>
-
+<div>
 	<p>#public </p>
 	<hr />
 	<p>linked/<br />
@@ -27,6 +18,5 @@
 	    a[hello] --> b[world]
 	</div>
 </div>
-
 
 {% endblock %}

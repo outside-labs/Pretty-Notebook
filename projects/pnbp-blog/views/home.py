@@ -35,7 +35,7 @@ async def _cookie_handler(content: dict, cookies: dict):
 
 
 async def get_template_content(req: Request):
-	""" """
+	"""	"""
 	cont = await get_layout_content()
 	cont = await _cookie_handler(cont, req.cookies)
 
@@ -44,42 +44,35 @@ async def get_template_content(req: Request):
 	return cont
 
 
-# @router.get('/contact', include_in_schema=False)
-# async def contact(request: Request):
-# 	""" """
-# 	cont = await get_template_content(request)
-
-# 	return templates.TemplateResponse('home/contact.html', cont)
-
-
-# @router.post('/contact', include_in_schema=False)
-# async def contact_post(email_address=Form(...), email_message=Form(...)):
-# 	""" todo 
-# 	"""
-# 	print(email_address, email_message) #by <input name="x">
-# 	return {"email_address": email_address, "email_message": email_message}
-
+""" defining any non-notebook /single-slug catches beforehand,
+	e.g. contact page
 """
-"""
-def _get_random_quote():
+@router.get('/contact', include_in_schema=False)
+async def contact(request: Request):
 	""" """
-	QUOTES = open('static/quotes.json', 'r')
-	QUOTES = json.load(QUOTES)
-	return random.choice(QUOTES)
+	cont = await get_template_content(request)
 
+	return templates.TemplateResponse('home/contact.html', cont)
+
+
+@router.post('/contact', include_in_schema=False)
+async def contact_post(email_address=Form(...), email_message=Form(...)):
+	""" todo 
+	"""
+	print(email_address, email_message) #by <input name="x">
+	return {"email_address": email_address, "email_message": email_message}
+
+
+""" 
+"""
 @router.get('/', include_in_schema=False)
 async def home(request: Request):
 	""" """
-	# print('cookies', request.cookies)
 	cont = await get_template_content(request)
-
-	cont.update({'quote': _get_random_quote()})
 
 	return templates.TemplateResponse('home/home.html', cont)
 
 
-"""
-"""
 @router.get('/{content}', include_in_schema=False)
 async def content(request: Request, content: str):
 	""" main catching route to /single-slug

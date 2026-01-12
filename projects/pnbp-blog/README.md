@@ -1,36 +1,27 @@
-blog/
-a FastAPI implementation of publishing static websites (aka blog) from https://obsidian.md/.
+pnbp-blog is a FastAPI implementation of publishing static websites (aka blog) against #public .md notes in a pretty notebook - handling for (most) from https://obsidian.md/ (e.g. mermaid-js).
 
-```mermaid
-graph BT
-    id1[(Obsidian .md)]
-    --> local --> blog
-    local --> id1
-    blog --> local
-```
---- 
+see: https://github.com/prettynb/pnbp/
 
-blog/
-
-- receives via API to put/post/delete HTML (& images) of set #public notes, wraps 'em with jinja2 extends template tags, and saves each "page" statically to templates/blog/.html file to be rendered quick and statically. (via local/)
-- Tl;dr the most essential things happening are that notebook/[[My Next Best Note]] -> myblogurl.com/my-next-best-note is caught via existence as a single slug through a single general {content} view function. 
 
 --- 
-**installing blog/**
+how it works (w/ pnbp):
+
+- pnbp.Notebook converts #public notes to HTML -> contains methods to communicate with running pnbp-blog/ api instance -> which receives HTML (& images), wraps it with local extends and jinja2 template tags, and saves each publicly-made notebook "page" statically to an .html file (avail from: notebook/[[My Next Best Note]] -> myblogurl.com/my-next-best-note via existence as a single slug through a single general {content} view function.)
+- use **nb-commit-remote** or **nb-commit-local** 
+- if page made unpublic with #public removal, pnbp.Notebook deletes from server on next push
+- use **touch-all-public** if you want to ensure all #public markdown files are pushed to the remote server, otherwise only pushes those pages with newer changes than most recently received. 
+- images only transfer once
+
+--- 
+**installing pnbp-blog (local dev)**
 
 ```sh
+git clone https://github.com/prettynb/pnbp-blog/ blog
 cd blog/
 pip install -r requirements.txt
-touch .env
+nano .env
 ```
 
-need to add .env file values via any text editor:
-(pick a non-default JWT_ALGO if desired)
-
-```py
-JWT_SECRET=long123random456alphanumeric
-JWT_ALGO=HS256
-```
 generate long alphanumeric JWS_SECRET via e.g. 
 
 ```py
@@ -39,33 +30,45 @@ generate long alphanumeric JWS_SECRET via e.g.
 '1ab12802724b4d9ebe92e3eecae8b4f6'
 ```
 
++ (pick a non-default JWT_ALGO if desired)
+
 --> 
 
+add these values to the blog/.env file:
+```py
+JWT_SECRET=long123random456alphanumeric
+JWT_ALGO=HS256
 ```
+
+--> 
+
+```sh
 python main.py
 \# then in browser see: https://127.0.0.1:8000/ 
 ```
 
+...
+
 --- 
 Place a version of **blog-settings.json** locally into your nb.NOTE_PATH
-e.g.
+e.g. 
 
 ```json
 {
     "NAV_BRAND": "<i class='bi bi-globe2'></i><i class='bi bi-book-fill'></i> ",
     "NAV_PAGES": {
         "content": "/index/",
-        "about": "/obsidian-parser/",
+        "about": "/about/",
         "contact": [
             {
-                "github": "https://github.com/pysidian"
+                "github": "https://github.com/pretty-nb/"
             },
             {
                 "subname2": "/subroute2/"
             }
         ]
     },
-    "FOOTER": "<p><small>mail to:</small><button type=\"button\" class=\"btn btn-link\"><small>self&commat;linked.page</small></button> &nbsp;| <small>powered by <a href=\"https://www.python.org/\">Python</a>&nbsp;,&nbsp;<a href=\"https://fastapi.tiangolo.com/\">FastAPI</a>&nbsp;,&nbsp;<a href=\"https://getbootstrap.com/\">Bootstrap</a>&nbsp;,&nbsp;and&nbsp;</a><a href=\"https://obsidian.md/\">Obsidian</a>&nbsp;via&nbsp;<a href=\"https://daringfireball.net/projects/markdown/\">markdown</a>.</small></p>",
+    "FOOTER": "&nbsp;| <small>powered by <a href=\"https://www.python.org/\">Python</a>&nbsp;,&nbsp;<a href=\"https://fastapi.tiangolo.com/\">FastAPI</a>&nbsp;,&nbsp;<a href=\"https://getbootstrap.com/\">Bootstrap</a>&nbsp;,&nbsp;and&nbsp;</a><a href=\"https://obsidian.md/\">Obsidian</a>&nbsp;via&nbsp;<a href=\"https://daringfireball.net/projects/markdown/\">markdown</a>.</small></p>",
     "darkmode": false,
     "hljs_light": "default",
     "hljs_dark": "xt256",
@@ -76,16 +79,11 @@ e.g.
 
 --- 
 
-further initialization 
-
-```sh
-% cd ../local
-% python3
-```
+further initialization:
 
 ```py
->>> from models import PysidianNotebook
->>> nb = PysidianNotebook()
+>>> import pnbp
+>>> nb = pnbp.Notebook()
 >>> nb.create_api_user()
 >>> nb.refresh_token()
 >>> # username: 
@@ -97,13 +95,13 @@ further initialization
 >>> # --> tag a note #public
 >>> # --> 
 >>> nb.post_commits_to_blog_api()
->>> # ^^ equiv to local/ avail commands
->>> # % commit-remote-api
+>>> # ^^ equiv to avail commands
+>>> # % nb-commit-remote 
 >>> # or 
->>> # % commit-local-api
+>>> # % nb-commit-local
 ```
 
-...
+also available:
 
 ```py
 >>> nb.reset_api_password()
@@ -111,3 +109,7 @@ further initialization
 ```
 
 --- 
+
+
+
+
