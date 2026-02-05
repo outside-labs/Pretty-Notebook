@@ -18,7 +18,7 @@ def pass_nb(func):
 	def inner(*args, **kwargs):
 		
 		if not 'nb' in inspect.signature(func).parameters.keys(): # why being wrapped?
-			raise TypeError(f"@pass_nb decorator expecting keyword argument 'nb' on func '{func.__name__}'")
+			raise TypeError(f"@pass_nb decorator expecting keyword argument 'nb' in func '{func.__name__}' def parameters")
 
 		args = list(args) # convert from tuple to manip
 
@@ -31,11 +31,11 @@ def pass_nb(func):
 			kwargs.update({'nb': nb})
 
 		if not isinstance(kwargs['nb'], Notebook):
-			print('fresh nb open by pass_ wrapping...')
+			# print('fresh nb open by pass_ wrapping...')
 			kwargs['nb'] = Notebook()
 
 		if (note := kwargs.get('note')):
-			print('**', note)
+			# print('**', note)
 			if isinstance(note, str):
 				if (n := kwargs['nb'].get(note)):
 					kwargs['note'] = n
