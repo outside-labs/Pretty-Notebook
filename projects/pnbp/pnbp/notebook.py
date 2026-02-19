@@ -4,35 +4,19 @@ import json
 import datetime
 from collections import defaultdict
 from getpass import getpass
-# from pathlib import Path
 import difflib
 
 import markdown as md
 import requests
 
 from .note import Note
-from .helpers import (int_link_repl, int_img_repl, int_tag_repl,
-						md_mermaid_repl, md_nakedhref_repl, comment_unescape,
-						_convert_datetime, add_header_attr_list)
+from .helpers import Link, Tag, Url, CodeBlock, _convert_datetime
 
 
 
 class Notebook:
-	""" class owned common regex patterns
+	""" 
 	"""
-	MDS_INT_LNK = r'\[\[([^]]+)\]\]' 
-	MDS_IMG_LNK = r'!\[\[([^]]+)\]\]'
-	MDS_INT_TAG = r'([^\\)/>\'\w])#([A-Za-z]+)' 
-
-	MD_CODE = r'```([^`]*)```'
-	MD_MERMAID = r'```mermaid([^`]*)```'
-
-	MD_EXT_LINK = r'\[([^]]+)\]\(([^)]+)\)'
-	HTTP_NAKED_LNK = r'([^\(])(https?://[^;,\s\]\*]+)'
-
-	COMMIT_TAG = '#public'
-	EXCLUDE_TAG = '#private'
-
 	def __init__(self):
 
 		self.NOTE_PATH = os.environ.get('NOTE_PATH')
@@ -96,10 +80,14 @@ class Notebook:
 		if (tag := self.config.get("COMMIT_TAG")):
 			# overwrite class default:
 			self.COMMIT_TAG = tag
+		else:
+			self.COMMIT_TAG = '#public'
 
 		if (tag := self.config.get("EXCLUDE_TAG")):
 			# ... 
 			self.EXCLUDE_TAG = tag
+		else:
+			self.EXCLUDE_TAG = '#private'
 
 		self.notes = defaultdict()
 		self.open_md()
@@ -122,10 +110,10 @@ class Notebook:
 			n = Note(
 				name=fname,
 				md=fo,
-				links=[m.strip() for m in re.findall(self.MDS_INT_LNK, fo)],
-				tags=[m[1] for m in re.findall(self.MDS_INT_TAG, fo)],
-				urls=self.collect_urls(fo),
-				cblocks=re.findall(self.MD_CODE, fo),
+				links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, fo)],
+				tags=[m[1] for m in re.findall(Tag.MDS_INT_TAG, fo)],
+				urls=Url.collect_urls(fo),
+				cblocks=re.findall(CodeBlock.MD_CODE, fo),
 				mtime=datetime.datetime.fromtimestamp(os.path.getmtime(os.path.join(self.NOTE_PATH, f)))
 				)
 
@@ -193,11 +181,10 @@ class Notebook:
 
 		return None
 
-
 	def get_tagged(self, tag)->list:
 		""" 
 		:param tag: the #tag in question
-		:returns: a list of Note instances matching #tag
+		:returns: a list of Note instances containing tag
 		"""
 		t_notes = []
 		for n in self.notes.values():
@@ -205,6 +192,18 @@ class Notebook:
 				t_notes.append(n)
 
 		return t_notes
+
+	def get_linked(self, link)->list:
+		"""
+		:param link: the [[link]] in question
+		:returns: a list of Note instances containing link
+		"""
+		l_notes = []
+		for n in self.notes.values():
+			if n.is_tagged(link):
+				l_notes.append(n)
+
+		return l_notes
 
 	@property
 	def tags(self)->list:
@@ -216,7 +215,23 @@ class Notebook:
 				ts.append(t)
 
 		return sorted(list(set(ts)))
-	
+
+	@property
+	def links(self):
+		""" a list of all .md Notes in the Notebook
+		"""
+		return sorted([fn for fn in self.notes.keys()])
+
+	@property
+	def urls(self)->list:
+		""" a list of all Urls found in the Notebook
+		"""
+		us = []
+		for n in self.notes.values():
+			for u in n.urls:
+				us.append(u)
+
+		return sorted(us)
 
 	def find(self, regex):
 		""" a user convenience method to effectively grep notebook
@@ -241,82 +256,36 @@ class Notebook:
 			for n in ntc:
 				n.md_out = re.sub(regex, replace, n.md)
 				n.save(self)
-
-	def collect_urls(self, note)->list:
-		""" a regex search mtd 
-			for http/https links
-			available via each n.urls
-
-		:param note: the .md content of the Note
-		"""
-		ext_links = []
-
-		p = re.compile(self.MD_EXT_LINK)
-		for l in p.findall(note):
-			ext_links.append(l[1])
-
-		p = re.compile(self.HTTP_NAKED_LNK)
-		for l in p.findall(note):
-			ext_links.append(l[1].rstrip('.').rstrip(')'))
-
-		return ext_links
 	
-	""" md->html str repl methods
-		coupled with fxn from helpers.py
+	""" preparing for api commits : 
 	"""
-	def replace_imglinks(self, note):
+	@classmethod
+	def replace_strikethrough(cls, note_md):
 		""" a regex replace mtd 
-
-		:param note: the .md content of the Note
+		
+		:param note: the .md content of an Note
 		"""
-		p = re.compile(self.MDS_IMG_LNK)
-		return p.sub(int_img_repl, note)
+		p = re.compile(r'(~~)(.*)(~~)')
+		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
 
-	def replace_intlinks(self, note):
+		return p.sub(strike_repl, note_md)
+
+	@classmethod
+	def replace_eqhighlight(cls, note_md):
 		""" a regex replace mtd 
-
-		:param note: the .md content of the Note
+		
+		:param note_md: the .md content of an Note
 		"""
-		p = re.compile(self.MDS_INT_LNK)
-		return p.sub(int_link_repl, note)
+		p = re.compile(r'(==)(.*)(==)')
+		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
 
-	def replace_smdtags(self, note):
-		""" a regex replace mtd 
-
-		:param note: the .md content of the Note
-		"""
-		p = re.compile(self.MDS_INT_TAG)
-		return p.sub(int_tag_repl, note)
-
-	def replace_mermaid(self, note):
-		""" a regex replace mtd 
-
-		:param note: the .md content of the Note
-		"""
-		p = re.compile(self.MD_MERMAID)
-		return p.sub(md_mermaid_repl, note)
-
-	def replace_nakedhref(self, note):
-		""" a regex replace mtd 
-
-		:param note: the .md content of the Note
-		"""
-		p = re.compile(self.HTTP_NAKED_LNK)
-		return p.sub(md_nakedhref_repl, note)
-
-	def fix_blocked_comments(self, note):
-		""" a regex replace mtd 
-
-		:param note: the .md content of the Note
-		"""
-		p = re.compile(r'<code class="(.+)">((.|\n)*)</code>')
-		return p.sub(comment_unescape, note)
+		return p.sub(eqhl_repl, note_md)
 
 	def remove_nonpub_links(self, note):
 		""" if #public note with [[not public]] links,
 			remove them from html generation if nb.PUB_LNK_ONLY
 
-		:param note: the .md content of the Note
+		:param note: an Note instance
 		""" 
 		remv = []
 		for name in note.links:
@@ -330,60 +299,22 @@ class Notebook:
 
 		return note.md_out
 
-	def add_header_ids(self, note):
-		""" providing access to sublink-ed via 
-			[[mynote#section2]] to html 
+	def hide_commit_tag(self, note_md):
+		""" removes the #public tag (aka COMMIT_TAG) from
+			the .md before export (if PUB_LNK_ONLY)
 
-		:param note: the .md content of the Note
+		:param note: the .md of an Note
 		"""
-		p = re.compile(r'(#{1,6}\s)(.*)')
-
-		return p.sub(add_header_attr_list, note)
-
-	def replace_strikethrough(self, note):
-		""" ... 
-		
-		:param note: the .md content of the Note
-		"""
-		p = re.compile(r'(~~)(.*)(~~)')
-		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
-
-		return p.sub(strike_repl, note)
-
-	def replace_eqhighlight(self, note):
-		""" ... 
-		
-		:param note: the .md content of the Note
-		"""
-		p = re.compile(r'(==)(.*)(==)')
-		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
-
-		return p.sub(eqhl_repl, note)
-
-	def adjust_externallinks(self, note):
-		""" adding external link symbol, nofollow, and _blank target
-
-		:param note: the .md content of the Note
-		"""
-		_ext_icon = '<i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>'
-		_add_attrs = 'rel="nofollow" target="_blank"'
-
-		p = re.compile(r'<a href="(.*)">(.*)</a>') # taking advantage of our repl internal linked href='' vs ""
-		extlnk_repl = lambda m: f'<a {_add_attrs} href="{m.group(1)}">{m.group(2)}</a> {_ext_icon}'
-
-		return p.sub(extlnk_repl, note)
-
-	def hide_commit_tag(self, note):
-		""" remove the #public tag from notes 
-		"""
-		return note.replace(self.COMMIT_TAG, '')
-
+		return note_md.replace(self.COMMIT_TAG, '')
 
 	def convert_to_html(self, note):
 		""" apply all the regex method changes to 
 			a single note
 
-		:param note: the .md content of the Note
+			md->html str repl methods
+			coupled with mtds from helpers.py
+
+		:param note: an Note instance
 		"""
 		if self.PUB_LNK_ONLY:
 			note = self.remove_nonpub_links(note)
@@ -393,23 +324,22 @@ class Notebook:
 		if self.config.get('HIDE_COMMIT_TAG') == True:
 			note = self.hide_commit_tag(note)
 
-		nout = self.replace_imglinks(note)
-		nout = self.replace_intlinks(nout)
-		nout = self.replace_smdtags(nout)
-		nout = self.replace_mermaid(nout)
-		nout = self.replace_nakedhref(nout)
+		nout = Link.replace_imglinks(note)
+		nout = Link.replace_intlinks(nout)
+		nout = Tag.replace_smdtags(nout)
+		nout = CodeBlock.replace_mermaid(nout)
+		nout = Url.replace_nakedhref(nout)
 
-		nout = self.add_header_ids(nout)
+		nout = Link.add_header_ids(nout)
 
 		nout = md.markdown(nout, extensions=['fenced_code',	'nl2br', 'markdown.extensions.tables', 'attr_list', 'footnotes'], use_pygments=True)
 
-		nout = self.fix_blocked_comments(nout)
-		nout = self.replace_strikethrough(nout)
-		nout = self.replace_eqhighlight(nout)
-		nout = self.adjust_externallinks(nout)
+		nout = CodeBlock.fix_blocked_comments(nout)
+		nout = Notebook.replace_strikethrough(nout)
+		nout = Notebook.replace_eqhighlight(nout)
+		nout = Url.adjust_externallinks(nout)
 
 		return nout
-
 
 	def write_commits_to_local_html(self):
 		""" a local debugging mtd 
@@ -514,7 +444,6 @@ class Notebook:
 		r = requests.delete(f'{self.API_BASE}/api/publishment/{rname}', headers=h)
 		print(f'(removed) {r.json()["pub_name"]} -> {r}')
 
-
 	def post_commits_to_blog_api(self, stage_only=False):
 		""" the main POST method
 
@@ -611,7 +540,7 @@ class Notebook:
 
 		r = requests.post(f'{self.API_BASE}/api/layout', json=_config, headers=h)
 		print(r)
-
+		# -> record to file ? 
 		# with open(os.path.join(self.NOTE_PATH, 'pnbp-blog-settings.json'), 'r') as f:
 		# 	r = requests.post(f'{self.API_BASE}/api/layout', json=json.load(f), headers=h)
 		# 	print(r)
