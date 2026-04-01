@@ -1,40 +1,17 @@
 import re
-from collections import namedtuple
+import platform
+
+from .base import Helper
 
 
 
 """ 
 """
-class Link(namedtuple('Link', ['link'])):
+class Link(Helper):
 	"""
 	"""
 	MDS_INT_LNK = r'\[\[([^]]+)\]\]' 
 	MDS_IMG_LNK = r'!\[\[([^]]+)\]\]'
-
-	def __repr__(self):
-		""" """
-		return f'Link({self.link})'
-
-	def __str__(self):
-		""" """
-		return self.link
-
-	def __eq__(self, b):
-		""" """
-		if isinstance(b, str):
-			if b == str(self):
-				return True
-			elif b == self.note:
-				return True
-
-		return super().__eq__(self, b)
-
-	def __add__(self, b):
-		""" """
-		if isinstance(b, str):
-			return f'{str(self)}{b}'
-
-		return super().__add__(self, b)
 	
 	@staticmethod
 	def regex_to_html(matchobj):
@@ -61,16 +38,13 @@ class Link(namedtuple('Link', ['link'])):
 		return f"<a href='{href}'>{val}</a>"
 
 	@classmethod
+	@Helper.prep_md_out
 	def replace_intlinks(cls, note):
 		""" a regex replace mtd 
 
 		:param note: an Note instance
 		"""
-		p = re.compile(cls.MDS_INT_LNK)
-
-		if not note.md_out:
-			note.md_out = note.md
-		
+		p = re.compile(cls.MDS_INT_LNK)		
 		note.md_out = p.sub(Link.regex_to_html, note.md_out)
 		
 		return note
@@ -83,16 +57,13 @@ class Link(namedtuple('Link', ['link'])):
 		return f"""<img class="img-fluid" src='static/imgs/{matchobj.group(1)}'>"""
 
 	@classmethod
+	@Helper.prep_md_out
 	def replace_imglinks(cls, note):
 		""" a regex replace mtd 
 
 		:param note: an Note instance
 		"""
 		p = re.compile(cls.MDS_IMG_LNK)
-
-		if not note.md_out:
-			note.md_out = note.md
-		
 		note.md_out = p.sub(Link.regex_img_to_html, note.md_out)
 
 		return note
@@ -113,17 +84,14 @@ class Link(namedtuple('Link', ['link'])):
 		return f'{matchobj.group(1)}{matchobj.group(2)} {attr_list}'
 
 	@classmethod
+	@Helper.prep_md_out
 	def add_header_ids(cls, note):
 		""" providing access to sublink-ed via 
 			[[mynote#section2]] to html 
 
 		:param note: an Note instance
 		"""
-		p = re.compile(r'(#{1,6}\s)(.*)')
-
-		if not note.md_out:
-			note.md_out = note.md
-		
+		p = re.compile(r'(#{1,6}\s)(.*)')		
 		note.md_out = p.sub(Link.regex_append_subheader_attr_list, note.md_out)
 
 		return note
@@ -188,6 +156,20 @@ class Link(namedtuple('Link', ['link'])):
 				pass
 
 		return _subheader
+
+	@property
+	def subdirs(self):
+		""" """
+		if platform.system() == 'Windows':
+			fpp = '\\'
+		else:
+			fpp = '/'
+
+		if len((bydir := self.link.split(fpp))) > 1:
+			subdirs = bydir[:-1]
+			return subdirs
+
+		return []
 
 	@property
 	def note(self):
