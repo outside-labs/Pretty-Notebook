@@ -87,11 +87,6 @@ class Helper:
 
 		return False
 
-		print(b, type(b))
-		print(b.__class__.__name__)
-
-		return super().__eq__(b)
-
 	def __add__(self, b) -> str:
 		"""
 		"""
