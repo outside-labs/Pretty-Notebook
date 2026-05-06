@@ -1,9 +1,9 @@
 from string import ascii_uppercase
 
+import click 
+
 from pnbp.models import Notebook, Note
 from pnbp.wrappers import pass_nb
-
-import click 
 
 """ -> graph 
 	e.g. 
@@ -25,7 +25,8 @@ import click
 @pass_nb
 @click.option('--tag', help="The name of the #tag to be graphed. (#tag or tag)")
 def _create_tag_graph(tag: str, nb=None):
-	""" """
+	""" --tag -> nb/graph-tag-{tag}.md
+	"""
 	tag = tag.strip('#')
 
 	ll = [ch for ch in ascii_uppercase] # link letters
@@ -62,6 +63,9 @@ def _create_tag_graph(tag: str, nb=None):
 def _collect_public_graph(nb=None):
 	""" #public -> flat link graph notebook/graph-tag-public.md"""
 	_create_tag_graph('public', nb)
+	n = nb.get('graph-tag-public')
+	n.append_section('\n#pnbp')
+	n.save(nb)
 
 
 
@@ -143,18 +147,23 @@ def _collect_all_graphs(nb=None):
 
 
 
+@pass_nb
+def _delete_all_graph_dash_name(nb=None):
+	"""
+	"""
+	for n in nb.notes.values():
+		if n.name.startswith('graph-') and n.codeblocks[0].lang == 'mermaid':
+			lfn = n.name + '.md'
+			if os.path.exists(os.path.join(nb.NOTE_PATH, lfn)):
+				print(f'removing: {lfn} (graph-)')
+				os.remove(os.path.join(nb.NOTE_PATH, lfn))
 
 
 
-if __name__ == '__main__':
-	pass
-	# nb = Notebook()
-	# _create_tag_graph('jots', nb)
-	# _create_link_graph('TODAY', nb)
-	# _create_link_graph('PYTHON', nb)
 
-	# for n in nb.notes.values():
-	# 	# print(n.name)
-	# 	if n.is_tagged('public'):
-	# 		print(n.name)
-			# _create_link_graph(n.name, nb)	
+
+
+
+
+
+

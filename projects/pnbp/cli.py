@@ -8,14 +8,14 @@ import click
 from pnbp.models import Notebook
 from pnbp.wrappers import arrow_call
 
-from commands import cleanup as clea
-from commands import commit as comm
 from commands import collect as coll
-from commands import tasks
-from commands import subl
-from commands import graph
+from commands import commit as comm
+from commands import correct as corr
 from commands import code
+from commands import graph
 from commands import pprint
+from commands import subl
+from commands import tasks
 
 
 
@@ -95,6 +95,22 @@ def nb_commit_settings():
 	nb.blog_settings_post()
 
 
+@cli.command()
+def nb_git_clone_pnbp_blog():
+	""" command to clone from github to a new blog/
+	"""
+	op = subprocess.run([
+		'git', 'clone',
+		'https://github.com/prettynb/pnbp-blog',
+		'blog'
+		],
+		capture_output=True)
+
+	if op.stdout:
+		click.echo(op.stdout)
+	else:
+		click.echo(op.stderr)
+
 
 
 """ building click.commands out of 
@@ -124,6 +140,8 @@ def _create_command(func):
 	cmd = cli.command()
 
 	if 'note' in inspect.signature(func).parameters.keys():
+		# prove it : 
+		func.__name__ = f'nbn_{func.__name__[3:]}'
 		func = click.option('-n', '--note', type=str, help='the name of a note', required=True)(func)
 
 	func = arrow_call(func)
@@ -161,37 +179,34 @@ def create_commands(module, _all=False):
 def create_all_commands():
 	""" main function for building imported module commands 
 		and tacking them onto the click.group(), & module local() name cli
-	"""
-	# looking into imports from commands/collect.py
-	# for k,v in coll.__dict__.items(): 
-	# 	if inspect.isfunction(v) and k.startswith('_'):
-	# 		# print(k) # _func's name...
-	# 		create_command(v)
 
+	"""
 	create_commands(coll, _all=True)
 
-	create_command(tasks._nb_task_settle)
+	create_commands(comm, _all=True)
 
-	create_command(comm._git_commit_notebook)
-	create_command(comm._init_git_ignore)
+	create_commands(corr, _all=True)
 
-	create_command(clea._fix_link_spacing)
-	create_command(clea._remove_leading_newline)
-	create_command(clea._add_leading_newline)
-	create_command(clea._link_unlinked_mentions)
-	create_command(clea._remove_nonexistant_links)
-	create_command(clea._collect_nonexistant_links)
-	create_command(clea._collect_unlinked_mentions)
 
-	create_command(subl._subl_init)
+	create_command(code._extract_code_blocks)
+	create_command(code._extract_all_code_blocks)
 
 	create_command(graph._create_link_graph)
 	create_command(graph._create_tag_graph)
-
-	create_command(code._extract_code_blocks)
-	create_command(code._extract_all_codeblocks)
+	create_command(graph._delete_all_graph_dash_name)
 
 	create_command(pprint._nb_pprint)
+
+	create_command(subl._subl_init)
+
+	create_command(tasks._nb_task_settle)
+
+
+
+	
+
+
+
 
 
 

@@ -1,26 +1,42 @@
 import re
+import os
+import subprocess
 
 from pnbp.models import Note
 from pnbp.wrappers import pass_nb
 from pnbp.helpers import Link
 
 
-"""
+
+""" 
 """
 @pass_nb
-def _fix_link_spacing(note:Note, nb=None):
+def _strip_links_spacing(note:Note, nb=None):
 	""" [[ LINK ]] -> [[LINK]]
 	"""
 	n = note
 	p = re.compile(Link.MDS_INT_LNK)
 
-	n.md_out = p.sub(Link.str_strip_name, n.md)
+	n.md_out = p.sub(Link.str_strip_link, n.md)
 	n.save(nb)
 
 
 @pass_nb
-def _add_leading_newline(nb=None):
-	""" add '\n' if not to top of note 
+def _expand_links_spacing(note:Note, nb=None):
+	""" [[LINK]] -> [[ LINK ]]
+	"""
+	n = note
+	p = re.compile(Link.MDS_INT_LNK)
+
+	n.md_out = p.sub(Link.str_expand_link, n.md)
+	n.save(nb)
+
+
+"""
+"""
+@pass_nb
+def _prepend_leading_newline(nb=None):
+	""" add (a single) '\n' if not to top of every note 
 	""" 
 	for n in nb.notes.values():
 		if not n.md.startswith('\n'):
@@ -30,7 +46,8 @@ def _add_leading_newline(nb=None):
 
 @pass_nb
 def _remove_leading_newline(nb=None):
-	""" remove leading '\n' if in note
+	""" remove (a single) leading '\n' from every in note
+		(->  it if you want consistant top of file)
 	"""
 	for n in nb.notes.values():
 		if n.md.startswith('\n'):
@@ -38,8 +55,18 @@ def _remove_leading_newline(nb=None):
 			n.save(nb)
 
 
+@pass_nb
+def _remove_leading_and_trailing_newlines(nb=None):
+	""" str.strip() if necessary
+	"""
+	for n in nb.notes.values():
+		if n.md.startswith('\n') or n.md.endswith('\n'):
+			n.md_out = n.md.strip()
+			n.save(nb)
 
-"""
+
+
+""" 
 """
 @pass_nb
 def _link_unlinked_mentions(note:Note, nb=None):
@@ -93,7 +120,8 @@ def _collect_unlinked_mentions(nb=None):
 
 
 
-
+"""
+"""
 @pass_nb
 def _remove_nonexistant_links(note=Note, nb=None):
 	""" [[An Old Note]] link -> An Old Note link
@@ -110,31 +138,39 @@ def _remove_nonexistant_links(note=Note, nb=None):
 	n.save(nb)
 
 
+
+""" 
+"""
 @pass_nb
-def _collect_nonexistant_links(nb=None):
-	""" ... -> nb/all nonexistant links.mb
+def _delete_all_pnbp(nb=None):
+	""" if note contains #pnbp -> DELETE
 	"""
-	ns = "\n\n---\n\n"
-
-	for n in nb.notes.values():
-		_oldl = []
-		for name in n.links:
-			if not nb.get(name):
-				print(f'\[\[{name}\]\]')
-				_oldl.append(f'\[\[{name}\]\]')
-
-		if _oldl:
-			print(f'\n[[{n.name}]] :\n --> ')
-			ns += f'\n[[{n.name}]] :\n --> '
-			for ol in _oldl:
-				ns += f'{ol}, '
-			ns += '\n'
-
-	nb.generate_note('all nonexistant links', ns, overwrite=True, pnbp=True)
+	for n in nb.get_tagged("#pnbp"):
+		lfn = n.name + '.md'
+		if os.path.exists(os.path.join(nb.NOTE_PATH, lfn)):
+			print(f'removing: {lfn} (#pnbp)')
+			os.remove(os.path.join(nb.NOTE_PATH, lfn))
 
 
+@pass_nb
+def _delete_all_empty(nb=None):
+	""" delete all empty notes from nb/all empty.md
+	"""
+	_collect_all_empty(nb) # refresh
+
+	for l in nb.notes['all empty'].links:
+		lfn = l + '.md'
+		if os.path.exists(os.path.join(nb.NOTE_PATH, lfn)):
+			print(f'removing: {lfn} (empty)')
+			os.remove(os.path.join(nb.NOTE_PATH, lfn))
 
 
+@pass_nb
+def _touch_all_public(nb=None):
+	""" update the mod date for all #public 
+	"""
+	for pub in [n.name+'md' for n in nb.get_tagged(nb.COMMIT_TAG)]:
+		subprocess.run(['touch', os.path.join(nb.NOTE_PATH, pub)])
 
 
 
