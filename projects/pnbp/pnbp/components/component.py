@@ -4,19 +4,19 @@ from functools import wraps
 
 
 
-class Helper:
+class Component:
 	""" an extendable namedtuple
 		subclass that acts as though it's the string value
 		found on an instance at it's class named attr (e.g.
 			>>> # ... 
-			>>> h = Helper("foo")
-			>>> h.helper == "foo"
+			>>> c = Component("foo")
+			>>> c.component == "foo"
 			True
-			>>> h == "foo"
+			>>> c == "foo"
 			True
-			>>> h + " bar"
+			>>> c + " bar"
 			"foo bar"
-			>>> h # unaltered
+			>>> c # unaltered
 			Helper("foo")
 		)
 	"""
@@ -28,9 +28,9 @@ class Helper:
 		try:
 			val = args[0]
 		except IndexError:
-			# being called empty, (e.g. HelperSub() vs HelperSub("value"))
+			# being called empty, (e.g. ComponentSub() vs ComponentSub("value"))
 			# don't care (?) -> 
-			# return the uncalled (e.g. HelperSub) class constructor
+			# return the uncalled (e.g. ComponentSub) class constructor
 			val = None
 
 		_cls = namedtuple(cls_name, [attr_name])
@@ -51,7 +51,7 @@ class Helper:
 
 	def __repr__(self):
 		""" rather than returning namedtuple's repr of
-			Helper(helper="foo") -> Helper("foo")
+			Component(component="foo") -> Helper("foo")
 			to denote it's specific string-y actuality
 		"""
 		return f'{self.__class__.__name__}({self[0]})'
@@ -81,7 +81,7 @@ class Helper:
 				# ...
 				return True
 
-		elif self.__class__.__name__ == 'Name':
+		elif self.__class__.__name__ == 'Example':
 			if b == self.asupper or b == self.astitle:
 				return True
 
@@ -133,10 +133,10 @@ class Helper:
 
 
 
-class Name(Helper):
+class Example(Component):
 	""" a Helper subclass is an for e.g. 
 
-			Name = namedtuple("Name", "name")
+			Example = namedtuple("Example", "example")
 
 			that 
 				(a) defaults out to the string value of 
@@ -145,14 +145,14 @@ class Name(Helper):
 					associated with the subclass Name
 
 			note: can't super() and assume
-			you're getting the Helper's dunder mtds defined here.
+			you're getting the Component's dunder mtds defined here.
 			have access to all subclass mtds, but at __new__ (pre-instance)
 			subclass *actually* subclasses namedtuple. e.g. on this subclass,
 				
 				def __eq__(self, b):
-					# despite the fact that as Helper subclass
+					# despite the fact that as Component subclass
 					# and my __eq__ mtd without on-class re-defining one
-					# *is* Helper.__eq__, ...
+					# *is* Component.__eq__, ...
 					super().__eq__(b) # <- my direct parent is ultimately namedtuple, 
 	"""
 	@property
@@ -165,36 +165,7 @@ class Name(Helper):
 
 
 
-""" 
-""" 
-def _convert_datetime(dt: str, as_mtime=False, as_date=False, as_time=False):
-	""" mainly a helper function to convert from blog api,
-		also accepts dt="now" -> "2021-07-13 12:30:22"
 
-	:param dt: fastapi datetime object e.g. 
-		'2021-05-13T11:22:10.373376' or
-		'2019-12-15T15:32:34'
-
-	:returns: 2021-07-13 12:30:22
-	"""
-	if as_mtime:
-		return datetime.datetime.fromtimestamp(dt)
-
-	if dt == 'now':
-		if as_time:
-			return datetime.datetime.strftime(datetime.datetime.now(), '%H:%M:%S')
-		elif as_date:
-			return datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
-
-		return datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
-
-	try:
-		return datetime.datetime.strptime(dt, '%Y-%m-%dT%H:%M:%S.%f')
-	except ValueError:
-		try:
-			return datetime.datetime.strptime(dt, '%Y-%m-%dT%H:%M:%S')
-		except:
-			raise Exception(f'Something went wrong with the format parsing of {dt}')
 
 
 

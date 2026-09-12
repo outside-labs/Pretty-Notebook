@@ -1,12 +1,12 @@
 import re
 
-from .base import Helper
+from .component import Component
 
 
 
 """
 """
-class Url(Helper):
+class Url(Component):
 	"""
 	"""
 	MD_EXT_LINK = r'\[([^]]+)\]\(([^)]+)\)'
@@ -42,7 +42,7 @@ class Url(Helper):
 		return f"{matchobj.group(1)}[{matchobj.group(2)}]({matchobj.group(2)})"
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def replace_nakedhref(self, note):
 		""" a regex replace mtd 
 
@@ -54,7 +54,7 @@ class Url(Helper):
 		return note
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def adjust_externallinks(cls, note):
 		""" adding external link symbol, nofollow, and _blank target
 

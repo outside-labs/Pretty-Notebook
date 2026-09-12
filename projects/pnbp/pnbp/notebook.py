@@ -9,7 +9,10 @@ import markdown as md
 import requests
 
 from .note import Note
-from .helpers import Link, Tag, Url, CodeBlock, _convert_datetime
+
+from .components import Link, Tag, Url, CodeBlock
+
+from .helpers import _convert_datetime
 
 
 
@@ -491,6 +494,7 @@ class Notebook:
 		r = requests.get(f'{self.API_BASE}/api/users/me', headers=h)
 		print(r)
 		print(r.json())
+		return r
 
 	def get_api_home(self):
 		""" request method to /api/ (testing auth) 
@@ -499,6 +503,7 @@ class Notebook:
 		r = requests.get(f'{self.API_BASE}/api', headers=h)
 		print(r.text)
 		print(r.json())
+		return r
 
 	def get_pub_commits(self)->dict:
 		""" (internal use)
@@ -542,6 +547,7 @@ class Notebook:
 		h = self.get_headers()
 		r = requests.delete(f'{self.API_BASE}/api/publishment/{rname}', headers=h)
 		print(f'(removed) {r.json()["pub_name"]} -> {r}')
+		return r
 
 	def post_commits_to_blog_api(self, stage_only=False):
 		""" the main POST method
@@ -639,6 +645,7 @@ class Notebook:
 		r = requests.post(f'{self.API_BASE}/api/layout', json=_config, headers=h)
 
 		print(r)
+		return r
 
 	def create_api_user(self, username=''):
 		""" request method to generate an pnbp-blog API user 
@@ -662,6 +669,7 @@ class Notebook:
 		r = requests.post(f'{self.API_BASE}/api/users', json=u, headers=h)
 		print(r)
 		print(r.json())
+		return r
 	
 	def reset_api_password(self):
 		""" request method to update the authed user's API password 
@@ -678,6 +686,7 @@ class Notebook:
 		r = requests.post(f'{self.API_BASE}/api/users/me', json=p, headers=h)
 		print(r)
 		print(r.json())
+		return r
 
 
 

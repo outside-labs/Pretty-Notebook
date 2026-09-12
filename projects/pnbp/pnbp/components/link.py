@@ -1,13 +1,13 @@
 import re
 import platform
 
-from .base import Helper
+from .component import Component
 
 
 
 """ 
 """
-class Link(Helper):
+class Link(Component):
 	"""
 	"""
 	MDS_INT_LNK = r'\[\[([^]]+)\]\]' 
@@ -38,7 +38,7 @@ class Link(Helper):
 		return f"<a href='{href}'>{val}</a>"
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def replace_intlinks(cls, note):
 		""" a regex replace mtd 
 
@@ -57,7 +57,7 @@ class Link(Helper):
 		return f"""<img class="img-fluid" src='static/imgs/{matchobj.group(1)}'>"""
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def replace_imglinks(cls, note):
 		""" a regex replace mtd 
 
@@ -84,7 +84,7 @@ class Link(Helper):
 		return f'{matchobj.group(1)}{matchobj.group(2)} {attr_list}'
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def add_header_ids(cls, note):
 		""" providing access to sublink-ed via 
 			[[mynote#section2]] to html 

@@ -1,12 +1,12 @@
 import re
 
-from .base import Helper
+from .component import Component
 
 
 
 """
 """
-class CodeBlock(Helper):
+class CodeBlock(Component):
 	"""
 	"""
 	MD_CODE = r'```([^`]*)```'
@@ -29,7 +29,7 @@ class CodeBlock(Helper):
 		return f'<div class="mermaid">{matchobj.group(1)}</div>'
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def replace_mermaid(cls, note):
 		""" a regex replace mtd 
 
@@ -51,7 +51,7 @@ class CodeBlock(Helper):
 		return f'<code class="{matchobj.group(1)}">{_code}</code>'
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def fix_blocked_comments(cls, note):
 		""" a regex replace mtd 
 

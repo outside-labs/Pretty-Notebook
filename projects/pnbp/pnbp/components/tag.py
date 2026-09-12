@@ -1,12 +1,12 @@
 import re
 
-from .base import Helper
+from .component import Component
 
 
 
 """
 """
-class Tag(Helper):
+class Tag(Component):
 	""" 
 	"""
 	MDS_INT_TAG = r'([^\\)/>\'\w])#([A-Za-z]+)' 
@@ -20,7 +20,7 @@ class Tag(Helper):
 		return f"{matchobj.group(1)}\\#{matchobj.group(2)}"
 
 	@classmethod
-	@Helper.prep_md_out
+	@Component.prep_md_out
 	def replace_smdtags(cls, note):
 		""" a regex replace mtd 
 

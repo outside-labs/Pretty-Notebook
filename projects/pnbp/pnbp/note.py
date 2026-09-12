@@ -2,8 +2,9 @@ import os
 import re
 from collections import namedtuple, defaultdict
 
-from .helpers import Link, Tag, Url, CodeBlock, _convert_datetime
+from .components import Link, Tag, Url, CodeBlock
 
+from .helpers import _convert_datetime
 
 
 class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblocks', 'mtime'])):
