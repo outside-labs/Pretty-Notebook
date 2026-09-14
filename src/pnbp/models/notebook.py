@@ -4,6 +4,8 @@ import json
 import getpass
 import difflib
 import random
+from collections.abc import Iterator, Iterable
+from pathlib import Path
 
 import markdown as md
 import requests
@@ -268,7 +270,7 @@ class Notebook:
 		"""
 		l_notes = []
 		for n in self.notes.values():
-			if n.is_tagged(link):
+			if n.is_linked(link):
 				l_notes.append(n)
 
 		return l_notes
@@ -560,8 +562,7 @@ class Notebook:
 		pub_pub_data = self.get_pub_commits()
 		pub_pub_names = pub_pub_data.keys()
 
-		pub_img_data = 
-		self.get_img_commits()
+		pub_img_data = self.get_img_commits()
 		pub_img_names = pub_img_data.keys()
 
 		print(f'\ncommits: (to {self.API_BASE})')

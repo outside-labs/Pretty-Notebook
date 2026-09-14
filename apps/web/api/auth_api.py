@@ -117,7 +117,7 @@ async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()):
 	del payload['password_hash'] # <- you don't want your password hash in the payload
 	payload['tok_uuid'] = new_uuid
 
-	token = jwt.encode(payload=payload, key=JWT_SECRET)
+	token = jwt.encode(payload=payload, key=JWT_SECRET, algorithm=JWT_ALGO)
 
 	return {'access_token': token, 'token_type': 'bearer'}
 

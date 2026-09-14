@@ -104,8 +104,8 @@ class Component:
 			to regex repl) that e.g. n.md_out = "" -> n.md_out = n.md initially;
 			aka ... not re.sub-ing against an empty string.
 
-			note: reference to "<class 'pnbp.note.Note'>":
-				to allow an effective isinstance(a, pnbp.note.Note)
+			note: reference to "<class 'pnbp.models.note.Note'>":
+				to allow an effective isinstance(a, pnbp.models.note.Note)
 				without causing circular imports
 
 		:param mtd: an @classmethod that does regex replacement on an Note instance
@@ -113,13 +113,12 @@ class Component:
 		@wraps(mtd)
 		def inner(*args, **kwargs):
 			""" """
-			note = kwargs.get('note')
+			from pnbp.models.note import Note
+			
+			note = kwargs.get('note')	
 
-			if not note:
-				for a in args:
-					if str(a.__class__) == "<class 'pnbp.note.Note'>":
-						note = a
-						break
+			if note is None:
+				note = next((a for a in args if isinstance(a, Note)), None)
 
 			if not note:
 				raise ValueError("...")

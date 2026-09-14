@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Check Python source syntax
-        run: python -m compileall -q src  
+        run: python -m compileall -q src apps/web
 
       - name: Install build tools
         run: python -m pip install --upgrade build twine

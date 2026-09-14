@@ -151,9 +151,9 @@ def create_commands(module, _all=False):
 	for k,v in module.__dict__.items():
 		# print(k) # _func's name...
 		if _all:
-			if inspect.isfunction(v) 
+			if (inspect.isfunction(v) 
 			and k.startswith('_')
-			and v.__module__ == module.__name__: # ignore if imported 
+			and v.__module__ == module.__name__): # ignore if imported 
 				create_command(v)
 		else:
 			# leave open for additional bool switches
@@ -180,11 +180,11 @@ def create_all_commands():
 	create_command(graph._create_tag_graph)
 	create_command(graph._delete_all_graph_dash_name)
 
-	create_command(pprint._nb_pprint)
+	create_command(pprint._pprint)
 
 	create_command(subl._subl_init)
 
-	create_command(tasks._nb_task_settle)
+	create_command(tasks._task_settle)
 
 
 

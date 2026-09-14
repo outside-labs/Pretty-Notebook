@@ -1,3 +1,4 @@
+import re
 import datetime
 from pathlib import Path
 
@@ -31,7 +32,7 @@ class Publishment(BaseModel):
 def publication_path(name: str) -> Path:
 	""" build path to publishment, ensuring validity of slug-name
 	"""
-    if not SLUG_PATTERN.fullmatch(name):
+	if not SLUG_PATTERN.fullmatch(name):
 		raise HTTPException(400, "Invalid publication name.")
 
 	target = (PUB_PATH / f"{name}.html").resolve()
@@ -83,12 +84,12 @@ def image_path(filename: str | None) -> Path:
 	if supplied.name != filename:
 		raise HTTPException(400, "Invalid filename.")
 
-    if supplied.suffix.lower() not in ALLOWED_IMAGE_EXTENSIONS:
+	if supplied.suffix.lower() not in ALLOWED_IMAGE_EXTENSIONS:
 		raise HTTPException(400, "Unsupported image type.")
 
-	target = (IMG_DIR / supplied.name).resolve()
+	target = (IMG_PATH / supplied.name).resolve()
 
-	if target.parent != IMG_DIR:
+	if target.parent != IMG_PATH:
 		raise HTTPException(400, "Invalid image path.")
 	
 	return target
@@ -112,7 +113,7 @@ async def image_post(file: UploadFile = File(...)):
 async def publishments_get() -> list:
 	""" Publishments Get 
 	"""
-	pub_names = os.listdir(PUB_PATH)
+	pub_names = Path.iterdir(PUB_PATH)
 	pub_data = []
 	for p in pub_names:
 		mod_date = datetime.datetime.fromtimestamp(Path(PUB_PATH / p).stat().st_mtime)
@@ -138,7 +139,7 @@ async def images_get() -> list:
 async def publishment_delete(pub_name: str):
 	""" Publishment Delete 
 	"""
-	pub_names = [p for p in Path(PUB_PATH).iterdir()]
+	pub_names = [str(p) for p in Path(PUB_PATH).iterdir()]
 	
 	if pub_name in pub_names:
 		Path(PUB_PATH / pub_name).unlink()

@@ -1,3 +1,4 @@
+from pathlib import Path
 from string import ascii_uppercase
 
 import click 
@@ -154,9 +155,10 @@ def _delete_all_graph_dash_name(nb=None):
 	for n in nb.notes.values():
 		if n.name.startswith('graph-') and n.codeblocks[0].lang == 'mermaid':
 			lfn = n.name + '.md'
-			if os.path.exists(os.path.join(nb.NOTE_PATH, lfn)):
+			gpath = Path(nb.NOTE_PATH / lfn)
+			if gpath.exists():
 				print(f'removing: {lfn} (graph-)')
-				os.remove(os.path.join(nb.NOTE_PATH, lfn))
+				gpath.unlink()
 
 
 
