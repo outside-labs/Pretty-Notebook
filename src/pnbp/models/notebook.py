@@ -4,6 +4,7 @@ import json
 import getpass
 import difflib
 import random
+
 from collections.abc import Iterator, Iterable
 from pathlib import Path
 
@@ -21,6 +22,8 @@ from pnbp.helpers import _convert_datetime
 class Notebook:
 	""" 
 	"""
+	SKIP_DIRECTORIES = {".git", ".obsidian", "__pycache__"}
+
 	def __init__(self):
 
 		self.NOTE_PATH = os.environ.get('NOTE_PATH')
@@ -105,19 +108,115 @@ class Notebook:
 		""" the number of notes """
 		return len(self.notes.keys())
 
+	@property
+	def unsaved_notes(self)->tuple:
+		""" return a tuple of all notes that have unsaved changes
+		"""
+		return tuple(note for note in self.notes.values() if note.is_unsaved)
+	
+	@property
+	def has_unsaved_notes(self)->bool:
+		""" return True if any note has unsaved changes, False otherwise
+		"""
+		return bool(self.unsaved_notes)
+	
+	def save_all_notes(self):
+		""" save all notes that have unsaved changes
+		"""
+		if not self.has_unsaved_notes:
+			print("no unsaved notes to save.")
+			return []
+		
+		names = [note.name for note in self.unsaved_notes]
+
+		for name in names:
+			self.notes[name].save(self)
+
+			return names
+
+	def discard_all_changes(self):
+		""" discard all changes to all notes that have unsaved changes
+		"""
+		if not self.has_unsaved_notes:
+			print("no unsaved notes with content to discard.")
+			return []
+
+		names = [note.name for note in self.unsaved_notes]
+
+		for name in names:
+			self.notes[name].discard_changes()
+
+		return names
+
+	def _iter_note_files(self) -> Iterator[Path]:
+		""" an internal method to safely iterate the "flat" self.NOTE_PATH/
+			directory, a "single", or full "recur"(sive) path, 
+			including (if advised, not by default) "all" (i.e. incl. hidden)
+		"""
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		mode = self.config.get("NOTE_NESTED", "flat")
+		include_hidden = mode == "all"
+
+		if mode not in {"flat", "single", "recurs", "all"}:
+			raise ValueError(f"Unknown NOTE_NESTED mode: {mode!r}")
+
+		def markdown_files(directory: Path) -> list[Path]:
+			return sorted(
+				path
+				for path in directory.iterdir()
+				if path.is_file() and path.suffix.lower() == ".md"
+			)
+
+		def child_directories(directory: Path) -> list[Path]:
+			return sorted(
+				path
+				for path in directory.iterdir()
+				if (
+					path.is_dir()
+					and not path.is_symlink()
+					and path.name not in SKIP_DIRECTORIES
+					and (include_hidden or not path.name.startswith("."))
+				)
+			)
+
+		yield from markdown_files(root)
+
+		if mode == "flat":
+			return
+
+		first_level = child_directories(root)
+
+		if mode == "single":
+			for directory in first_level:
+				yield from markdown_files(directory)
+			return
+
+		pending = list(reversed(first_level))
+
+		while pending:
+			directory = pending.pop()
+			yield from markdown_files(directory)
+			pending.extend(reversed(child_directories(directory)))
+
 	def open_note(self, f):
 		""" 
 		:param str f: the .md note to open
 		"""
-		if isinstance(f, Note):
-			f = f.name + '.md'
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		path = Path((f if not isinstance(f, Note) else f.name+'.md'))
 
-		fname = f.split('.')[0].replace(self.NOTE_PATH, '')
-		with open(os.path.join(self.NOTE_PATH, f), 'r') as fo:
+		if not path.is_absolute():
+			path = root / path
+
+		path = path.resolve()
+		relative_path = path.relative_to(root) # rejects a path that escapes self.NOTE_PATH
+		note_name = relative_path.with_suffix("").as_posix()
+
+		with relative_path.open('r') as fo:
 			fo = fo.read()
 
 			n = Note(
-				name=fname,
+				name=note_name,
 				md=fo,
 				links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, fo)],
 				tags=[m[1] for m in re.findall(Tag.MDS_INT_TAG, fo)],
@@ -130,63 +229,21 @@ class Notebook:
 
 		return n
 
-	def open_sub_md(self, subdir, search_hidden: bool)->list:
-		""" helper method to walk through 
-			self.NOTE_PATH subpaths (if necessary)
-
-		:param subdir: a subdirectory
-		:param search_hidden: whether or not to be walking .directories
-		"""
-		if subdir.startswith('.') and not search_hidden:
-			return []
-
-		if subdir in ('.git', '.obsidian', '__pycache__'):
-			return []
-
-		subpath = os.path.join(self.NOTE_PATH, subdir)
-		
-		for f in os.listdir(subpath):
-			if f.endswith('.md'):
-				self.open_note(os.path.join(subpath,f))
-
-		subdirs = [d for d in os.listdir(subpath) if os.path.isdir(os.path.join(subpath, d))]
-		subdirs = [d for d in subdirs if not d in ('.git', '.obsidian', '__pycache__')]
-
-		if search_hidden:
-			return subdirs
-		else:
-			return [d for d in subdirs if not d.startswith('.')]
-
-	def open_sub_md_recurs(self, subdir, search_hidden: bool):
-		""" ... 
-		"""
-		while (r := self.open_sub_md(subdir, search_hidden)):
-			subdir = os.path.join(subdir, r.pop())
-			self.open_sub_md_recurs(subdir, search_hidden)
-
 	def open_md(self)->dict:
 		""" open all .md files from the self.NOTE_PATH path
 			into memory as e.g. {"my note name": Note}
 			-> available at nb.notes
 		"""
-		NOTE_NESTED = self.config.get('NOTE_NESTED')
-		srch_hidden = (True if NOTE_NESTED == 'all' else False)
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		self.notes.clear()
 
-		for f in os.listdir(self.NOTE_PATH):
-			if f.endswith('.md'):
-				self.open_note(f)
-		
-		if NOTE_NESTED != 'flat':
-			for d in os.listdir(self.NOTE_PATH):
-				if os.path.isdir(os.path.join(self.NOTE_PATH, d)):
+		for path in self._iter_note_files():
+			relative_path = path.relative_to(root)
+			self.open_note(relative_path.as_posix())
 
-					if NOTE_NESTED == 'single':
-						self.open_sub_md(d, srch_hidden)
-					
-					elif NOTE_NESTED == 'recurs':
-						self.open_sub_md_recurs(d, srch_hidden)
-		
 		self.notes = dict(sorted(self.notes.items()))
+
+		return self.notes
 
 	def open(self):
 		""" """
