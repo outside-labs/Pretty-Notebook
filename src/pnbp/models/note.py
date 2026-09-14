@@ -67,12 +67,32 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			-> set self.md_out = "as example, correct as is string instance"
 			-> update file via self.save()
 		"""
-		self.md_out = '' 	
+		self.md_out: str | None = None
 		self.pprotect = {}
 
 	def __str__(self):
 		""" """
 		return self.name
+	
+	@property
+	def current_md(self) -> str:
+		""" 
+		:return: the most updated (between self.md and self.md_out) Markdown content
+		"""
+		return self.md if self.md_out is None else self.md_out
+
+	@property
+	def is_unsaved(self) -> bool:
+		""" the content of self.md is different (i.e. req self.save())
+			as compared to self.md_out
+		"""
+		return self.md_out is not None and self.md_out != self.md
+
+	def discard_changes(self):
+		""" flush self.md_out, without self.save() -ing changes
+		"""
+		self.md_out = None
+		return self
 
 	@property
 	def subdirs(self):
@@ -141,16 +161,23 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 		:param nb: the Notebook instance must be passed to save!
 		"""
+		if self.md_out is None:
+			return self
+
+		if self.md_out == self.md:
+			self.md_out = None
+			return self
+
 		if not isinstance(self.md_out, str):
 			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
+		
+		path = Path(notebook.NOTE_PATH) / f"{self.name}.md"
+		path.parent.mkdir(parents=True, exist_ok=True)
+		path.write_text(self.md_out, encoding="utf-8")
 
-		if self.md_out:
-			print(f'saving {self.name}...\n')
-			# print(f'--->\n{self.md_out}')
-			with open(os.path.join(nb.NOTE_PATH, self.name+'.md'), 'w') as nf:
-				nf.write(self.md_out)
-
-			return nb.open_note(self)
+		self.md_out = None
+		
+		return nb.open_note(self)
 
 	def is_tagged(self, tag: str="", tags: list=[], to_all=False, at_all=False)->bool:
 		""" check if note.md contains a #tag
@@ -231,6 +258,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 	def remove_links(self, links: list):
 		""" if [[my link]] in links, -> if my link in links
+			*stage* removal to self.md_out
 
 		:param links: the [[link]] names to remove
 		"""
@@ -247,6 +275,8 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			ns = p.sub(Link.remove_link_mention, ns)
 
 		self.md_out = ns
+
+		return self 
 
 	def md_out_to_html(self, nb):
 		""" 
