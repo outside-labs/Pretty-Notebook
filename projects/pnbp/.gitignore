@@ -1,6 +1,0 @@
-*.sublime-*
-.DS_Store
-__pycache__/
-*egg-info/**
-
-pyproject.toml
