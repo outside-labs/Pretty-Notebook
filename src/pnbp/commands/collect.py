@@ -197,8 +197,8 @@ def _collect_nonexistant_links(nb=None):
 		_oldl = []
 		for name in n.links:
 			if not nb.get(name):
-				print(f'\[\[{name}\]\]')
-				_oldl.append(f'\[\[{name}\]\]')
+				print(rf'\[\[{name}\]\]')
+				_oldl.append(rf'\[\[{name}\]\]')
 
 		if _oldl:
 			print(f'\n[[{n.name}]] :\n --> ')

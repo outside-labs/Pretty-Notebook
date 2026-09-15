@@ -46,7 +46,7 @@ class CodeBlock(Component):
 			regex \#comment -> #comment
 			within html code blocks
 		"""
-		_code = matchobj.group(2).replace('\#', '#')
+		_code = matchobj.group(2).replace(r'\#', '#')
 
 		return f'<code class="{matchobj.group(1)}">{_code}</code>'
 
