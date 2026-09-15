@@ -186,7 +186,7 @@ async def reset_password(password: PasswordIn_Pydantic, user: User_Pydantic = De
 	if orm_user is None:
 		raise unauthorized("Could not validate credentials")
 	
-	orm_user.password_hash = bcrypt.hash(password.password_hash)}
+	orm_user.password_hash = bcrypt.hash(password.password_hash)
 	orm_user.tok_uuid = secrets.token_urlsafe(32) # rotate tok_uuid too
 	
 	await orm_user.save(update_fields=["password_hash", "tok_uuid"])

@@ -163,6 +163,16 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 		:param nb: the Notebook instance must be passed to save!
 		"""
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		raw_path = f"{f.name}.md" if isinstance(f, Note) else f
+		path = Path(raw_path).expanduser()
+
+		if not path.is_absolute():
+			path = root / path
+		
+		path = path.resolve()
+		relative_path = path.relative_to(root)
+		
 		if self.md_out is None:
 			return self
 
