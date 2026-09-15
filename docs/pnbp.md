@@ -3,9 +3,9 @@ pnbp = **"pretty notebook parser"**
 --- 
 
 **pnbp** provides programmatic access to a **notebook** via :
-- **[> pnbp/models](https://github.com/outside-labs/Pretty-Notebook/tree/main/docs/pnbp_models.md)** : **models and methods**. 
+- **[> pnbp/models](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)** : **models and methods**. 
     - access notes and their individual (regex established) components in the python repl, scripts, and your own shell commands. 
-- **[> pnbp/commands](https://github.com/outside-labs/Pretty-Notebook/tree/main/docs/pnbp_commands.md)** : **shell commands**. 
+- **[> pnbp/commands](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_commands.md)** : **shell commands**. 
     - run pre-defined function against a notebook in the terminal directly, or, scheduled.
 
 \--- 
@@ -25,13 +25,13 @@ https://obsidian.md/ is the best example of this in action.
 
 ##### (0) -> ```pip install pnbp```
 
-##### (1) -> [access via the Notebook model](https://github.com/outside-labs/Pretty-Notebook/docs/pnbp_models.md)
+##### (1) -> [access via the Notebook model](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)
 
-##### (2) -> [cli commands](https://github.com/outside-labs/Pretty-Notebook/docs/pnbp_commands.md)
+##### (2) -> [cli commands](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_commands.md)
 
-##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/docs/web.md)
+##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md)
 
-##### (4) -> [“pnano” (experimental)](https://github.com/outside-labs/Pretty-Notebook/docs/pnano.md)
+##### (4) -> [“pnano” (experimental)](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md)
 
 --- 
 
@@ -82,12 +82,6 @@ pip install --editable . # pnbp/cli.py defined “pnbp command”s
 
 --- 
 
-
-![IMG_pnbp.png](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png)
-
-
-
-
-
-
-
+<p align=center>
+  <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
+</p>
