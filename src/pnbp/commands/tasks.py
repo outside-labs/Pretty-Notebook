@@ -39,10 +39,6 @@ def md_task_uncheck(matchobj):
 
 	return f'- [ ] {t}'
 
-def md_reoccurring_task_uncheck(matchobj):
-	""" str replacement func """
-	return f'- [ ] {t}'
-
 
 
 # @pass_nb
@@ -257,56 +253,6 @@ def _collect_tasks_note(nb=None):
 
 	nb.generate_note(TASKS_NOTE, md_out=ns, overwrite=True, pnbp=True)
 
-
-
-"""
-"""
-@pass_nb
-def _move_sched_tasks_today(nb=None):
-	""" """
-	tasked = [n for n in nb.get_tagged(TASKS_TAG)]
-	for n in tasked:
-		for li in n.md.splitlines():
-			if '#sched' in li and li.strip().startswith('-'):
-				pass
-
-
-# @pass_nb
-def _parse_today_note(nb=None):
-	""" ... under development """
-	n = nb.get('TODAY')
-	# print(n.sections)
-	td = datetime.datetime.today().date()
-	td = datetime.datetime.strftime(td, '%Y-%m-%d')
-	print(td)
-
-	has_today = False
-	for s in n.sections:
-		# print(s)
-		if s.strip().startswith(td):
-			has_today = True
-			j = '\n'.join([x for x in s.split('\n') if not x.startswith('-')])
-			print(j) #journal content
-			# -> ^^ what do w/ - ?
-			# for x in n.md.splitlines():
-			# 	if x.startswith('-'):
-			# 		pass
-			# print(s)
-
-	if not has_today:
-		i = 0 if not n.header else 1
-		ns = n.sections.copy()
-		ns.insert(i, td)
-		n.md_out = '\n\n--- \n'.join(ns)
-		n.save(nb)
-
-
-
-
-if __name__ == '__main__':
-	pass
-	# nb = Notebook()
-	# parse_today_note(nb)
 
 
 
