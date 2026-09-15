@@ -37,11 +37,13 @@ jobs:
             exit 1
           fi
 
-      - name: Check Python source syntax
-        run: python -m compileall -q src apps/web
+      - name: Install check and build tools
+        run: python -m pip install --upgrade build twine ruff
 
-      - name: Install build tools
-        run: python -m pip install --upgrade build twine
+      - name: Check Python source
+        run: |
+          python -W error -m compileall -q src apps/web
+          python -m ruff check --select E9,F63,F7,F82,W605 src apps/web
 
       - name: Build wheel and source distribution
         run: python -m build
@@ -52,10 +54,20 @@ jobs:
       - name: Test installed wheel
         shell: bash
         run: |
-          python -m venv "${RUNNER_TEMP}/pnbp-release-test"
-          "${RUNNER_TEMP}/pnbp-release-test/bin/python" -m pip install dist/*.whl
-          "${RUNNER_TEMP}/pnbp-release-test/bin/python" -c "import pnbp"
-          "${RUNNER_TEMP}/pnbp-release-test/bin/pnbp" --help
+          test_venv="${RUNNER_TEMP}/pnbp-release-test"
+          note_path="${RUNNER_TEMP}/pnbp-smoke-notes"
+
+          python -m venv "$test_venv"
+          "$test_venv/bin/python" -m pip install dist/*.whl
+          "$test_venv/bin/python" -c "import pnbp"
+          "$test_venv/bin/pnbp" --help
+
+          mkdir -p "$note_path"
+          printf '#public\nHello.\n' > "$note_path/example.md"
+
+          NOTE_PATH="$note_path" PNBP_SETTINGS=off \
+            "$test_venv/bin/python" -c \
+            'from pnbp import Notebook; nb = Notebook(); assert "example" in nb.notes'
 
       - name: Store distributions
         uses: actions/upload-artifact@v5
