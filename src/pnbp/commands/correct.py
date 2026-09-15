@@ -81,7 +81,7 @@ def _link_unlinked_mentions(note:Note, nb=None):
 	# within the .md text body:
 	print(n.name, ':')
 	for name in nnames:
-		p = re.compile(fr'([^\[]\b)({name})(\b[^\]])')
+		p = re.compile(rf'([^\[]\b)({name})(\b[^\]])')
 		if (ml := p.findall(ns)):
 			for m in ml:
 				print(m[1], f'--> [[{m[1]}]]')
@@ -104,12 +104,12 @@ def _collect_unlinked_mentions(nb=None):
 		print(f'\n[[{n.name}]] :\n\t --> ')
 		ns += f'\n[[{n.name}]] :'
 		for name in nnames:
-			p = re.compile(fr'([^\[]\b)({name})(\b[^\]])')
+			p = re.compile(rf'([^\[]\b)({name})(\b[^\]])')
 			if (ml := p.findall(_md)):
 				ns += '\n\t --> '
 				for m in ml:
-					print(f'\[\[{m[1]}\]\], ')
-					ns += f'\[\[{m[1]}\]\], '
+					print(rf'\[\[{m[1]}\]\], ')
+					ns += rf'\[\[{m[1]}\]\], '
 		ns += '\n'
 		n.md_out = ''
 		n.pprotect = {}
