@@ -57,7 +57,7 @@ pip install -r requirements.txt
 Generate a JWT signing secret:
 
 ```bash
-python -c ‘import secrets; print(secrets.token_urlsafe(32))‘
+python -c 'import secrets; print(secrets.token_urlsafe(32))'
 ```
 
 Copy the resulting value into the deployment’s untracked .env file:
@@ -174,10 +174,6 @@ from the command-line :
 
 --- 
 
-<p align=“center”>
-  <img
-    src=“https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png”
-    alt=“Pretty Notebook”
-    width=“200”
-    >
+<p align=center>
+  <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
 </p>

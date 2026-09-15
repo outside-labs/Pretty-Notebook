@@ -14,10 +14,6 @@ graph BT
 	Tag --> id2
 ```
 
-<p align=“center”>
-  <img
-    src=“https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png”
-    alt=“Pretty Notebook”
-    width=“200”
-    >
+<p align=center>
+  <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
 </p>

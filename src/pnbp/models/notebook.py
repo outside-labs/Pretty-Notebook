@@ -217,9 +217,7 @@ class Notebook:
 			raise ValueError("Note path escapes NOTE_PATH") from e
 
 		if path.suffix.lower() != ".md":
-			raise ValueError(f"Not a Markdown note: {path}")	
-		
-		relative_path = path.relative_to(root)	
+			raise ValueError(f"Not a Markdown note: {path}")
 
 		text = path.read_text(encoding="utf-8")
 		note_name = relative_path.with_suffix("").as_posix()
