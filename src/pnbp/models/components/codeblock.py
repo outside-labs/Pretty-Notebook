@@ -42,7 +42,7 @@ class CodeBlock(Component):
 
 	@staticmethod
 	def regex_unescape_comments(matchobj):
-		""" where tags are escaped by int_tag_repl,
+		r""" where tags are escaped by int_tag_repl,
 			regex \#comment -> #comment
 			within html code blocks
 		"""
