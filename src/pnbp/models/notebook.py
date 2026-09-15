@@ -202,11 +202,24 @@ class Notebook:
 		""" 
 		:param str f: the .md note to open
 		"""
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		raw_path = f"{f.name}.md" if isinstance(f, Note) else f
+		path = Path(raw_path).expanduser()
+
+		if not path.is_absolute():
+			path = root / path
+
 		path = path.resolve()
-		relative_path = path.relative_to(root)
+
+		try:
+			relative_path = path.relative_to(root)
+		except ValueError as e:
+			raise ValueError("Note path escapes NOTE_PATH") from e
 
 		if path.suffix.lower() != ".md":
-			raise ValueError(f"Not a Markdown note: {path}")
+			raise ValueError(f"Not a Markdown note: {path}")	
+		
+		relative_path = path.relative_to(root)	
 
 		text = path.read_text(encoding="utf-8")
 		note_name = relative_path.with_suffix("").as_posix()

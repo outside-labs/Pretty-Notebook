@@ -380,11 +380,17 @@ def create_all_commands():
 (venv) % cd pnbp
 (venv) % pip install --editable .
 # ... 
-(venv) % pnbp —-help
+(venv) % pnbp --help
 # -> see your new command in the list !
 (venv) % pnbp do-this-thing
 ```
 
 --- 
 
-<img src=“https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png” width=“512” height=“512” alt=“IMG_pnbp.png”>
+<p align=“center”>
+  <img
+    src=“https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png”
+    alt=“Pretty Notebook”
+    width=“200”
+    >
+</p>

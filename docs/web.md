@@ -32,11 +32,11 @@ or do it manually :
 
 ```bash
 git clone \
-  —filter=blob:none \
-  —sparse \
-  —depth 1 \
-  —single-branch \
-  —branch main \
+  --filter=blob:none \
+  --sparse \
+  --depth 1 \
+  --single-branch \
+  --branch main \
   https://github.com/outside-labs/Pretty-Notebook.git \
   pnbp_web
 
@@ -57,7 +57,7 @@ pip install -r requirements.txt
 Generate a JWT signing secret:
 
 ```bash
-python -c ‘import secrets; print(secrets.token_urlsafe(32))
+python -c ‘import secrets; print(secrets.token_urlsafe(32))‘
 ```
 
 Copy the resulting value into the deployment’s untracked .env file:
@@ -174,4 +174,10 @@ from the command-line :
 
 --- 
 
-<img src=“https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png” width=“512” height=“512” alt=“IMG_pnbp.png”>
+<p align=“center”>
+  <img
+    src=“https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png”
+    alt=“Pretty Notebook”
+    width=“200”
+    >
+</p>
