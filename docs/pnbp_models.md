@@ -124,7 +124,7 @@ and **note**(s) can be individually queried against things:
 >>> n.insert_section(0, "An added section by index")
 >>> n = n.save(nb)
 >>> n.prepend_section("Add to the beginning, but not before an n.header.")
->>> n.md_out = "" # nevermind, don't want that
+>>> n.discard_changes() # nevermind, don't want that
 >>> n.prepend_today_section(nb)
 >>> # ^^ added section headered w/ YYYY-MM-DD
 >>> # and saved inplace

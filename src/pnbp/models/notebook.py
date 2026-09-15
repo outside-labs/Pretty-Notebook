@@ -126,13 +126,13 @@ class Notebook:
 		if not self.has_unsaved_notes:
 			print("no unsaved notes to save.")
 			return []
-		
+
 		names = [note.name for note in self.unsaved_notes]
 
 		for name in names:
 			self.notes[name].save(self)
 
-			return names
+		return names
 
 	def discard_all_changes(self):
 		""" discard all changes to all notes that have unsaved changes
@@ -174,7 +174,7 @@ class Notebook:
 				if (
 					path.is_dir()
 					and not path.is_symlink()
-					and path.name not in SKIP_DIRECTORIES
+					and path.name not in self.SKIP_DIRECTORIES
 					and (include_hidden or not path.name.startswith("."))
 				)
 			)
@@ -202,30 +202,26 @@ class Notebook:
 		""" 
 		:param str f: the .md note to open
 		"""
-		root = Path(self.NOTE_PATH).expanduser().resolve()
-		path = Path((f if not isinstance(f, Note) else f.name+'.md'))
-
-		if not path.is_absolute():
-			path = root / path
-
 		path = path.resolve()
-		relative_path = path.relative_to(root) # rejects a path that escapes self.NOTE_PATH
+		relative_path = path.relative_to(root)
+
+		if path.suffix.lower() != ".md":
+			raise ValueError(f"Not a Markdown note: {path}")
+
+		text = path.read_text(encoding="utf-8")
 		note_name = relative_path.with_suffix("").as_posix()
 
-		with relative_path.open('r') as fo:
-			fo = fo.read()
+		n = Note(
+			name=note_name,
+			md=text,
+			links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, text)],
+			tags=[m[1] for m in re.findall(Tag.MDS_INT_TAG, text)],
+			urls=Url.collect_urls(text),
+			codeblocks=re.findall(CodeBlock.MD_CODE, text),
+			mtime=_convert_datetime(path.stat().st_mtime, as_mtime=True),
+			)
 
-			n = Note(
-				name=note_name,
-				md=fo,
-				links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, fo)],
-				tags=[m[1] for m in re.findall(Tag.MDS_INT_TAG, fo)],
-				urls=Url.collect_urls(fo),
-				codeblocks=re.findall(CodeBlock.MD_CODE, fo),
-				mtime=_convert_datetime(os.path.getmtime(os.path.join(self.NOTE_PATH, f)), as_mtime=True),
-				)
-
-			self.notes.update({fname: n})
+		self.notes[note_name] = n
 
 		return n
 
@@ -413,7 +409,7 @@ class Notebook:
 		p = re.compile(r'(~~)(.*)(~~)')
 		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
 
-		if not note.md_out:
+		if note.md_out is None:
 			note.md_out = note.md
 		
 		note.md_out = p.sub(strike_repl, note.md_out)
@@ -429,7 +425,7 @@ class Notebook:
 		p = re.compile(r'(==)(.*)(==)')
 		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
 
-		if not note.md_out:
+		if note.md_out is None:
 			note.md_out = note.md
 		
 		note.md_out = p.sub(eqhl_repl, note.md_out)
@@ -461,11 +457,11 @@ class Notebook:
 
 		:param note: an Note instance
 		"""
-		if not note.md_out:
+		if note.md_out is None:
 			# -> if md_out is not set yet...
 			note.md_out = note.md
 
-		note.md_out.replace(self.COMMIT_TAG, '')
+		note.md_out = note.md_out.replace(self.COMMIT_TAG, '')
 
 		return note
 
@@ -479,28 +475,37 @@ class Notebook:
 		:param note: an Note instance
 		::
 		"""
-		if self.PUB_LNK_ONLY:
-			note = self.remove_nonpub_links(note)
+		previous_md_out = note.md_out
+		
+		try:
+			note.md_out = note.current_md
+	
+			if self.PUB_LNK_ONLY:
+				note = self.remove_nonpub_links(note)
 
-		if self.config.get('HIDE_COMMIT_TAG') == True:
-			note = self.hide_commit_tag(note)
+			if self.config.get('HIDE_COMMIT_TAG') == True:
+				note = self.hide_commit_tag(note)
 
-		nout = Link.replace_imglinks(note)
-		nout = Link.replace_intlinks(nout)
-		nout = Tag.replace_smdtags(nout)
-		nout = CodeBlock.replace_mermaid(nout)
-		nout = Url.replace_nakedhref(nout)
+			nout = Link.replace_imglinks(note)
+			nout = Link.replace_intlinks(nout)
+			nout = Tag.replace_smdtags(nout)
+			nout = CodeBlock.replace_mermaid(nout)
+			nout = Url.replace_nakedhref(nout)
 
-		nout = Link.add_header_ids(nout)
+			nout = Link.add_header_ids(nout)
 
-		nout.md_out = md.markdown(nout.md_out, extensions=['fenced_code', 'nl2br', 'markdown.extensions.tables', 'attr_list', 'footnotes'], use_pygments=True)
+			nout.md_out = md.markdown(nout.md_out, extensions=['fenced_code', 'nl2br', 'markdown.extensions.tables', 'attr_list', 'footnotes'], use_pygments=True)
 
-		nout = CodeBlock.fix_blocked_comments(nout)
-		nout = Notebook.replace_strikethrough(nout)
-		nout = Notebook.replace_eqhighlight(nout)
-		nout = Url.adjust_externallinks(nout)
+			nout = CodeBlock.fix_blocked_comments(nout)
+			nout = Notebook.replace_strikethrough(nout)
+			nout = Notebook.replace_eqhighlight(nout)
+			nout = Url.adjust_externallinks(nout)
 
-		return nout
+			return nout.md_out
+	
+		finally:
+			note.md_out = previous_md_out	
+		
 
 	def write_commits_to_local_html(self):
 		""" a local debugging mtd 
@@ -512,9 +517,9 @@ class Notebook:
 		for n in self.notes.values():
 
 			if n.is_tagged(self.COMMIT_TAG) and not n.is_tagged(self.EXCLUDE_TAG):
-				nout = self.convert_to_html(note=n)
+				html = self.convert_to_html(note=n)
 				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
-				of.write(nout.md_out)
+				of.write(html)
 				of.close()
 
 				print(f'\t{n.name} ---> {self.HTML_PATH}')
@@ -637,9 +642,9 @@ class Notebook:
 					to_post = True
 
 			if to_post and not stage_only:
-				nout = self.convert_to_html(note=n)
+				html = self.convert_to_html(note=n)
 				r = requests.post(f'{self.API_BASE}/api/publishment',
-					json={"name": n.slugname, "content": nout.md_out},
+					json={"name": n.slugname, "content": html},
 					headers=h
 					)
 				

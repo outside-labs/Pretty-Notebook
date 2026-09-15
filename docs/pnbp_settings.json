@@ -3,7 +3,7 @@
 	"HTML_PATH": "/users/alice/blogtest",
 	"VENV_PATH": "/users/alice/.envs/venv/",
 	"API_BASE": "http://127.0.0.1:8000",
-	"API_TOKEN": "fakeinitialvalue",
+	"API_TOKEN": "",
 	"PUB_LNK_ONLY": false,
 	"NAV_BRAND": "<i class='bi bi-book-fill'></i>&nbsp;<i class='bi bi-globe2'></i>",
 	"NAV_PAGES": {
@@ -11,7 +11,7 @@
 		"about": "/about/",
 		"contact": [
 			{
-				"github": "https://github.com/prettynb/"
+				"github": "https://github.com/outside-labs/Pretty-Notebook"
 			},
 			{
 				"subname2": "/subroute2/"

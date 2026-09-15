@@ -116,8 +116,9 @@ async def publishments_get() -> list:
 	pub_names = Path.iterdir(PUB_PATH)
 	pub_data = []
 	for p in pub_names:
-		mod_date = datetime.datetime.fromtimestamp(Path(PUB_PATH / p).stat().st_mtime)
-		pub_data.append({'pub_name': p, 'mod_date': mod_date})
+		if p.is_file() and p.suffix.lower() == '.html':
+			mod_date = datetime.datetime.fromtimestamp(Path(PUB_PATH / p).stat().st_mtime)
+			pub_data.append({'pub_name': p.name, 'mod_date': mod_date})
 
 	return pub_data
 
@@ -126,11 +127,12 @@ async def publishments_get() -> list:
 async def images_get() -> list:
 	""" Images Get 
 	"""
-	img_names = os.listdir(IMG_PATH)
+	img_names = Path.iterdir(IMG_PATH)
 	img_data = []
-	for n in img_names:
-		mod_date = datetime.datetime.fromtimestamp(Path(IMG_PATH / n).stat().st_mtime)
-		img_data.append({'img_name': n, 'mod_date': mod_date})
+	for i in img_names:
+		if i.is_file() and i.suffix.lower() in ALLOWED_IMG_EXTENSIONS:
+			mod_date = datetime.datetime.fromtimestamp(Path(IMG_PATH / i).stat().st_mtime)
+			img_data.append({'img_name': i.name, 'mod_date': mod_date})
 
 	return img_data
 

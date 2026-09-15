@@ -123,7 +123,7 @@ class Component:
 			if not note:
 				raise ValueError("...")
 
-			if not note.md_out:
+			if note.md_out is None:
 				note.md_out = note.md
 
 			return mtd(*args, **kwargs)
