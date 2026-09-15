@@ -1,6 +1,8 @@
 import os
 import re
+
 from collections import namedtuple, defaultdict
+from pathlib import Path
 
 from .components import Link, Tag, Url, CodeBlock
 
@@ -118,7 +120,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 	@property
 	def sections(self)->list:
 		"""	"""
-		return [x.strip() for x in self.md.split('---') if x]
+		return [x.strip() for x in self.current_md.split('---') if x]
 
 	@property
 	def header(self):
@@ -161,6 +163,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 		:param nb: the Notebook instance must be passed to save!
 		"""
+		
 		if self.md_out is None:
 			return self
 
@@ -170,14 +173,20 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 		if not isinstance(self.md_out, str):
 			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
-		
-		path = Path(notebook.NOTE_PATH) / f"{self.name}.md"
+
+		root = Path(nb.NOTE_PATH).expanduser().resolve()
+		path = (root / f"{self.name}.md").resolve()
+
+		try:
+			path.relative_to(root)
+		except ValueError as e:
+			raise ValueError("Note path escapes NOTE_PATH") from e
+
 		path.parent.mkdir(parents=True, exist_ok=True)
 		path.write_text(self.md_out, encoding="utf-8")
 
 		self.md_out = None
-		
-		return nb.open_note(self)
+		return nb.open_note(path)
 
 	def is_tagged(self, tag: str="", tags: list=[], to_all=False, at_all=False)->bool:
 		""" check if note.md contains a #tag
@@ -262,10 +271,11 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 		:param links: the [[link]] names to remove
 		"""
-		ns = self.md
+		ns = self.current_md
 		links = [l for l in links if not '.' in l] # keep images!
 		
 		for name in links:
+			name = re.escape(str(name))
 			p = re.compile(fr'(\[\[\s?)({name})(\s?\]\])')
 
 			if (ml := p.findall(ns)):
@@ -291,7 +301,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			This allows for safe parsing/repl against .md "body content"
 			exclusively. -> ... -> self.prime_md_out_release()
 		"""
-		if self.md_out:
+		if self.md_out is not None:
 			raise Exception(f"""You already have updated context for {self.name} in note.md_out.
 							note.save() or n.md_out = '' first...""")
 
@@ -323,7 +333,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 		:param nb: lazy accept Notebook to save Note inline
 		"""
-		if not self.md_out and self.pprotect:
+		if self.md_out is None and self.pprotect:
 			raise Exception("Can't return prime note context that was never protected to begin with!")
 
 		ns = self.md_out		
