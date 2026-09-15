@@ -1,6 +1,5 @@
-import random
-import uuid
-import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -22,6 +21,7 @@ router = APIRouter()
 
 JWT_SECRET = config('JWT_SECRET')
 JWT_ALGO = config('JWT_ALGO')
+TOKEN_LIFETIME = timedelta(days=30)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/token')
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token', auto_error=False)
@@ -33,7 +33,7 @@ class User(Model):
 	id = fields.IntField(pk=True)
 	username = fields.CharField(max_length=50, unique=True)
 	password_hash = fields.CharField(max_length=128)
-	tok_uuid = fields.TextField(default=hashlib.sha512(str(uuid.uuid4()).encode('utf-8')).hexdigest())
+	tok_uuid = fields.TextField(default=lambda: secrets.token_urlsafe(32))
 	# group = fields.TextField(default='user')
 
 	def verify_password(self, password):
@@ -46,8 +46,8 @@ class Password(Model):
 
 
 
-User_Pydantic = pydantic_model_creator(User, name='User')
-UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude_readonly=True)
+User_Pydantic = pydantic_model_creator(User, name='User', exclude=('password_hash', 'tok_uuid'))
+UserIn_Pydantic = pydantic_model_creator(User, name='UserIn', exclude=('tok_uuid',), exclude_readonly=True)
 
 PasswordIn_Pydantic = pydantic_model_creator(Password, name='PasswordIn', exclude_readonly=True)
 
@@ -89,7 +89,6 @@ async def create_user(user: UserIn_Pydantic, curr_user: User_Pydantic = Depends(
 	return await User_Pydantic.from_tortoise_orm(user_obj)
 
 
-
 async def authenticate_user(username: str, password: str):
 	""" """
 	user = await User.filter(username=username).first()
@@ -99,76 +98,108 @@ async def authenticate_user(username: str, password: str):
 		return False
 	return user
 
+async def _generate_token(user):
+	now = datetime.now(timezone.utc)
+	token_id = secrets.token_urlsafe(32)
+	user.tok_uuid = token_id
+	
+	await user.save(update_fields=["tok_uuid"])
+
+	payload = {
+		"sub": str(user.id),
+		"username": user.username,
+		"tok_uuid": token_id,
+		"iat": now,
+		"exp": now + TOKEN_LIFETIME
+		}
+
+	return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)	
+
 @router.post('/api/token')
 async def generate_token(form_data: OAuth2PasswordRequestForm = Depends()):
 	""" Generate Token 
 	"""
 	user = await authenticate_user(username=form_data.username, password=form_data.password)
+	
 	if not user:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
-
-	user_obj = await User_Pydantic.from_tortoise_orm(user)
-
-	new_uuid = hashlib.sha512(str(uuid.uuid4()).encode('utf-8')).hexdigest()
-
-	await User.filter(id=user_obj.id).update(**{'tok_uuid': new_uuid})
-
-	payload = user_obj.dict().copy()
-	del payload['password_hash'] # <- you don't want your password hash in the payload
-	payload['tok_uuid'] = new_uuid
-
-	token = jwt.encode(payload=payload, key=JWT_SECRET, algorithm=JWT_ALGO)
+	
+	token = await _generate_token(user)
 
 	return {'access_token': token, 'token_type': 'bearer'}
 
 
+def unauthorized(detail: str) -> HTTPException:
+	""" """
+	return HTTPException(
+		status_code=status.HTTP_401_UNAUTHORIZED,
+		detail=detail,
+		headers={"WWW-Authenticate": "Bearer"},
+		)
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
 	""" """
 	try:
-		payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
-		user = await User.get(id=payload.get('id'))
+		payload = jwt.decode(
+			token,
+			JWT_SECRET,
+			algorithms=[JWT_ALGO],
+			options={"require": ["sub", "tok_uuid", "exp"]},
+			)
 
-	except:
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Invalid username or password')
+	except jwt.ExpiredSignatureError as exc:
+		raise unauthorized("Token expired") from exc
 
+	except jwt.InvalidTokenError as exc:
+		raise unauthorized("Could not validate credentials") from exc
+
+	try:
+		user_id = int(payload["sub"])
+		token_id = payload["tok_uuid"]
+
+	except (KeyError, TypeError, ValueError) as exc:
+		raise unauthorized("Could not validate credentials") from exc
+
+	user = await User.get_or_none(id=user_id)
+
+	if user is None or not isinstance(token_id, str):
+		raise unauthorized("Could not validate credentials")
+
+	if not secrets.compare_digest(token_id, user.tok_uuid):
+		raise unauthorized("Token revoked or superseded")
+	
 	return await User_Pydantic.from_tortoise_orm(user) # convert to pydantic, user isnt being passed directly, token is being passed
 
 @router.get('/api/users/me', response_model=User_Pydantic)
 async def get_user(user: User_Pydantic = Depends(get_current_user)):
 	""" Get User 
 	"""
-	payload = user.dict().copy()
-	payload['password_hash'] = '' 	# don't include these
-	payload['tok_uuid'] = ''		# back to user here
-
-	return payload
+	return user
 
 
 @router.post('/api/users/me', response_model=User_Pydantic)
 async def reset_password(password: PasswordIn_Pydantic, user: User_Pydantic = Depends(get_current_user)):
 	""" Reset Password 
 	"""
+	orm_user = await User.get_or_none(id=user.id)
 
-	password_hash = password.dict()['password_hash']
-	curr_id = user.dict()['id']
+	if orm_user is None:
+		raise unauthorized("Could not validate credentials")
+	
+	orm_user.password_hash = bcrypt.hash(password.password_hash)
+	orm_user.tok_uuid = secrets.token_urlsafe(32) # rotate tok_uuid too
+	
+	await orm_user.save(update_fields=["password_hash", "tok_uuid"])
 
-	try:
-		user = await User.filter(id=curr_id).first()
-		_out = {'password_hash': bcrypt.hash(password_hash)}
-		await user.update_from_dict(_out).save()
-
-	except:
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='failed')
-
-	return await User_Pydantic.from_queryset_single(User.get(id=curr_id))
+	return await User_Pydantic.from_tortoise_orm(orm_user)
 
 
 
 @router.get('/api')
-async def api_index(token: str = Depends(oauth2_scheme)):
-	""" """
-	return {'the_token': token}
+async def api_index(user: User_Pydantic = Depends(get_current_user)):
+	""" basic index, returns if authorized 
+	"""
+	return {"authenticated": True, "username": user.username}
 
 
 
