@@ -82,12 +82,4 @@ pip install --editable . # pnbp/cli.py defined “pnbp command”s
 
 --- 
 
-
-![IMG_pnbp.png](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png)
-
-
-
-
-
-
-
+<img src=“https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png” width=“512” height=“512” alt=“IMG_pnbp.png”>

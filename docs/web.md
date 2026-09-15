@@ -54,20 +54,21 @@ pip install -r requirements.txt
 
 ##### (2) -> **pnbp_web/** **.env** :
 
-```nano .env```
+Generate a JWT signing secret:
 
 ```bash
-JWT_SECRET=long123random456alphanumeric
+python -c ‘import secrets; print(secrets.token_urlsafe(32))
+```
+
+Copy the resulting value into the deployment’s untracked .env file:
+
+```dotenv
+JWT_SECRET=PASTE_GENERATED_VALUE_HERE
 JWT_ALGO=HS256
 ```
 
-```py
->>> ^^ pick a different **JWT_ALGO** if desired,  
->>> and generate your own **JWS_SECRET**, e.g. 
->>> import uuid
->>> uuid.uuid4().hex
-'1ab12802724b4d9ebe92e3eecae8b4f6'
-```
+REMINDER: Never commit the generated value.
+
 
 --- 
 
@@ -173,4 +174,4 @@ from the command-line :
 
 --- 
 
-![IMG_pnbp.png](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png)
+<img src=“https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/IMG_pnbp.png” width=“512” height=“512” alt=“IMG_pnbp.png”>
