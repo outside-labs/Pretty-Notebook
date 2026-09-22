@@ -117,7 +117,10 @@ async def publishments_get() -> list:
 	pub_data = []
 	for p in pub_names:
 		if p.is_file() and p.suffix.lower() == '.html':
-			mod_date = datetime.datetime.fromtimestamp(Path(PUB_PATH / p).stat().st_mtime)
+			mod_date = datetime.datetime.fromtimestamp(
+				Path(PUB_PATH / p).stat().st_mtime,
+				tz=datetime.timezone.utc,
+			)
 			pub_data.append({'pub_name': p.name, 'mod_date': mod_date})
 
 	return pub_data
@@ -131,7 +134,10 @@ async def images_get() -> list:
 	img_data = []
 	for i in img_names:
 		if i.is_file() and i.suffix.lower() in ALLOWED_IMAGE_EXTENSIONS:
-			mod_date = datetime.datetime.fromtimestamp(Path(IMG_PATH / i).stat().st_mtime)
+			mod_date = datetime.datetime.fromtimestamp(
+				Path(IMG_PATH / i).stat().st_mtime,
+				tz=datetime.timezone.utc,
+			)
 			img_data.append({'img_name': i.name, 'mod_date': mod_date})
 
 	return img_data
@@ -154,7 +160,6 @@ async def publishment_delete(pub_name: str):
 	target.unlink()
 
 	return {"pub_name": target.name}
-
 
 
 

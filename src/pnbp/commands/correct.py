@@ -1,6 +1,6 @@
 import re
 import os
-import subprocess
+from pathlib import Path
 
 from pnbp.models import Note, Link
 from pnbp.helpers import pass_nb
@@ -187,10 +187,20 @@ def _delete_all_empty(nb=None):
 def _touch_all_public(nb=None):
 	""" update the mod date for all #public 
 	"""
-	for pub in [n.name+'md' for n in nb.get_tagged(nb.COMMIT_TAG)]:
-		subprocess.run(['touch', os.path.join(nb.NOTE_PATH, pub)])
+	root = Path(nb.NOTE_PATH).expanduser().resolve()
+	paths = {
+		path.relative_to(root).with_suffix('').as_posix(): path
+		for path in nb._iter_note_files()
+	}
 
+	for note in nb.notes.values():
+		if not nb.is_publishable(note):
+			continue
 
+		path = paths.get(note.name)
+		if path is None or not path.is_file():
+			raise FileNotFoundError(f'Cannot touch missing note: {note.name!r}')
 
+		path.touch()
 
 
