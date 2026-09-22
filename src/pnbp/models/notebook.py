@@ -227,7 +227,7 @@ class Notebook:
 			name=note_name,
 			md=text,
 			links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, text)],
-			tags=[m[1] for m in re.findall(Tag.MDS_INT_TAG, text)],
+			tags=Tag.collect_tags(text),
 			urls=Url.collect_urls(text),
 			codeblocks=re.findall(CodeBlock.MD_CODE, text),
 			mtime=_convert_datetime(path.stat().st_mtime, as_mtime=True),
@@ -346,6 +346,13 @@ class Notebook:
 				t_notes.append(n)
 
 		return t_notes
+
+	def is_publishable(self, note)->bool:
+		"""Return whether a note is explicitly public and not excluded."""
+		return (
+			note.is_tagged(self.COMMIT_TAG)
+			and not note.is_tagged(self.EXCLUDE_TAG)
+		)
 
 	def get_linked(self, link)->list:
 		"""
@@ -470,12 +477,10 @@ class Notebook:
 		:param note: an Note instance
 		""" 
 		remv = []
-		for name in note.links:
-			if (ln := self.get(name)):
-				if not ln.is_tagged(self.COMMIT_TAG):
-					remv.append(name)
-			else:
-				remv.append(name)
+		for link in note.links:
+			target = self.notes.get(link.note)
+			if target is None or not self.is_publishable(target):
+				remv.append(str(link))
 
 		note.remove_links(remv)
 		# -> md_out is set initially here. 
@@ -548,7 +553,7 @@ class Notebook:
 		print(f'\nlocal commit: {self.HTML_PATH}')
 		for n in self.notes.values():
 
-			if n.is_tagged(self.COMMIT_TAG) and not n.is_tagged(self.EXCLUDE_TAG):
+			if self.is_publishable(n):
 				html = self.convert_to_html(note=n)
 				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
 				of.write(html)
@@ -666,7 +671,7 @@ class Notebook:
 			to_post = False
 			fname = n.slugname + '.html'
 
-			if n.is_tagged(self.COMMIT_TAG) and not n.is_tagged(self.EXCLUDE_TAG):
+			if self.is_publishable(n):
 				post_names.append(fname)
 				if fname in pub_pub_names:
 					if pub_pub_data[fname] < n.mtime: # change has occured 
@@ -790,7 +795,6 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-
 
 
 
