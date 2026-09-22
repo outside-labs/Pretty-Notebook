@@ -95,25 +95,29 @@ def _link_unlinked_mentions(note:Note, nb=None):
 def _collect_unlinked_mentions(nb=None):
 	""" ... -> nb/all unlinked mentions.md 
 	""" # takes a long time ...
+	nb._require_clean_notes("collect unlinked mentions")
 	nnames = sorted(nb.notes.keys(), reverse=True)
 	ns = "\n\n---\n\n"
 	for n in nb.notes.values():
-		n.prime_md_out_protect()
-		_md = n.md_out
-		
-		print(f'\n[[{n.name}]] :\n\t --> ')
-		ns += f'\n[[{n.name}]] :'
-		for name in nnames:
-			p = re.compile(rf'([^\[]\b)({name})(\b[^\]])')
-			if (ml := p.findall(_md)):
-				ns += '\n\t --> '
-				for m in ml:
-					print(rf'\[\[{m[1]}\]\], ')
-					ns += rf'\[\[{m[1]}\]\], '
-		ns += '\n'
-		n.md_out = ''
-		n.pprotect = {}
-		# ^^ not saving, just looking
+		previous_md_out = n.md_out
+		previous_pprotect = n.pprotect.copy()
+		try:
+			n.prime_md_out_protect()
+			_md = n.md_out
+
+			print(f'\n[[{n.name}]] :\n\t --> ')
+			ns += f'\n[[{n.name}]] :'
+			for name in nnames:
+				p = re.compile(rf'([^\[]\b)({name})(\b[^\]])')
+				if (ml := p.findall(_md)):
+					ns += '\n\t --> '
+					for m in ml:
+						print(rf'\[\[{m[1]}\]\], ')
+						ns += rf'\[\[{m[1]}\]\], '
+			ns += '\n'
+		finally:
+			n.md_out = previous_md_out
+			n.pprotect = previous_pprotect
 
 	nb.generate_note('all unlinked mentions', ns, overwrite=True, pnbp=True)
 
@@ -168,8 +172,6 @@ def _touch_all_public(nb=None):
 	"""
 	for pub in [n.name+'md' for n in nb.get_tagged(nb.COMMIT_TAG)]:
 		subprocess.run(['touch', os.path.join(nb.NOTE_PATH, pub)])
-
-
 
 
 

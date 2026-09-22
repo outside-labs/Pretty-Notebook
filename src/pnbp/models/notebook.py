@@ -198,9 +198,10 @@ class Notebook:
 			yield from markdown_files(directory)
 			pending.extend(reversed(child_directories(directory)))
 
-	def open_note(self, f):
+	def open_note(self, f, *, notes=None):
 		""" 
 		:param str f: the .md note to open
+		:param dict notes: optional destination mapping used during atomic reloads
 		"""
 		root = Path(self.NOTE_PATH).expanduser().resolve()
 		raw_path = f"{f.name}.md" if isinstance(f, Note) else f
@@ -232,29 +233,48 @@ class Notebook:
 			mtime=_convert_datetime(path.stat().st_mtime, as_mtime=True),
 			)
 
-		self.notes[note_name] = n
+		target = self.notes if notes is None else notes
+		target[note_name] = n
 
 		return n
 
-	def open_md(self)->dict:
+	def open_md(self, *, discard_unsaved=False)->dict:
 		""" open all .md files from the self.NOTE_PATH path
 			into memory as e.g. {"my note name": Note}
 			-> available at nb.notes
+
+		:param bool discard_unsaved: explicitly allow pending edits to be discarded
 		"""
+		if self.has_unsaved_notes and not discard_unsaved:
+			names = ", ".join(note.name for note in self.unsaved_notes)
+			raise RuntimeError(
+				f"Cannot reload notebook with unsaved changes: {names}. "
+				"Save them or call open_md(discard_unsaved=True)."
+			)
+
 		root = Path(self.NOTE_PATH).expanduser().resolve()
-		self.notes.clear()
+		loaded_notes = {}
 
 		for path in self._iter_note_files():
 			relative_path = path.relative_to(root)
-			self.open_note(relative_path.as_posix())
+			self.open_note(relative_path.as_posix(), notes=loaded_notes)
 
-		self.notes = dict(sorted(self.notes.items()))
+		self.notes = dict(sorted(loaded_notes.items()))
 
 		return self.notes
 
-	def open(self):
+	def open(self, *, discard_unsaved=False):
 		""" """
-		self.open_md()
+		self.open_md(discard_unsaved=discard_unsaved)
+
+	def _require_clean_notes(self, operation):
+		"""Refuse operations that cannot safely consume staged note content."""
+		if self.has_unsaved_notes:
+			names = ", ".join(note.name for note in self.unsaved_notes)
+			raise RuntimeError(
+				f"Cannot {operation} with unsaved changes: {names}. "
+				"Save or discard them explicitly first."
+			)
 
 	def generate_note(self, name, md_out, overwrite=False, pnbp=False):
 		""" 
@@ -522,7 +542,8 @@ class Notebook:
 		""" a local debugging mtd 
 			-> self.HTML_PATH/.html ... 
 		"""
-		self.open_md() # fresh retrival 
+		self._require_clean_notes("publish local HTML")
+		self.open_md()
 
 		print(f'\nlocal commit: {self.HTML_PATH}')
 		for n in self.notes.values():
@@ -629,7 +650,8 @@ class Notebook:
 
 		:param stage_only: if stage_only, print #public and don't commit
 		"""
-		self.open_md() # fresh retrival
+		self._require_clean_notes("preview or publish remote commits")
+		self.open_md()
 		h = self.get_headers()
 
 		pub_pub_data = self.get_pub_commits()
@@ -768,8 +790,6 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-
-
 
 
 
