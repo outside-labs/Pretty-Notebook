@@ -3,6 +3,7 @@ import re
 import json
 import getpass
 import difflib
+import mimetypes
 import random
 
 from collections.abc import Iterator, Iterable
@@ -23,6 +24,8 @@ class Notebook:
 	""" 
 	"""
 	SKIP_DIRECTORIES = {".git", ".obsidian", "__pycache__"}
+	PUBLICATION_SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+	PUBLICATION_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 
 	def __init__(self):
 
@@ -354,6 +357,74 @@ class Notebook:
 			and not note.is_tagged(self.EXCLUDE_TAG)
 		)
 
+	def _publication_image(self, reference):
+		"""Resolve one flat image reference without allowing IMG_PATH escapes."""
+		reference = reference.strip()
+
+		if not reference or not self.IMG_PATH:
+			raise ValueError(f"Invalid publication image path: {reference!r}")
+
+		root = Path(self.IMG_PATH).expanduser().resolve()
+		supplied = Path(reference).expanduser()
+
+		if supplied.is_absolute() or supplied.name != reference:
+			raise ValueError(f"Invalid publication image path: {reference!r}")
+
+		target = (root / supplied).resolve()
+
+		try:
+			target.relative_to(root)
+		except ValueError as error:
+			raise ValueError(
+				f"Publication image path escapes IMG_PATH: {reference!r}"
+			) from error
+
+		if target.suffix.lower() not in self.PUBLICATION_IMAGE_EXTENSIONS:
+			raise ValueError(f"Unsupported publication image path: {reference!r}")
+
+		if not target.is_file():
+			raise FileNotFoundError(f"Publication image not found: {reference!r}")
+
+		content_type = mimetypes.guess_type(target.name)[0]
+		if content_type is None:
+			content_type = "application/octet-stream"
+
+		return target, content_type
+
+	def _publication_preflight(self, *, include_images=False):
+		"""Validate all publication inputs before writes or HTTP requests."""
+		notes = tuple(note for note in self.notes.values() if self.is_publishable(note))
+		slugs = {}
+
+		for note in notes:
+			slug = note.slugname
+
+			if not slug:
+				raise ValueError(f"Note {note.name!r} has an empty publication slug.")
+
+			if not self.PUBLICATION_SLUG_PATTERN.fullmatch(slug):
+				raise ValueError(
+					f"Note {note.name!r} has an invalid publication slug: {slug!r}."
+				)
+
+			if previous := slugs.get(slug):
+				raise ValueError(
+					f"Notes {previous.name!r} and {note.name!r} share "
+					f"duplicate publication slug {slug!r}."
+				)
+
+			slugs[slug] = note
+
+		images = {}
+		if include_images:
+			for note in notes:
+				for reference in re.findall(Link.MDS_IMG_LNK, note.md):
+					reference = reference.strip()
+					if reference not in images:
+						images[reference] = self._publication_image(reference)
+
+		return notes, images
+
 	def get_linked(self, link)->list:
 		"""
 		:param link: the [[link]] in question
@@ -549,17 +620,16 @@ class Notebook:
 		"""
 		self._require_clean_notes("publish local HTML")
 		self.open_md()
+		notes, _ = self._publication_preflight()
 
 		print(f'\nlocal commit: {self.HTML_PATH}')
-		for n in self.notes.values():
+		for n in notes:
+			html = self.convert_to_html(note=n)
+			target = Path(self.HTML_PATH) / f"{n.slugname}.html"
+			with target.open('w', encoding='utf-8') as output_file:
+				output_file.write(html)
 
-			if self.is_publishable(n):
-				html = self.convert_to_html(note=n)
-				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
-				of.write(html)
-				of.close()
-
-				print(f'\t{n.name} ---> {self.HTML_PATH}')
+			print(f'\t{n.name} ---> {self.HTML_PATH}')
 
 	""" pnbp-web api connection methods:
 	"""
@@ -657,6 +727,7 @@ class Notebook:
 		"""
 		self._require_clean_notes("preview or publish remote commits")
 		self.open_md()
+		notes, publication_images = self._publication_preflight(include_images=True)
 		h = self.get_headers()
 
 		pub_pub_data = self.get_pub_commits()
@@ -667,17 +738,16 @@ class Notebook:
 
 		print(f'\ncommits: (to {self.API_BASE})')
 		post_names = []
-		for n in self.notes.values():
+		for n in notes:
 			to_post = False
 			fname = n.slugname + '.html'
 
-			if self.is_publishable(n):
-				post_names.append(fname)
-				if fname in pub_pub_names:
-					if pub_pub_data[fname] < n.mtime: # change has occured 
-						to_post = True
-				else: # it's newly #public
+			post_names.append(fname)
+			if fname in pub_pub_names:
+				if pub_pub_data[fname] < n.mtime: # change has occurred
 					to_post = True
+			else: # it's newly #public
+				to_post = True
 
 			if to_post and not stage_only:
 				html = self.convert_to_html(note=n)
@@ -689,17 +759,16 @@ class Notebook:
 				print(f'\t{n.name} -> {r}')
 
 				for img in re.findall(Link.MDS_IMG_LNK, n.md):
+					img = img.strip()
 					if not img in pub_img_names:
-						try:
-							f = open(os.path.join(self.IMG_PATH, img), 'rb')
+						path, content_type = publication_images[img]
+						with path.open('rb') as image_file:
 							r = requests.post(f'{self.API_BASE}/api/image',
-								files={"filename": img, "file": f, "content_type": "image/jpeg"},
+								files={"file": (path.name, image_file, content_type)},
 								headers=h
 								)
 
-							print(f'\t\t{img} -> {r}')
-						except FileNotFoundError:
-							print(f'\t\t{img} -> Broken image link!')
+						print(f'\t\t{img} -> {r}')
 					else:
 						print(f'\t\t{img} -> EXISTS!')
 
@@ -795,8 +864,6 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-
-
 
 
 
