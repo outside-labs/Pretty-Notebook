@@ -188,7 +188,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		self.md_out = None
 		return nb.open_note(path)
 
-	def is_tagged(self, tag: str="", tags: list=[], to_all=False, at_all=False)->bool:
+	def is_tagged(self, tag: str="", tags: list | None=None, to_all=False, at_all=False)->bool:
 		""" check if note.md contains a #tag
 
 		:param tag: the #tag in question
@@ -196,39 +196,26 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		:param to_all: to_all=True requires that all entered param tags are found in self.md
 		:param at_all: at_all=True as the only paramater will return False if note has no tags at all
 		"""
-		if not tag and not tags and at_all and self.tags:
-			return True
+		queries = list(tags) if tags else []
+		if not queries and isinstance(tag, (list, tuple, set, frozenset)):
+			queries = list(tag)
+		elif not queries and tag:
+			queries = [tag]
 
-		if not tag and not tags and not at_all:
+		if not queries and at_all:
+			return bool(self.tags)
+
+		if not queries:
 			msg = "Did you mean to call is_tagged(at_all=True)? Otherwise,\n"
 			raise ValueError(f"{msg}provide e.g. is_tagged(tag='#examp'), or is_tagged(tags=['#find', '#us'], to_all=True)")
 
-		if tags or isinstance(tag, list):
-			# handling for poss pos arg entry
-			if not tags:
-				tags = tag
+		results = (
+			any(note_tag.matches(query) for note_tag in self.tags)
+			for query in queries
+		)
+		return all(results) if to_all else any(results)
 
-			res = []
-			for tag in tags:
-				if self.is_tagged(tag):
-					if not to_all:
-						return True
-					else:
-						res.append(tag)
-
-			if res == tags:
-				return True
-
-		tag = str(tag)
-
-		tag = f"#{tag.lstrip('#')}" #failsafe
-
-		if tag in self.tags:
-			return True
-			
-		return False
-
-	def is_linked(self, link: str="", links: list=[], to_all=False, at_all=False)->bool:
+	def is_linked(self, link: str="", links: list | None=None, to_all=False, at_all=False)->bool:
 		""" check if note.md contains a [[link]]
 
 		:param link: the [[link]] in question
@@ -236,34 +223,24 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		:param to_all:
 		:param at_all:
 		"""
-		if not link and not links and at_all and self.links:
-			return True
+		queries = list(links) if links else []
+		if not queries and isinstance(link, (list, tuple, set, frozenset)):
+			queries = list(link)
+		elif not queries and link:
+			queries = [link]
 
-		if not link and not links and not at_all:
+		if not queries and at_all:
+			return bool(self.links)
+
+		if not queries:
 			msg = "Did you mean to call is_linked(at_all=True)? Otherwise,\n"
 			raise ValueError(f"{msg}provide e.g. is_linked('some-note'), or is_linked(links=['note-a', 'note-b'], to_all=True)")
 
-		if links or isinstance(link, list):
-			if not links:
-				links = link
-
-			res = []
-			for link in links:
-				if self.is_linked(link):
-					if not to_all:
-						return True
-					else:
-						res.append(link)
-
-			if res == links:
-				return True
-
-		link = link.replace('[', '').replace(']', '').strip().lower()
-
-		if link in [l.link.lower() for l in self.links]:
-			return True
-
-		return False
+		results = (
+			any(note_link.matches(query) for note_link in self.links)
+			for query in queries
+		)
+		return all(results) if to_all else any(results)
 
 	def remove_links(self, links: list):
 		""" if [[my link]] in links, -> if my link in links
@@ -441,7 +418,6 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			cont = f'\n\n--- \n{d_today}\n\n'
 			self.prepend_section(cont)
 			self.save(nb)
-
 
 
 
