@@ -39,10 +39,12 @@ def pass_nb(func):
 			# print('fresh nb open by pass_ wrapping...')
 			kwargs['nb'] = Notebook()
 
+		fuzzy = kwargs.pop('fuzzy', False)
+
 		if (note := kwargs.get('note')):
 			# print('**', note)
 			if isinstance(note, str):
-				if (n := kwargs['nb'].get(note)):
+				if (n := kwargs['nb'].get(note, fuzzy=fuzzy)):
 					kwargs['note'] = n
 				else:
 					raise KeyError(f"note: '{note}' does not exist in the notebook!")
@@ -65,7 +67,6 @@ def arrow_call(func):
 		print(f'-> {func.__name__}')
 		return func(*args, **kwargs)
 	return inner
-
 
 
 

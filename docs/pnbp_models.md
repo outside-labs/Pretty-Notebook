@@ -14,8 +14,13 @@ a **Notebook** instance contains a dictionary of each **Note** available by it's
 best accessed directly from the nb with .get() :
 
 ```py
+>>> from pnbp.models.components import Link
+>>> nb.get('SCIENCE') # exact names are checked first
+>>> nb.get('SCIENCE.md') # only a terminal .md or .html is normalized
 >>> # get by best match ~
 >>> n = nb.get('sc13nce')
+>>> nb.get('sc13nce', fuzzy=False) # exact/normalized lookup only
+>>> nb.get(Link('SCIENCE#method')) # Link targets resolve through Link.note
 ```
 
 each note exposes lists of **Link**s, **Tag**s, **CodeBlock**s, **Url**s, (and more) :

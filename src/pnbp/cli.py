@@ -125,6 +125,11 @@ def _create_command(func):
 
 	if 'note' in inspect.signature(func).parameters.keys():
 		# prove it : 
+		func = click.option(
+			'--fuzzy',
+			is_flag=True,
+			help='explicitly accept the closest matching note name',
+		)(func)
 		func = click.option('-n', '--note', type=str, help='the name of a note', required=True)(func)
 
 	func = arrow_call(func)
@@ -204,7 +209,6 @@ create_all_commands()
 if __name__ == '__main__':
 	cli()
 	
-
 
 
 
