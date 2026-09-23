@@ -86,12 +86,11 @@ class Link(Component):
 	@classmethod
 	@Component.prep_md_out
 	def add_header_ids(cls, note):
-		""" providing access to sublink-ed via 
-			[[mynote#section2]] to html 
+		"""Add explicit IDs to actual Markdown ATX heading lines.
 
 		:param note: an Note instance
 		"""
-		p = re.compile(r'(#{1,6}\s)(.*)')		
+		p = re.compile(r'^(#{1,6}[ \t]+)([^\n]+)$', re.MULTILINE)
 		note.md_out = p.sub(Link.regex_append_subheader_attr_list, note.md_out)
 
 		return note
@@ -222,7 +221,6 @@ class Link(Component):
 		:returns: an Note instance
 		"""
 		return nb.get(self.note)
-
 
 
 

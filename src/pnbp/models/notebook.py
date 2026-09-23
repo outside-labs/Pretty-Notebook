@@ -18,6 +18,71 @@ from .components import Link, Tag, Url, CodeBlock
 from pnbp.helpers import _convert_datetime
 
 
+_FENCED_LITERAL = re.compile(
+	r"^(?P<indent>[ ]{0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\n]*)\n"
+	r"(?P<body>.*?)"
+	r"^(?P=indent)(?P=fence)[ \t]*(?:\n|$)",
+	re.MULTILINE | re.DOTALL,
+)
+_INLINE_LITERAL = re.compile(
+	r"(?<!`)(?P<fence>`+)(?!`)(?P<body>.+?)(?P=fence)(?!`)",
+	re.DOTALL,
+)
+_HTML_LITERAL = re.compile(
+	r"<div class=(?:\"|')mermaid(?:\"|')[^>]*>.*?</div>"
+	r"|<pre\b[^>]*>.*?</pre>"
+	r"|<code\b[^>]*>.*?</code>",
+	re.IGNORECASE | re.DOTALL,
+)
+
+
+def _stash_literal(text, stashed, value):
+	index = len(stashed)
+	token = f"PNBPLITERAL{index}TOKEN"
+	while token in text or token in stashed:
+		index += 1
+		token = f"PNBPLITERAL{index}TOKEN"
+	stashed[token] = value
+	return token
+
+
+def _stash_markdown_literals(text):
+	stashed = {}
+
+	def stash_fence(match):
+		info = match.group("info").strip().split()
+		if info and info[0].lower() == "mermaid":
+			replacement = f'<div class="mermaid">{match.group("body")}</div>'
+			if match.group(0).endswith("\n"):
+				replacement += "\n"
+		else:
+			replacement = match.group(0)
+		return _stash_literal(text, stashed, replacement)
+
+	protected = _FENCED_LITERAL.sub(stash_fence, text)
+
+	def stash_inline(match):
+		return _stash_literal(text, stashed, match.group(0))
+
+	protected = _INLINE_LITERAL.sub(stash_inline, protected)
+	return protected, stashed
+
+
+def _stash_html_literals(text):
+	stashed = {}
+
+	def stash(match):
+		return _stash_literal(text, stashed, match.group(0))
+
+	return _HTML_LITERAL.sub(stash, text), stashed
+
+
+def _restore_literals(text, stashed):
+	for token, literal in stashed.items():
+		text = text.replace(token, literal)
+	return text
+
+
 
 class Notebook:
 	""" 
@@ -433,12 +498,12 @@ class Notebook:
 	"""
 	@classmethod
 	def replace_strikethrough(cls, note):
-		""" a regex replace mtd 
+		"""Replace separate ``~~text~~`` spans without crossing whitespace edges.
 		
 		:param note: an Note instance
 		"""
-		p = re.compile(r'(~~)(.*)(~~)')
-		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
+		p = re.compile(r'~~(?=\S)(.+?)(?<=\S)~~')
+		strike_repl = lambda m: f'<s>{m.group(1)}</s>'
 
 		if note.md_out is None:
 			note.md_out = note.md
@@ -449,12 +514,12 @@ class Notebook:
 
 	@classmethod
 	def replace_eqhighlight(cls, note):
-		""" a regex replace mtd 
+		"""Replace separate ``==text==`` spans without treating comparisons as markup.
 		
 		:param note: an Note instance
 		"""
-		p = re.compile(r'(==)(.*)(==)')
-		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
+		p = re.compile(r'==(?=\S)(.+?)(?<=\S)==')
+		eqhl_repl = lambda m: f'<mark>{m.group(1)}</mark>'
 
 		if note.md_out is None:
 			note.md_out = note.md
@@ -497,19 +562,14 @@ class Notebook:
 		return note
 
 	def convert_to_html(self, note):
-		""" apply all the regex method changes to 
-			a single note
+		"""Render one note while keeping literal code spans opaque to extensions.
 
-			md->html str repl methods
-			coupled with mtds from helpers.py
-
-		:param note: an Note instance
-		::
+		:param note: a Note instance
 		"""
 		previous_md_out = note.md_out
 		
 		try:
-			note.md_out = note.current_md
+			note.md_out, markdown_literals = _stash_markdown_literals(note.current_md)
 	
 			if self.PUB_LNK_ONLY:
 				note = self.remove_nonpub_links(note)
@@ -520,17 +580,27 @@ class Notebook:
 			nout = Link.replace_imglinks(note)
 			nout = Link.replace_intlinks(nout)
 			nout = Tag.replace_smdtags(nout)
-			nout = CodeBlock.replace_mermaid(nout)
 			nout = Url.replace_nakedhref(nout)
 
-			nout = Link.add_header_ids(nout)
+			nout.md_out = _restore_literals(nout.md_out, markdown_literals)
+			nout.md_out = md.markdown(
+				nout.md_out,
+				extensions=[
+					'fenced_code',
+					'nl2br',
+					'markdown.extensions.tables',
+					'attr_list',
+					'footnotes',
+					'toc',
+				],
+				use_pygments=True,
+			)
 
-			nout.md_out = md.markdown(nout.md_out, extensions=['fenced_code', 'nl2br', 'markdown.extensions.tables', 'attr_list', 'footnotes'], use_pygments=True)
-
-			nout = CodeBlock.fix_blocked_comments(nout)
+			nout.md_out, html_literals = _stash_html_literals(nout.md_out)
 			nout = Notebook.replace_strikethrough(nout)
 			nout = Notebook.replace_eqhighlight(nout)
 			nout = Url.adjust_externallinks(nout)
+			nout.md_out = _restore_literals(nout.md_out, html_literals)
 
 			return nout.md_out
 	
@@ -790,9 +860,6 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-
-
-
 
 
 
