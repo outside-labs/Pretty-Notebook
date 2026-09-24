@@ -124,15 +124,17 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 	@property
 	def aliases(self):
-		""" """
-		if self.sections[0].startswith('aliases: '):
+		"""Return whether the first section is an aliases section."""
+		sections = self.sections
+		if sections and sections[0].startswith('aliases: '):
 			return True
 		return None
 
 	@property
 	def footnotes(self):
-		""" """
-		if re.match(r'\[\^\d+\]: ', self.sections[-1]):
+		"""Return whether the final section is a footnotes section."""
+		sections = self.sections
+		if sections and re.match(r'\[\^\d+\]: ', sections[-1]):
 			return True
 		return None
 

@@ -159,28 +159,57 @@ def _remove_nonexistant_links(note=Note, nb=None):
 
 
 
+def _note_path(note: Note, nb):
+	root = Path(nb.NOTE_PATH).expanduser().resolve()
+	relative = note.source_path or f'{note.name}.md'
+	path = (root / relative).resolve()
+	try:
+		path.relative_to(root)
+	except ValueError as e:
+		raise ValueError("Note path escapes NOTE_PATH") from e
+	return path
+
+
+def _remove_note(note: Note, nb, reason: str):
+	path = _note_path(note, nb)
+	if path.exists():
+		print(f'removing: {note.source_path or note.name + ".md"} ({reason})')
+		path.unlink()
+	nb.notes.pop(note.name, None)
+
+
 """ 
 """
 @pass_nb
 def _delete_all_pnbp(nb=None):
 	""" if note contains #pnbp -> DELETE
 	"""
-	for n in nb.get_tagged("#pnbp"):
-		lfn = n.name + '.md'
-		if os.path.exists(os.path.join(nb.NOTE_PATH, lfn)):
-			print(f'removing: {lfn} (#pnbp)')
-			os.remove(os.path.join(nb.NOTE_PATH, lfn))
+	nb._require_clean_notes("delete generated pnbp notes")
+	for n in list(nb.get_tagged("#pnbp")):
+		_remove_note(n, nb, '#pnbp')
 
 
 @pass_nb
 def _delete_all_empty(nb=None):
-	""" delete all empty notes from nb/all empty.md
+	""" delete notes that are still empty when cleanup executes
 	"""
-	for l in nb.notes['all empty'].links:
-		lfn = l + '.md'
-		if os.path.exists(os.path.join(nb.NOTE_PATH, lfn)):
-			print(f'removing: {lfn} (empty)')
-			os.remove(os.path.join(nb.NOTE_PATH, lfn))
+	nb._require_clean_notes("delete empty notes")
+	report = nb.notes.get('all empty')
+	if report is None:
+		return
+
+	for link in tuple(report.links):
+		note = nb.get(link, fuzzy=False)
+		if note is None:
+			continue
+
+		path = _note_path(note, nb)
+		if not path.exists():
+			nb.notes.pop(note.name, None)
+			continue
+
+		if len(path.read_text(encoding='utf-8')) < 4:
+			_remove_note(note, nb, 'empty')
 
 
 @pass_nb
@@ -202,5 +231,4 @@ def _touch_all_public(nb=None):
 			raise FileNotFoundError(f'Cannot touch missing note: {note.name!r}')
 
 		path.touch()
-
 

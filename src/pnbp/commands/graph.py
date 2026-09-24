@@ -148,17 +148,35 @@ def _collect_all_graphs(nb=None):
 
 
 
+def _is_generated_graph(note):
+	if not note.name.startswith('graph-') or not note.codeblocks:
+		return False
+
+	first_token = note.codeblocks[0].codeblock.lstrip().split(maxsplit=1)
+	return bool(first_token) and first_token[0] == 'mermaid'
+
+
 @pass_nb
 def _delete_all_graph_dash_name(nb=None):
-	"""
-	"""
-	for n in nb.notes.values():
-		if n.name.startswith('graph-') and n.codeblocks[0].lang == 'mermaid':
-			lfn = n.name + '.md'
-			gpath = Path(nb.NOTE_PATH / lfn)
-			if gpath.exists():
-				print(f'removing: {lfn} (graph-)')
-				gpath.unlink()
+	"""Delete generated graph notes and keep notebook state in sync."""
+	nb._require_clean_notes("delete generated graph notes")
+	root = Path(nb.NOTE_PATH).expanduser().resolve()
+
+	for note in list(nb.notes.values()):
+		if not _is_generated_graph(note):
+			continue
+
+		relative = note.source_path or f'{note.name}.md'
+		path = (root / relative).resolve()
+		try:
+			path.relative_to(root)
+		except ValueError as e:
+			raise ValueError("Note path escapes NOTE_PATH") from e
+
+		if path.exists():
+			print(f'removing: {relative} (graph-)')
+			path.unlink()
+		nb.notes.pop(note.name, None)
 
 
 
