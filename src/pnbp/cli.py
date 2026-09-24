@@ -96,7 +96,7 @@ def commit_stage():
 
 
 @cli.command()
-@click.option('--local', required=False, default=True, help="optionally, to localhost.")
+@click.option('--local', is_flag=True, default=False, help="post to localhost instead of the configured API_BASE")
 def commit_settings(local):
 	""" commit nb.NOTE_PATH/pnbp_settings.json -> the Pretty-Notebook/apps/web api .../web_settings.json 
 	"""

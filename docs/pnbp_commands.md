@@ -54,7 +54,7 @@ Commands that accept `--note` require an exact or terminal-extension-normalized 
 | pnbp commit-html | save the nb->html conversion to nb.HTML_PATH (local debug) |
 | pnbp commit-stage | *only* print commit- changes against nb.API_BASE (staging view) |
 | pnbp touch-all-public | update the mod date for all #public (remote debug) |
-| pnbp commit-settings | update the remote web-settings.json values (local to server); use “--local True” for localhost setups |
+| pnbp commit-settings | update the remote web-settings.json values (local to server); use “--local” for localhost setups |
 
 --- 
 
