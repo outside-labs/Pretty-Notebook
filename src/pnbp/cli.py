@@ -202,6 +202,15 @@ def create_all_commands():
 	"""
 	create_commands(collect, _all=True)
 
+	# Imported collection helpers are excluded by create_commands() so that
+	# module scans do not accidentally register unrelated imports. Register the
+	# five intended collection commands explicitly.
+	create_command(collect._collect_code_blocked)
+	create_command(collect._collect_tasks_note)
+	create_command(collect._collect_public_graph)
+	create_command(collect._collect_all_graphs)
+	create_command(collect._collect_subl_projs)
+
 	create_commands(commit, _all=True)
 
 	create_commands(correct, _all=True)
