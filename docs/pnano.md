@@ -1,3 +1,6 @@
+> [!WARNING]
+> **0.9.0rc1 status:** the `pnano.app` and `ppnbp.app` protocol handlers are experimental and unsupported. Do not treat their installation instructions as a supported 0.9.0rc1 integration.
+
 **pnano** ("protocol-ed nano") is ultimately a non-nano name to call some monkey patch that handles for the (unused) URI protocol namespace of ```nano://``` to open files directly to the nano text editor. (e.g. as written for macos, when clicking ```nano:///Users/alice/hello.py```, ```hello.py``` will be opened in ```nano``` to the second (to the right) pane in a split-pane iTerm2 window (closed/->reopened).
 
 Why? 

@@ -1,3 +1,6 @@
+> [!WARNING]
+> `apps/web` is experimental in `0.9.0rc1` and is not supported for public deployment. The package release candidate focuses on the `pnbp` library/CLI; the web deployment security gate is still open.
+
 Pretty-Notebook/apps/web api
 
 RESTful management of web pages implemented in FastAPI for / using [pnbp](https://github.com/outside-labs/Pretty-Notebook/docs/pnbp.md).

@@ -29,9 +29,9 @@ https://obsidian.md/ is the best example of this in action.
 
 ##### (2) -> [cli commands](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_commands.md)
 
-##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md)
+##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md) *(experimental; not supported for public deployment in 0.9.0rc1)*
 
-##### (4) -> [“pnano” (experimental)](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md)
+##### (4) -> [“pnano”](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md) *(experimental/unsupported in 0.9.0rc1)*
 
 --- 
 
