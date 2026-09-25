@@ -225,6 +225,7 @@ class Notebook:
 			raise ValueError(f"Not a Markdown note: {path}")
 
 		text = path.read_text(encoding="utf-8")
+		file_stat = path.stat()
 		note_name = relative_path.with_suffix("").as_posix()
 
 		n = Note(
@@ -234,8 +235,11 @@ class Notebook:
 			tags=Tag.collect_tags(text),
 			urls=Url.collect_urls(text),
 			codeblocks=re.findall(CodeBlock.MD_CODE, text),
-			mtime=_convert_datetime(path.stat().st_mtime, as_mtime=True),
+			mtime=_convert_datetime(file_stat.st_mtime, as_mtime=True),
 			)
+		n.source_path = relative_path.as_posix()
+		n._source_exists = True
+		n._source_signature = Note._stat_signature(file_stat)
 
 		target = self.notes if notes is None else notes
 		target[note_name] = n
@@ -287,18 +291,68 @@ class Notebook:
 		:param overwrite: if overwrite=True, allow existing file to be re-written
 		:param pnbp: if pnbp=True, tagging #pnbp to track and ignore
 		"""
-		name = name.strip()
+		if not isinstance(md_out, str):
+			raise TypeError(f"md_out must be a str, not {type(md_out)}")
 
-		if name in self.notes.keys() and not overwrite:
-			raise FileExistsError(f"Cannot generate a new note with name {name}.")
- 
-		n = Note(name=name, md='', links=[], tags=[], urls=[], codeblocks=[], mtime='')
+		name = str(name).strip()
+		if name.lower().endswith(".md"):
+			name = name[:-3]
+		if not name:
+			raise ValueError("A note name is required.")
+
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		destination = (root / f"{name}.md").resolve()
+
+		try:
+			relative_path = destination.relative_to(root)
+		except ValueError as e:
+			raise ValueError("Note path escapes NOTE_PATH") from e
+
+		existing_paths = []
+		if destination.parent.exists():
+			existing_paths = [
+				path
+				for path in destination.parent.iterdir()
+				if path.name.casefold() == destination.name.casefold()
+			]
+
+		if existing_paths and not overwrite:
+			raise FileExistsError(f"Cannot generate a new note at {relative_path}.")
+
+		if len(existing_paths) > 1:
+			raise FileExistsError(
+				f"Cannot choose between case-variant note paths for {relative_path}."
+			)
+
+		if existing_paths:
+			existing_path = existing_paths[0]
+			if existing_path.is_symlink():
+				raise ValueError(f"Refusing to overwrite a note symlink: {existing_path}")
+			existing_path = existing_path.resolve()
+			try:
+				existing_relative = existing_path.relative_to(root)
+			except ValueError as e:
+				raise ValueError("Note path escapes NOTE_PATH") from e
+			n = self.open_note(existing_relative.as_posix())
+		else:
+			note_name = relative_path.with_suffix("").as_posix()
+			n = Note(
+				name=note_name,
+				md='',
+				links=[],
+				tags=[],
+				urls=[],
+				codeblocks=[],
+				mtime='',
+			)
+			n.source_path = relative_path.as_posix()
+
 		n.md_out = md_out
 
 		if pnbp is True:
 			n.md_out += '\n\n--- \n\n#pnbp'
 
-		n.save(self) # ^^ although instantiated empty, live access to attrs on nb instance
+		return n.save(self)
 
 	def get(self, name)->Note:
 		""" access the notes dict directly 
