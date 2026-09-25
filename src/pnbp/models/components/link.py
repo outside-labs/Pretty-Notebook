@@ -12,6 +12,17 @@ class Link(Component):
 	"""
 	MDS_INT_LNK = r'\[\[([^]]+)\]\]' 
 	MDS_IMG_LNK = r'!\[\[([^]]+)\]\]'
+
+	@staticmethod
+	def _match_name(value) -> str:
+		raw_value = str(value).strip()
+		if raw_value.startswith('[[') and raw_value.endswith(']]'):
+			raw_value = raw_value[2:-2].strip()
+		return Link(raw_value).note.casefold()
+
+	def matches(self, value) -> bool:
+		"""Match a link by note name, ignoring wrappers, labels, and sections."""
+		return self.note.casefold() == self._match_name(value)
 	
 	@staticmethod
 	def regex_to_html(matchobj):

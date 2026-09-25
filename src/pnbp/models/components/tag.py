@@ -39,6 +39,10 @@ class Tag(Component):
 
 		return [match.group(1) for match in cls.TAG_TOKEN.finditer(''.join(eligible))]
 
+	def matches(self, value) -> bool:
+		"""Match a tag value with or without its leading hash."""
+		return str(self).lstrip('#') == str(value).lstrip('#')
+
 	@staticmethod
 	def regex_to_html(matchobj):
 		""" regex #tags out to distinguish vs

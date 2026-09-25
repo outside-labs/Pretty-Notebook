@@ -162,7 +162,7 @@ more *great* content here...
 
 **Link**, **Tag**, **CodeBlock**, and **Url** all subclass [models/components/component.**Component**](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/models/components/component.py).
 
-A **Component** subclass produces a namedtuple object of it's own class name, with a single named instance variable of it's own class name (e.g. ```Link(link="SCIENCE")```, ```Tag(tag="#tag")```, ... ). 
+A **Component** subclass is a stable string subtype with a named view of its value (e.g. ```Link(link="SCIENCE").link```, ```Tag(tag="#tag").tag```, ... ). Positional and named construction produce the same component type.
 
 In order to maintain simple access to them as though referencing against their string-ed value, the **Component** class provides methods that make them shake hands as such : 
 
@@ -176,11 +176,15 @@ True
 "SCIENCE *is* a linked note in n !"
 ```
 
-Each subclass definition holds it's own regex pattern, various string replacement methods, in addition to exposing class specific properties on instance :
+String equality and hashing remain exact. Query normalization is explicit through ```.matches()```: tags may be queried with or without ```#```, while links are matched case-insensitively by note name without their optional brackets, section, or label.
+
+Each subclass definition holds its own regex pattern, various string replacement methods, and class-specific instance properties:
 
 ```py
->>> n.tags[0] == "tag"
+>>> n.tags[0].matches("tag")
 True
+>>> n.tags[0] == "tag"
+False
 >>> n.links
 ['SCIENCE']
 >>> [l.aslink for l in n.links]
