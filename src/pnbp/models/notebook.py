@@ -419,36 +419,50 @@ class Notebook:
 
 		return n.save(self)
 
-	def get(self, name)->Note:
-		""" access the notes dict directly 
+	def get(self, name, *, fuzzy=True)->Note:
+		"""Resolve a note exact-first, with optional fuzzy fallback.
 
 		:param name: name of the note
+		:param bool fuzzy: allow a close-match fallback after exact resolution
 		:returns: Note instance or None
 		"""
 		if isinstance(name, Note):
-			n = name
-			return self.notes.get(n.name)
+			return self.notes.get(name.name)
 
-		name = str(name)
+		if hasattr(name, "note"):
+			name = name.note
 
-		name = name.replace('.md', '').replace('.html', '').replace('\\', '')
+		raw_name = str(name).strip()
+		if (note := self.notes.get(raw_name)):
+			return note
 
-		if (note := self.notes.get(name)):
+		normalized_name = raw_name.replace('\\', '/')
+		if (note := self.notes.get(normalized_name)):
+			return note
+
+		normalized_name = re.sub(
+			r'\.(?:md|html)$',
+			'',
+			normalized_name,
+			flags=re.IGNORECASE,
+		)
+		if (note := self.notes.get(normalized_name)):
 			return note
 
 		for n in self.notes.values():
-			if n.slugname == name:
+			if n.slugname == normalized_name:
 				return n
 
-		try: 
-			name_in = name
-			name = difflib.get_close_matches(name, [n for n in self.notes.keys()])[0]
-			print(f"^^ {name} (by close match) ")
-			return self.get(name)
+		if not fuzzy:
+			return None
 
-		except IndexError:
-			print(f"note: `{name_in}` does not exist in the notebook!")
+		matches = difflib.get_close_matches(normalized_name, self.notes.keys(), n=1)
+		if matches:
+			matched_name = matches[0]
+			print(f"^^ {matched_name} (by close match) ")
+			return self.notes[matched_name]
 
+		print(f"note: `{raw_name}` does not exist in the notebook!")
 		return None
 
 	def get_random_note(self):
@@ -1026,4 +1040,3 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-

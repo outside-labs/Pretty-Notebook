@@ -1,5 +1,7 @@
 **commands**
 
+Commands that accept `--note` require an exact or terminal-extension-normalized note name by default. Add `--fuzzy` to explicitly accept the closest match before the command runs.
+
 --- 
 
 **core** : 
