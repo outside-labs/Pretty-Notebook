@@ -28,14 +28,14 @@ def get_rich_note(note=Note, nb=None):
 	n = note 
 
 	p = re.compile(Link.MDS_INT_LNK)
-	n.md_out = p.sub(sub_for_this, n.md)
+	rich_md = p.sub(sub_for_this, n.current_md)
 
 	note_path_encoded = nb.NOTE_PATH.replace(' ' , '%20')
 
 	nano_path = 'nano://' + note_path_encoded
 	pnbp_path = 'pnbp://' + note_path_encoded
 
-	n.md_out = re.sub('poiuytrewq', pnbp_path, n.md_out)
+	rich_md = re.sub('poiuytrewq', pnbp_path, rich_md)
 
 	menu_header = '**MENU** : '
 	refresh_link = f'--->: [refresh]({pnbp_path}/{n.name.replace(" ", "%20")}.md)'
@@ -54,10 +54,10 @@ def get_rich_note(note=Note, nb=None):
 	nano_new_link = f'nano: [new note]({nano_path}/{new_name})'
 	frame = f'\n --- \n\n{menu_header}\n{refresh_link}\n{nano_edit_link}\n{nano_new_link}\n\n--- \n\n'
 
-	n.md_out = frame + n.md_out + frame
+	rich_md = frame + rich_md + frame
 
 	# adding 2x trailing spaces ensures single \n is rendered
-	return Markdown("\n".join([l+"  " for l in n.md_out.split('\n')]))
+	return Markdown("\n".join([line + "  " for line in rich_md.split('\n')]))
 
 
 
@@ -70,7 +70,6 @@ def _pprint(note: Note, nb=None):
 	console = Console()
 
 	console.print(md)
-
 
 
 
