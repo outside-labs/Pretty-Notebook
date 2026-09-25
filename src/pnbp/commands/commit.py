@@ -1,116 +1,286 @@
 import datetime
-import subprocess
-import os
 import re
+import subprocess
+from pathlib import Path, PurePosixPath
 
-import click 
+import click
 
-from pnbp.helpers import pass_nb, _convert_datetime
+from pnbp.helpers import _convert_datetime, pass_nb
 
-
-
-@pass_nb
-def _git_commit_notebook(nb=None):
-	""" commit to local git -> nb/.git/
-	"""
-	st = subprocess.run(['git', '-C', nb.NOTE_PATH, 'status'], capture_output=True)
-	print(st)
-
-	if st.stderr == b'fatal: not a git repository (or any of the parent directories): .git\n':
-		print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'init'], capture_output=True))
-
-	lt = datetime.datetime.strftime(datetime.datetime.now(), '%X')
-	ld = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
-
-	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'add', '-A'], capture_output=True))
-	print(subprocess.run(['git', '-C', nb.NOTE_PATH, 'commit', '-m' , f'Automated commit @ {lt} on {ld}'], capture_output=True))
+_GITIGNORE_PATTERNS = (
+	".DS_Store",
+	"**/__pycache__/",
+	"*.sqlite3",
+	"*.sublime-*",
+	"*.pkl",
+	"*.py[co]",
+	"**/migrations/0*.py",
+	"*egg-info/",
+	"/pnbp_settings.json",
+	".env",
+)
 
 
+def _run_git(repository, *args, allowed_returncodes=(0,)):
+	result = subprocess.run(
+		["git", "-C", str(repository), *args],
+		check=False,
+		capture_output=True,
+		text=True,
+		encoding="utf-8",
+		errors="replace",
+	)
+	if result.returncode not in allowed_returncodes:
+		detail = (result.stderr or result.stdout).strip()
+		if not detail:
+			detail = f"exit status {result.returncode}"
+		raise click.ClickException(f"Git command failed: {detail}")
+	return result
 
-@pass_nb
-def _collect_git_diff(nb=None):
-	""" git diff -> nb/all diff.md
-	"""
-	FI_LI = r'diff --git a/(.+) b/(.+)'
-	A_LI = r'--- a/(.+)'
-	B_LI = r'\+\+\+ b/(.+)'
 
-	res = subprocess.run(['git', '-C', nb.NOTE_PATH, 'diff'], capture_output=True)
-	if (diff := res.stdout.decode('utf-8').strip()):
-		res = diff
+def _resolve_repository(note_path, repo_root=None, initialize=False):
+	note_root = Path(note_path).expanduser().resolve()
+	expected_root = (
+		Path(repo_root).expanduser().resolve()
+		if repo_root is not None
+		else note_root
+	)
+
+	if not expected_root.is_dir():
+		raise click.ClickException(f"Repository root is not a directory: {expected_root}")
+
+	try:
+		note_root.relative_to(expected_root)
+	except ValueError as error:
+		raise click.ClickException(
+			f"NOTE_PATH is outside the configured repository root: {expected_root}"
+		) from error
+
+	probe = subprocess.run(
+		["git", "-C", str(note_root), "rev-parse", "--show-toplevel"],
+		check=False,
+		capture_output=True,
+		text=True,
+		encoding="utf-8",
+		errors="replace",
+	)
+	if probe.returncode:
+		if initialize and expected_root == note_root:
+			_run_git(note_root, "init")
+			actual_root = note_root
+		else:
+			detail = (probe.stderr or probe.stdout).strip()
+			raise click.ClickException(
+				f"Expected Git repository at {expected_root}: {detail}"
+			)
 	else:
-		return res.stderr.decode('utf-8').strip()
+		actual_root = Path(probe.stdout.strip()).resolve()
 
+	if actual_root != expected_root:
+		if repo_root is None:
+			raise click.ClickException(
+				"NOTE_PATH is inside a parent Git repository. "
+				f"Pass --repo-root {actual_root} to authorize that repository root."
+			)
+		raise click.ClickException(
+			f"Configured repository root {expected_root} does not match {actual_root}"
+		)
+
+	return actual_root, note_root.relative_to(actual_root)
+
+
+def _notebook_pathspecs(relative_note_path):
+	root = relative_note_path.as_posix()
+	settings = (relative_note_path / "pnbp_settings.json").as_posix()
+	include = "." if root == "." else f":(top,literal){root}"
+	exclude_settings = f":(top,literal,exclude){settings}"
+	return include, exclude_settings, settings
+
+
+def _staged_paths(repository):
+	result = _run_git(repository, "diff", "--cached", "--name-only", "-z")
+	return tuple(path for path in result.stdout.split("\0") if path)
+
+
+def _path_is_within_notebook(path, relative_note_path):
+	if relative_note_path == Path("."):
+		return True
+	note_path = PurePosixPath(relative_note_path.as_posix())
+	candidate = PurePosixPath(path)
+	return candidate == note_path or note_path in candidate.parents
+
+
+def _unstage_notebook(repository, include):
+	result = subprocess.run(
+		["git", "-C", str(repository), "reset", "--quiet", "--", include],
+		check=False,
+		capture_output=True,
+		text=True,
+		encoding="utf-8",
+		errors="replace",
+	)
+	if result.returncode:
+		detail = (result.stderr or result.stdout).strip()
+		raise click.ClickException(
+			f"Git operation failed and notebook changes could not be unstaged: {detail}"
+		)
+
+
+def _exclude_settings_from_index(repository, settings_path):
+	if settings_path not in _staged_paths(repository):
+		return
+
+	head = subprocess.run(
+		["git", "-C", str(repository), "rev-parse", "--verify", "HEAD"],
+		check=False,
+		capture_output=True,
+	)
+	if head.returncode == 0:
+		_run_git(repository, "reset", "--quiet", "HEAD", "--", settings_path)
+	else:
+		_run_git(
+			repository,
+			"rm",
+			"--cached",
+			"--force",
+			"--quiet",
+			"--ignore-unmatch",
+			"--",
+			settings_path,
+		)
+
+
+@click.option(
+	"--repo-root",
+	type=click.Path(path_type=Path, file_okay=False),
+	help="Expected Git repository root. Required when NOTE_PATH is inside a parent repository.",
+)
+@pass_nb
+def _git_commit_notebook(repo_root=None, nb=None):
+	"""Commit notebook changes to a verified local Git repository."""
+	repository, relative_note_path = _resolve_repository(
+		nb.NOTE_PATH,
+		repo_root=repo_root,
+		initialize=True,
+	)
+	include, _exclude_settings, settings_path = _notebook_pathspecs(relative_note_path)
+
+	preexisting = _staged_paths(repository)
+	if preexisting:
+		raise click.ClickException(
+			"Git already has staged changes; commit or unstage them before running notebook automation."
+		)
+
+	_run_git(repository, "add", "-A", "--", include)
+	_exclude_settings_from_index(repository, settings_path)
+	staged = _staged_paths(repository)
+	if not staged:
+		click.echo("No notebook changes to commit.")
+		return None
+
+	unexpected = tuple(
+		path
+		for path in staged
+		if (
+			not _path_is_within_notebook(path, relative_note_path)
+			or path == settings_path
+		)
+	)
+	if unexpected:
+		_unstage_notebook(repository, include)
+		raise click.ClickException(
+			"Refusing to commit paths outside the notebook scope: "
+			+ ", ".join(unexpected)
+		)
+
+	timestamp = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+	try:
+		result = _run_git(
+			repository,
+			"commit",
+			"-m",
+			f"Automated notebook commit at {timestamp}",
+		)
+	except click.ClickException:
+		_unstage_notebook(repository, include)
+		raise
+
+	click.echo(result.stdout.strip())
+	return _run_git(repository, "rev-parse", "HEAD").stdout.strip()
+
+
+@click.option(
+	"--repo-root",
+	type=click.Path(path_type=Path, file_okay=False),
+	help="Expected Git repository root. Required when NOTE_PATH is inside a parent repository.",
+)
+@pass_nb
+def _collect_git_diff(repo_root=None, nb=None):
+	"""Write the notebook-scoped Git diff to ``all diff.md``."""
+	repository, relative_note_path = _resolve_repository(
+		nb.NOTE_PATH,
+		repo_root=repo_root,
+	)
+	include, exclude_settings, _ = _notebook_pathspecs(relative_note_path)
+	result = _run_git(repository, "diff", "--", include, exclude_settings)
+	if not (diff := result.stdout.strip()):
+		return ""
+
+	file_line = r"diff --git a/(.+) b/(.+)"
+	a_line = r"--- a/(.+)"
+	b_line = r"\+\+\+ b/(.+)"
 	diff_dict = {}
-	curr = ''
-	a = [] # -#
-	b = [] # +
-	
-	dlen = len(res.splitlines())
-	for i, dl in enumerate(res.splitlines()):
+	current = ""
+	removed = []
+	added = []
+	lines = diff.splitlines()
 
-		if (m := re.match(FI_LI, dl)) or i == dlen-1:
-			# start of a new file diff
-			if curr and (a or b):
-				diff_dict.update({curr: [a, b]})
+	for index, line in enumerate(lines):
+		if (match := re.match(file_line, line)) or index == len(lines) - 1:
+			if current and (removed or added):
+				diff_dict[current] = [removed, added]
+			if index != len(lines) - 1:
+				current = match.group(1)
+				removed = []
+				added = []
 
-			if not i == dlen-1:
-				curr = m.group(1)
-				a = []
-				b = []
+		if current:
+			if line.startswith("-") and not re.match(a_line, line):
+				if len(line) > 1:
+					removed.append("\\" + line[1:] if line[1:].strip() == "---" else line[1:])
+			elif line.startswith("+") and not re.match(b_line, line) and len(line) > 1:
+				added.append("\\" + line[1:] if line[1:].strip() == "---" else line[1:])
 
-		if curr:
-			if dl.startswith('-') and not re.match(A_LI, dl):
-				if len(dl) > 1:
-					if dl[1:].strip() == '---':
-						a.append('\\' + dl[1:])
-					else:
-						a.append(dl[1:])
-			elif dl.startswith('+') and not re.match(B_LI, dl):
-				if len(dl) > 1:
-					if dl[1:].strip() == '---':
-						b.append('\\' + dl[1:])
-					else:
-						b.append(dl[1:])
+	datetime_text = _convert_datetime("now")
+	note_text = f"\ngit diff: ({datetime_text})\n\n--- \n\n"
+	for path, changes in diff_dict.items():
+		note_text += f"#### [[{path.replace('.md', '')}]]\n"
+		note_text += "**ADDED**: \n{}\n\n\n".format("\n".join(changes[1]))
+		note_text += "**REMOVED**: \n{}\n\n--- \n\n".format("\n".join(changes[0]))
 
-	dt = _convert_datetime("now")
-	ns = f"\ngit diff: ({dt})\n\n--- \n\n"
-	for k,v in diff_dict.items():
-		ns += f"#### [[{k.replace('.md', '')}]]\n"
-		ns += '**ADDED**: \n{}\n\n\n'.format("\n".join(v[1]))
-		ns += '**REMOVED**: \n{}\n\n--- \n\n'.format("\n".join(v[0]))
-
-	nb.generate_note('all diff', ns, overwrite=True)
+	return nb.generate_note("all diff", note_text, overwrite=True)
 
 
-
-""" 
-"""
-@click.option('--path', default='.', help='File path to project directory')
+@click.option("--path", default=".", type=click.Path(path_type=Path, file_okay=False))
 def _init_git_ignore(path):
-	""" write .gitignore w/ essentials to curr directory or --path specified
-	"""
-	defaultTxt = """.DS_Store
-**__pycache__/**
-*.sqlite3
-*.sublime-*
-*.pkl
-*.py[co]
-**/migrations/0*.py
-*egg-info/**
-settings.json
-.env
-	"""
-	with open(os.path.join(path, '.gitignore'), 'w') as gitignore:
-		gitignore.write(defaultTxt)
-		
-	click.echo(f'.gitignore --> {path}')
+	"""Append essential patterns to ``.gitignore`` without replacing existing rules."""
+	root = Path(path).expanduser().resolve()
+	if not root.is_dir():
+		raise click.ClickException(f"Path is not a directory: {root}")
 
+	gitignore = root / ".gitignore"
+	if gitignore.is_symlink():
+		raise click.ClickException("Refusing to replace a symlinked .gitignore")
 
+	existing = gitignore.read_text(encoding="utf-8") if gitignore.exists() else ""
+	existing_lines = set(existing.splitlines())
+	missing = [pattern for pattern in _GITIGNORE_PATTERNS if pattern not in existing_lines]
+	if missing:
+		updated = existing
+		if updated and not updated.endswith("\n"):
+			updated += "\n"
+		updated += "\n".join(missing) + "\n"
+		gitignore.write_text(updated, encoding="utf-8")
 
-
-
-
-
-
-
+	click.echo(f".gitignore --> {root}")
+	return gitignore

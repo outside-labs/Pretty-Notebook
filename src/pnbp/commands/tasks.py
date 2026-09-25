@@ -1,5 +1,6 @@
 import re
 import datetime
+import hashlib
 
 from pnbp.models import Notebook, Note
 from pnbp.helpers import pass_nb
@@ -42,7 +43,11 @@ def md_task_uncheck(matchobj):
 
 
 # @pass_nb
-def record_complete_tasks(c_tasks:list=[], nb: Notebook=None):
+def record_complete_tasks(
+	c_tasks: list | None = None,
+	nb: Notebook = None,
+	settlement_marker: str | None = None,
+):
 	""" called by other tasks fnxs (not a command)
 		initialize nb/_complete.md -> 
 		record c_tasks at YYYY-MM-DD section 
@@ -55,30 +60,59 @@ def record_complete_tasks(c_tasks:list=[], nb: Notebook=None):
 	if not COMPL_NOTE:
 		COMPL_NOTE = '_complete'
 
-	if not nb.get(COMPL_NOTE):
-		nb.generate_note(COMPL_NOTE, "")
+	c_tasks = list(c_tasks or [])
+	if not c_tasks:
+		return nb.notes.get(COMPL_NOTE)
 
-	if c_tasks:
-		fin_item_str = '\n'.join(c_tasks)
+	fin_item_str = '\n'.join(c_tasks)
+	entry = fin_item_str
+	if settlement_marker:
+		entry = f'{settlement_marker}\n{fin_item_str}'
+
+	d_today = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
+	completion_note = nb.notes.get(COMPL_NOTE)
+	if completion_note is None:
+		return nb.generate_note(COMPL_NOTE, f'{d_today}\n{entry}')
+
+	if completion_note.is_unsaved:
+		raise RuntimeError(
+			f"Cannot record task completion while {COMPL_NOTE} has unsaved changes."
+		)
+
+	if settlement_marker and settlement_marker in completion_note.md:
+		return completion_note
 
 	new_day = True
-	d_today = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d')
-	repl_section = ''
-	for i, s in enumerate(nb.notes[COMPL_NOTE].sections):
-		if re.match(d_today, s):
-			repl_section = s + '\n' + fin_item_str
-			_md_out = nb.notes[COMPL_NOTE].sections.copy()
-			_md_out[i] = repl_section
-
-			nb.notes[COMPL_NOTE].md_out = '\n\n--- \n'.join(_md_out)
-			nb.notes[COMPL_NOTE].save(nb)
+	sections = completion_note.sections.copy()
+	for i, section in enumerate(sections):
+		if re.match(rf'{re.escape(d_today)}(?:\n|$)', section):
+			sections[i] = f'{section}\n{entry}'
 			new_day = False
+			break
 
 	if new_day:
-		_md_out = nb.notes[COMPL_NOTE].sections.copy()
-		_md_out.insert(1, f'{d_today}\n{fin_item_str}')
-		nb.notes[COMPL_NOTE].md_out = '\n\n--- \n'.join(_md_out)
-		nb.notes[COMPL_NOTE].save(nb)
+		sections.insert(1, f'{d_today}\n{entry}')
+
+	previous_md_out = completion_note.md_out
+	completion_note.md_out = '\n\n--- \n'.join(sections)
+	try:
+		return completion_note.save(nb)
+	except Exception:
+		completion_note.md_out = previous_md_out
+		raise
+
+
+def _settlement_marker(note: Note, operation: str, source_lines: list[str]) -> str:
+	identity = '\x1f'.join(
+		[
+			operation,
+			note.name,
+			repr(note._source_signature),
+			*source_lines,
+		]
+	)
+	digest = hashlib.sha256(identity.encode('utf-8')).hexdigest()
+	return f'<!-- pnbp:task-settlement {digest} -->'
 
 
 @pass_nb
@@ -97,10 +131,16 @@ def _uncheck_complete_tasks(note: Note=None, nb=None):
 			ns[i] = p.sub(md_task_uncheck, li)
 
 	if complete_tasks:
-		record_complete_tasks(complete_tasks, nb)
+		marker = _settlement_marker(note, 'uncheck', complete_tasks)
+		record_complete_tasks(complete_tasks, nb, marker)
 
+		previous_md_out = note.md_out
 		note.md_out = '\n'.join(ns)
-		note.save(nb)
+		try:
+			note.save(nb)
+		except Exception:
+			note.md_out = previous_md_out
+			raise
 
 
 @pass_nb
@@ -123,7 +163,8 @@ def _complete_complete_tasks(note: Note=None, nb=None):
 			complete_tasks.append(li)
 
 	if complete_tasks:
-		record_complete_tasks(complete_tasks, nb=nb)
+		marker = _settlement_marker(note, 'remove-complete', complete_tasks)
+		record_complete_tasks(complete_tasks, nb=nb, settlement_marker=marker)
 
 		_md_out = note.md
 		for t in complete_tasks:
@@ -133,8 +174,13 @@ def _complete_complete_tasks(note: Note=None, nb=None):
 			_md_out = _md_out.replace(t, '') # more explicit 
 			# print("-------->\n", _md_out)
 
+		previous_md_out = note.md_out
 		note.md_out = _md_out
-		note.save(nb)
+		try:
+			note.save(nb)
+		except Exception:
+			note.md_out = previous_md_out
+			raise
 
 
 @pass_nb
@@ -198,17 +244,30 @@ def _reset_reoccurring_param_tasks(note: Note=None, nb=None):
 			
 
 	if complete_tasks:
-		# -> reset task & vars
-		# -> record to _complete
+		marker = _settlement_marker(
+			note,
+			'reset-recurring',
+			[t[0] for t in complete_tasks],
+		)
+		record_complete_tasks(
+			[t[1] for t in complete_tasks],
+			nb,
+			marker,
+		)
+
+		# -> reset task & vars only after the completion is durable
 		_md_out = note.md
 		for t in complete_tasks:
 			c_in, c_out, r_out = t
 			_md_out = _md_out.replace(c_in, r_out)
-		
+
+		previous_md_out = note.md_out
 		note.md_out = _md_out
-		note.save(nb)
-		
-		record_complete_tasks([t[1] for t in complete_tasks], nb)
+		try:
+			note.save(nb)
+		except Exception:
+			note.md_out = previous_md_out
+			raise
 
 
 
@@ -221,6 +280,7 @@ def _task_settle(nb=None):
 		(2) ^^ for - [x] standard tasks
 		(3) ^^ and remove - bullet-only todos marked #complete
 	"""
+	nb._require_clean_notes("settle tasks")
 	TASKS_TAG = nb.config.get('TASKS_TAG')
 
 	if not TASKS_TAG:
@@ -252,7 +312,6 @@ def _collect_tasks_note(nb=None):
 	ns = '\n'.join([f'[[{n.name}]]' for n in tasked])
 
 	nb.generate_note(TASKS_NOTE, md_out=ns, overwrite=True, pnbp=True)
-
 
 
 
