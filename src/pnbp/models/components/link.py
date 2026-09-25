@@ -202,7 +202,10 @@ class Link(Component):
 			if self.subheader:
 				_sub = '#' + self.subheader
 
-		_name = re.sub(r'[^a-zA-Z1-9\s_-]+', '', _name)
+		# Published pages use a flat ASCII slug namespace. Preserve nested-name
+		# boundaries as hyphens rather than silently collapsing them.
+		_name = _name.replace('/', '-').replace('\\', '-')
+		_name = re.sub(r'[^a-zA-Z0-9\s_-]+', '', _name)
 
 		if _sub:
 			_name = _name + _sub

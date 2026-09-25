@@ -21,7 +21,7 @@ class CodeBlock(Component):
 		'txt': 'txt',
 		'json': 'json'
 		}
-	
+
 	@staticmethod
 	def regex_mermaid_to_html(matchobj):
 		""" required "scripts" in blog/static/layout.html 
@@ -69,9 +69,12 @@ class CodeBlock(Component):
 			the language string as used to 
 			render the codeblock with syntax highlighting	
 		"""
-		_lang = self.codeblock.split()[0]
+		language_line = self.codeblock.partition('\n')[0].strip()
+		if not language_line:
+			return None
 
-		if self.LANG_EXTS.get(_lang):
+		_lang = language_line.split(maxsplit=1)[0]
+		if _lang in self.LANG_EXTS:
 			return _lang
 
 		return None
@@ -82,10 +85,16 @@ class CodeBlock(Component):
 
 			the language's file extension
 		"""
-		if self.lang:
+		if self.lang is not None:
 			return self.LANG_EXTS[self.lang]
 
 		return None
+
+	@property
+	def body(self):
+		"""Return everything after the fence language line verbatim."""
+		_, separator, body = self.codeblock.partition('\n')
+		return body if separator else ''
 
 	@property
 	def fname(self):
@@ -97,37 +106,18 @@ class CodeBlock(Component):
 				print("hello world!")
 				```
 		"""
-		clines = [x for x in self.codeblock.split() if x]
-		_fname = ''
-		if self.lang == 'py':
-			if '#' == clines[1]:
-				_fname = clines[2].strip()
-			elif '#' in clines[1]:
-				_fname = clines[1].strip().lstrip('#')
+		if self.lang != 'py' or not self.body:
+			return None
 
-		if not re.match(rf'.+\.{self.extn}', _fname):
-			_fname = ''
+		first_line = self.body.partition('\n')[0]
+		match = re.fullmatch(r'\s*#\s*(?P<name>\S+\.py)\s*', first_line)
+		return match.group('name') if match else None
 
-		return _fname
+	@property
+	def extraction_body(self):
+		"""Return the body, excluding a recognized filename directive."""
+		if not self.fname:
+			return self.body
 
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
+		_, separator, body = self.body.partition('\n')
+		return body if separator else ''
