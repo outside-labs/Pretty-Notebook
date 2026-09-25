@@ -48,3 +48,7 @@ package-dir = { "" = "src" }
 where = ["src"]
 include = ["pnbp*"]
 namespaces = false
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
