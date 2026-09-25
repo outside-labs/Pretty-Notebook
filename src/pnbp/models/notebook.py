@@ -102,35 +102,43 @@ class Notebook:
 		if not self.NOTE_PATH:
 			raise ImportError("required to set NOTE_PATH environment variable to init a Notebook instance!")
 
-		self.settings_file = os.path.join(self.NOTE_PATH, 'pnbp_settings.json')
+		settings_path = os.path.join(self.NOTE_PATH, 'pnbp_settings.json')
+		self.settings_file = False if os.environ.get('PNBP_SETTINGS') == 'off' else settings_path
 
-		if not os.path.exists(self.settings_file):
-			if not os.environ.get('PNBP_SETTINGS') == 'off':
-				print("an NOTE_PATH/pnbp_settings.json file not found.")
-				gen_empt = input("generate it from a template? (y/n): ")
-				if gen_empt.lower() == 'y':
+		if self.settings_file and not os.path.exists(self.settings_file):
+			print("an NOTE_PATH/pnbp_settings.json file not found.")
+			gen_empt = input("generate it from a template? (y/n): ")
+			if gen_empt.lower() == 'y':
+				empty_settings = {
+					"IMG_PATH": "", "HTML_PATH": "", "VENV_PATH": "",
+					"API_BASE": "http://127.0.0.1:8000",
+					"API_TOKEN": "", "PUB_LNK_ONLY": False,
+					"TITLE": "", "NAV_BRAND": "", "NAV_PAGES": {},
+					"FOOTER": "", "darkmode": False,
+					"hljs_light": "default", "hljs_dark": "xt256",
+					"merm_light": "default", "merm_dark": "dark",
+					"COMMIT_TAG": '#public', "EXCLUDE_TAG": '#private',
+					"HIDE_COMMIT_TAG": False,
+				}
 
-					empty_settings = {
-							"IMG_PATH": "", "HTML_PATH": "", "VENV_PATH": "", 
-							"API_BASE": "http://127.0.0.1:8000",
-							"API_TOKEN": "", "PUB_LNK_ONLY": False,
-							"NAV_BRAND": "", "NAV_PAGES": {},
-							"FOOTER": "", "darkmode": False,
-							"hljs_light": "default", "hljs_dark": "xt256",
-							"merm_light": "default", "merm_dark": "dark",
-							"COMMIT_TAG": '#public', "EXCLUDE_TAG": '#private',
-							"HIDE_COMMIT_TAG": False, 
-							}
-					
-					with open(self.settings_file, 'w') as sf:
-						json.dump(empty_settings, sf, indent=4)
+				with open(self.settings_file, 'w') as sf:
+					json.dump(empty_settings, sf, indent=4)
 
-					print(f"generated (most empty/default) from template to\n{self.NOTE_PATH}/pnbp_settings.json: \n{json.dumps(empty_settings, indent=4)}")
-				else:
-					print("NOTE_PATH/pnbp_settings.json is only soft required, please see https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_settings.json for example.")
-					print("Suppress warning+template offer message in the future by setting NOTE_CONFIG environment variable to 'off'.")
-					self.settings_file = False
+				print(
+					f"generated (most empty/default) from template to\n"
+					f"{self.NOTE_PATH}/pnbp_settings.json: \n"
+					f"{json.dumps(empty_settings, indent=4)}"
+				)
 			else:
+				print(
+					"NOTE_PATH/pnbp_settings.json is only soft required, please see "
+					"https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_settings.json "
+					"for example."
+				)
+				print(
+					"Suppress warning+template offer message in the future by setting "
+					"PNBP_SETTINGS environment variable to 'off'."
+				)
 				self.settings_file = False
 
 		if self.settings_file:
@@ -792,17 +800,34 @@ class Notebook:
 		h.update({'Content-Type': 'application/x-www-form-urlencoded'})
 		r = requests.post(f'{self.API_BASE}/api/token', data={'username': u, 'password': p}, headers=h)
 		print(r)
-		print(r.text)
-		print(r.json())
+
+		try:
+			payload = r.json()
+		except ValueError:
+			payload = None
+
+		if isinstance(payload, dict):
+			redacted = {
+				key: ('<redacted>' if 'token' in key.lower() else value)
+				for key, value in payload.items()
+			}
+			print(redacted)
+		elif payload is not None:
+			print('<response payload omitted>')
+
 		if r.status_code == 200:
-			self.API_TOKEN = r.json()['access_token']
+			if not isinstance(payload, dict) or 'access_token' not in payload:
+				raise ValueError("Token refresh response did not include access_token.")
 
-			with open(self.settings_file) as sf:
-				config = json.load(sf)
-				config.update({"API_TOKEN": self.API_TOKEN})
+			self.API_TOKEN = payload['access_token']
 
-			with open(self.settings_file, 'w') as sf:
-				json.dump(config, sf, indent=4)
+			if self.settings_file:
+				with open(self.settings_file) as sf:
+					config = json.load(sf)
+					config.update({"API_TOKEN": self.API_TOKEN})
+
+				with open(self.settings_file, 'w') as sf:
+					json.dump(config, sf, indent=4)
 
 	def get_authed_user(self):
 		""" request method to get the authenticated user's username 
