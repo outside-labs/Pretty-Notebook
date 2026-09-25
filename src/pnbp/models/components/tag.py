@@ -10,6 +10,34 @@ class Tag(Component):
 	""" 
 	"""
 	MDS_INT_TAG = r'([^\\)/>\'\w])#([A-Za-z]+)' 
+	TAG_TOKEN = re.compile(r"(?<![\\/)>\'\w])#([A-Za-z]+)(?![\w-])")
+	PROTECTED_PATTERNS = (
+		re.compile(r'```[^`]*```'),
+		re.compile(r'\[[^]]+\]\([^)]+\)'),
+		re.compile(r'!?\[\[[^]]+\]\]'),
+		re.compile(r'https?://[^;,\s\]\*]+'),
+	)
+
+	@classmethod
+	def collect_tags(cls, note_md):
+		"""Collect ASCII-letter tags outside code, links, and URLs.
+
+		A tag begins with ``#``, contains one or more ASCII letters, and is not
+		adjacent to a word character or hyphen. The returned values omit ``#``.
+		"""
+		spans = []
+		for pattern in cls.PROTECTED_PATTERNS:
+			for match in pattern.finditer(note_md):
+				start, end = match.span()
+				if any(start < used_end and end > used_start for used_start, used_end in spans):
+					continue
+				spans.append((start, end))
+
+		eligible = list(note_md)
+		for start, end in spans:
+			eligible[start:end] = ' ' * (end - start)
+
+		return [match.group(1) for match in cls.TAG_TOKEN.finditer(''.join(eligible))]
 
 	def matches(self, value) -> bool:
 		"""Match a tag value with or without its leading hash."""

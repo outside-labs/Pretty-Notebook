@@ -1,7 +1,9 @@
 import os
 import re
+import stat
+import tempfile
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 from pathlib import Path
 
 from .components import Link, Tag, Url, CodeBlock
@@ -22,34 +24,8 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		:param str mtime: the local md most recent modification date
 			-> used against remote blog api to determine if POST required
 		"""
-		all_tags = [f'#{t}' for t in tags]
-
-		# removing "#tags" found within Urls, 
-		# CodeBlocks, and Links :
-		_tags = list(set(all_tags.copy()))
-		_remove = defaultdict(int)
-		for t in _tags:
-			for u in urls:
-				if (num_occur := len(re.findall(t, u))):
-					_remove[t] += num_occur
-			for b in codeblocks:
-				if (num_occur := len(re.findall(t, b))):
-					_remove[t] += num_occur
-			for l in links:
-				if (num_occur := len(re.findall(t, l))):
-					_remove[t] += num_occur
-
-		for tag, occ in _remove.items():
-			for x in range(occ):
-				if tag in all_tags:
-					all_tags.remove(tag)
-		
-		if (m := re.match(r'^#([A-Za-z]+)', md)):
-			# catch a #tag at the very beginning of the md string
-			# without opening pandoras box
-			all_tags.append(f'#{m.groups(1)[0]}')
-
-		tags = [Tag(t) for t in set(all_tags)]
+		tag_values = dict.fromkeys(f"#{str(tag).lstrip('#')}" for tag in tags)
+		tags = [Tag(tag) for tag in tag_values]
 		urls = [Url(u) for u in set(urls)]
 		links = [Link(l) for l in set(links)]
 
@@ -71,6 +47,9 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		"""
 		self.md_out: str | None = None
 		self.pprotect = {}
+		self.source_path: str | None = None
+		self._source_exists = False
+		self._source_signature = None
 
 	def __str__(self):
 		""" """
@@ -167,7 +146,7 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		if self.md_out is None:
 			return self
 
-		if self.md_out == self.md:
+		if self.md_out == self.md and self._source_exists:
 			self.md_out = None
 			return self
 
@@ -175,18 +154,107 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
 
 		root = Path(nb.NOTE_PATH).expanduser().resolve()
-		path = (root / f"{self.name}.md").resolve()
+		relative_path = self.source_path or f"{self.name}.md"
+		path = (root / relative_path).resolve()
 
 		try:
 			path.relative_to(root)
 		except ValueError as e:
 			raise ValueError("Note path escapes NOTE_PATH") from e
 
-		path.parent.mkdir(parents=True, exist_ok=True)
-		path.write_text(self.md_out, encoding="utf-8")
+		if path.suffix.lower() != ".md":
+			raise ValueError(f"Not a Markdown note: {path}")
 
+		path.parent.mkdir(parents=True, exist_ok=True)
+
+		if self._source_exists:
+			source_stat = self._require_unchanged_source(path)
+			self._atomic_replace(path, self.md_out, source_stat)
+		else:
+			self._exclusive_create(path, self.md_out)
+
+		saved = nb.open_note(path)
+		self.source_path = saved.source_path
+		self._source_exists = True
 		self.md_out = None
-		return nb.open_note(path)
+		return saved
+
+	@staticmethod
+	def _stat_signature(file_stat):
+		return (
+			file_stat.st_dev,
+			file_stat.st_ino,
+			file_stat.st_size,
+			file_stat.st_mtime_ns,
+		)
+
+	def _require_unchanged_source(self, path):
+		try:
+			before = path.stat()
+			text = path.read_text(encoding="utf-8")
+			after = path.stat()
+		except FileNotFoundError as e:
+			raise RuntimeError(f"Cannot save {self.name}: source changed on disk.") from e
+
+		if (
+			self._stat_signature(before) != self._stat_signature(after)
+			or (
+				self._source_signature is not None
+				and self._stat_signature(after) != self._source_signature
+			)
+			or text != self.md
+		):
+			raise RuntimeError(f"Cannot save {self.name}: source changed on disk.")
+
+		return after
+
+	@staticmethod
+	def _exclusive_create(path, text):
+		flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+		fd = os.open(path, flags, 0o666)
+
+		try:
+			with os.fdopen(fd, "w", encoding="utf-8") as output:
+				fd = None
+				output.write(text)
+				output.flush()
+				os.fsync(output.fileno())
+		except Exception:
+			if fd is not None:
+				os.close(fd)
+			path.unlink(missing_ok=True)
+			raise
+
+	def _atomic_replace(self, path, text, source_stat):
+		fd, temporary_name = tempfile.mkstemp(
+			dir=path.parent,
+			prefix=f".{path.name}.",
+			suffix=".tmp",
+		)
+		temporary_path = Path(temporary_name)
+
+		try:
+			with os.fdopen(fd, "w", encoding="utf-8") as output:
+				fd = None
+				output.write(text)
+				output.flush()
+				os.fsync(output.fileno())
+
+			os.chmod(temporary_path, stat.S_IMODE(source_stat.st_mode))
+
+			current_stat = path.stat()
+			current_text = path.read_text(encoding="utf-8")
+			if (
+				self._stat_signature(current_stat) != self._stat_signature(source_stat)
+				or current_text != self.md
+			):
+				raise RuntimeError(f"Cannot save {self.name}: source changed on disk.")
+
+			os.replace(temporary_path, path)
+		finally:
+			if fd is not None:
+				os.close(fd)
+			temporary_path.unlink(missing_ok=True)
 
 	def is_tagged(self, tag: str="", tags: list | None=None, to_all=False, at_all=False)->bool:
 		""" check if note.md contains a #tag
@@ -249,11 +317,10 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		:param links: the [[link]] names to remove
 		"""
 		ns = self.current_md
-		links = [l for l in links if not '.' in l] # keep images!
 		
 		for name in links:
 			name = re.escape(str(name))
-			p = re.compile(fr'(\[\[\s?)({name})(\s?\]\])')
+			p = re.compile(fr'(?<!!)(\[\[\s*)({name})(\s*\]\])')
 
 			if (ml := p.findall(ns)):
 				for m in ml:

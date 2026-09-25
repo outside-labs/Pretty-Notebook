@@ -63,7 +63,7 @@ class Url(Component):
 		_ext_icon = '<i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>'
 		_add_attrs = 'rel="nofollow" target="_blank"'
 
-		p = re.compile(r'<a href="(.*)">(.*)</a>') # taking advantage of our repl internal linked href='' vs ""
+		p = re.compile(r'<a href="([^"]+)">(.*?)</a>', re.DOTALL) # internal links use single quotes
 		extlnk_repl = lambda m: f'<a {_add_attrs} href="{m.group(1)}">{m.group(2)}</a> {_ext_icon}'
 
 		note.md_out = p.sub(extlnk_repl, note.md_out)
@@ -94,7 +94,6 @@ class Url(Component):
 			return ".".join(self.baseurl.split('.')[-2:])
 
 		return None
-
 
 
 

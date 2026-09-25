@@ -14,8 +14,13 @@ a **Notebook** instance contains a dictionary of each **Note** available by it's
 best accessed directly from the nb with .get() :
 
 ```py
+>>> from pnbp.models.components import Link
+>>> nb.get('SCIENCE') # exact names are checked first
+>>> nb.get('SCIENCE.md') # only a terminal .md or .html is normalized
 >>> # get by best match ~
 >>> n = nb.get('sc13nce')
+>>> nb.get('sc13nce', fuzzy=False) # exact/normalized lookup only
+>>> nb.get(Link('SCIENCE#method')) # Link targets resolve through Link.note
 ```
 
 each note exposes lists of **Link**s, **Tag**s, **CodeBlock**s, **Url**s, (and more) :
@@ -113,6 +118,12 @@ and **note**(s) can be individually queried against things:
 >>> # or
 >>> n.prime_md_out_release(nb) # inplace save
 ```
+
+##### **HTML rendering contract** :
+
+`Notebook.convert_to_html(note)` is read-only with respect to the note's pending `md_out` state. Fenced code and inline code are treated as literal content: wiki links, tags, heading-like comments, `~~strikethrough~~`, and `==highlight==` inside code are not expanded. Mermaid fences are the intentional exception and render as Mermaid containers.
+
+Heading IDs are assigned only to parsed Markdown headings. Separate `~~strike~~` and `==highlight==` spans render separately; whitespace-delimited comparisons such as `x == y` remain ordinary text.
 
 ##### **by section** :
 

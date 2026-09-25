@@ -13,12 +13,14 @@ RESTful management of web pages implemented in FastAPI for / using [pnbp](https:
 via **pnbp**
 -  (1) conversion of **\#public** notes to HTML,
 -  (2) communicating with : 
-    -  ... **```pnbp commit-remote```** (or **```pnbp commit-local```**) to commit changes
+    -  ... **```pnbp commit-remote```** (or **```pnbp commit-local```**) to upload changes without deleting remote pages
     -  ... **```pnbp commit-stage```** to see the staged changes before updating
 
 **...** 
--  any note made unpublic between commits (e.g. #public tag removal or #private tag addition), are deleted from the server on next commit.
-- only those notes with newer changes than most recently received will be POST-ed and images only transfer once. if you want to ensure all #public markdown files are pushed to the remote server, you can use **```pnbp touch-all-public```**. 
+-  add **```--prune```** only after reviewing **```pnbp commit-stage```** when this notebook owns the server's entire publication namespace. Pruning deletes every remote page absent from this notebook; it is not safe for a site shared by independent notebooks or users without separate ownership tracking.
+-  a failed page or image upload stops the operation before pruning. HTTP failures return a nonzero command status.
+-  only notes newer than their remote copy are POST-ed. Use **```pnbp touch-all-public```** to mark every currently publishable note for upload.
+-  images transfer when their names are missing remotely. Use **```--refresh-images```** to resend all images referenced by publishable notes; removing a note does not remove its previously uploaded images.
 
 --- 
 

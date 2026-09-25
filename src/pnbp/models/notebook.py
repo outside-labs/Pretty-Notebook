@@ -3,6 +3,7 @@ import re
 import json
 import getpass
 import difflib
+import mimetypes
 import random
 
 from collections.abc import Iterator, Iterable
@@ -18,11 +19,79 @@ from .components import Link, Tag, Url, CodeBlock
 from pnbp.helpers import _convert_datetime
 
 
+_FENCED_LITERAL = re.compile(
+	r"^(?P<indent>[ ]{0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\n]*)\n"
+	r"(?P<body>.*?)"
+	r"^(?P=indent)(?P=fence)[ \t]*(?:\n|$)",
+	re.MULTILINE | re.DOTALL,
+)
+_INLINE_LITERAL = re.compile(
+	r"(?<!`)(?P<fence>`+)(?!`)(?P<body>.+?)(?P=fence)(?!`)",
+	re.DOTALL,
+)
+_HTML_LITERAL = re.compile(
+	r"<div class=(?:\"|')mermaid(?:\"|')[^>]*>.*?</div>"
+	r"|<pre\b[^>]*>.*?</pre>"
+	r"|<code\b[^>]*>.*?</code>",
+	re.IGNORECASE | re.DOTALL,
+)
+
+
+def _stash_literal(text, stashed, value):
+	index = len(stashed)
+	token = f"PNBPLITERAL{index}TOKEN"
+	while token in text or token in stashed:
+		index += 1
+		token = f"PNBPLITERAL{index}TOKEN"
+	stashed[token] = value
+	return token
+
+
+def _stash_markdown_literals(text):
+	stashed = {}
+
+	def stash_fence(match):
+		info = match.group("info").strip().split()
+		if info and info[0].lower() == "mermaid":
+			replacement = f'<div class="mermaid">{match.group("body")}</div>'
+			if match.group(0).endswith("\n"):
+				replacement += "\n"
+		else:
+			replacement = match.group(0)
+		return _stash_literal(text, stashed, replacement)
+
+	protected = _FENCED_LITERAL.sub(stash_fence, text)
+
+	def stash_inline(match):
+		return _stash_literal(text, stashed, match.group(0))
+
+	protected = _INLINE_LITERAL.sub(stash_inline, protected)
+	return protected, stashed
+
+
+def _stash_html_literals(text):
+	stashed = {}
+
+	def stash(match):
+		return _stash_literal(text, stashed, match.group(0))
+
+	return _HTML_LITERAL.sub(stash, text), stashed
+
+
+def _restore_literals(text, stashed):
+	for token, literal in stashed.items():
+		text = text.replace(token, literal)
+	return text
+
+
 
 class Notebook:
 	""" 
 	"""
 	SKIP_DIRECTORIES = {".git", ".obsidian", "__pycache__"}
+	PUBLICATION_SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
+	PUBLICATION_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+	REQUEST_TIMEOUT = (5, 30)
 
 	def __init__(self):
 
@@ -221,17 +290,21 @@ class Notebook:
 			raise ValueError(f"Not a Markdown note: {path}")
 
 		text = path.read_text(encoding="utf-8")
+		file_stat = path.stat()
 		note_name = relative_path.with_suffix("").as_posix()
 
 		n = Note(
 			name=note_name,
 			md=text,
 			links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, text)],
-			tags=[m[1] for m in re.findall(Tag.MDS_INT_TAG, text)],
+			tags=Tag.collect_tags(text),
 			urls=Url.collect_urls(text),
 			codeblocks=re.findall(CodeBlock.MD_CODE, text),
-			mtime=_convert_datetime(path.stat().st_mtime, as_mtime=True),
+			mtime=_convert_datetime(file_stat.st_mtime, as_mtime=True),
 			)
+		n.source_path = relative_path.as_posix()
+		n._source_exists = True
+		n._source_signature = Note._stat_signature(file_stat)
 
 		target = self.notes if notes is None else notes
 		target[note_name] = n
@@ -283,49 +356,113 @@ class Notebook:
 		:param overwrite: if overwrite=True, allow existing file to be re-written
 		:param pnbp: if pnbp=True, tagging #pnbp to track and ignore
 		"""
-		name = name.strip()
+		if not isinstance(md_out, str):
+			raise TypeError(f"md_out must be a str, not {type(md_out)}")
 
-		if name in self.notes.keys() and not overwrite:
-			raise FileExistsError(f"Cannot generate a new note with name {name}.")
- 
-		n = Note(name=name, md='', links=[], tags=[], urls=[], codeblocks=[], mtime='')
+		name = str(name).strip()
+		if name.lower().endswith(".md"):
+			name = name[:-3]
+		if not name:
+			raise ValueError("A note name is required.")
+
+		root = Path(self.NOTE_PATH).expanduser().resolve()
+		destination = (root / f"{name}.md").resolve()
+
+		try:
+			relative_path = destination.relative_to(root)
+		except ValueError as e:
+			raise ValueError("Note path escapes NOTE_PATH") from e
+
+		existing_paths = []
+		if destination.parent.exists():
+			existing_paths = [
+				path
+				for path in destination.parent.iterdir()
+				if path.name.casefold() == destination.name.casefold()
+			]
+
+		if existing_paths and not overwrite:
+			raise FileExistsError(f"Cannot generate a new note at {relative_path}.")
+
+		if len(existing_paths) > 1:
+			raise FileExistsError(
+				f"Cannot choose between case-variant note paths for {relative_path}."
+			)
+
+		if existing_paths:
+			existing_path = existing_paths[0]
+			if existing_path.is_symlink():
+				raise ValueError(f"Refusing to overwrite a note symlink: {existing_path}")
+			existing_path = existing_path.resolve()
+			try:
+				existing_relative = existing_path.relative_to(root)
+			except ValueError as e:
+				raise ValueError("Note path escapes NOTE_PATH") from e
+			n = self.open_note(existing_relative.as_posix())
+		else:
+			note_name = relative_path.with_suffix("").as_posix()
+			n = Note(
+				name=note_name,
+				md='',
+				links=[],
+				tags=[],
+				urls=[],
+				codeblocks=[],
+				mtime='',
+			)
+			n.source_path = relative_path.as_posix()
+
 		n.md_out = md_out
 
 		if pnbp is True:
 			n.md_out += '\n\n--- \n\n#pnbp'
 
-		n.save(self) # ^^ although instantiated empty, live access to attrs on nb instance
+		return n.save(self)
 
-	def get(self, name)->Note:
-		""" access the notes dict directly 
+	def get(self, name, *, fuzzy=True)->Note:
+		"""Resolve a note exact-first, with optional fuzzy fallback.
 
 		:param name: name of the note
+		:param bool fuzzy: allow a close-match fallback after exact resolution
 		:returns: Note instance or None
 		"""
 		if isinstance(name, Note):
-			n = name
-			return self.notes.get(n.name)
+			return self.notes.get(name.name)
 
-		name = str(name)
+		if hasattr(name, "note"):
+			name = name.note
 
-		name = name.replace('.md', '').replace('.html', '').replace('\\', '')
+		raw_name = str(name).strip()
+		if (note := self.notes.get(raw_name)):
+			return note
 
-		if (note := self.notes.get(name)):
+		normalized_name = raw_name.replace('\\', '/')
+		if (note := self.notes.get(normalized_name)):
+			return note
+
+		normalized_name = re.sub(
+			r'\.(?:md|html)$',
+			'',
+			normalized_name,
+			flags=re.IGNORECASE,
+		)
+		if (note := self.notes.get(normalized_name)):
 			return note
 
 		for n in self.notes.values():
-			if n.slugname == name:
+			if n.slugname == normalized_name:
 				return n
 
-		try: 
-			name_in = name
-			name = difflib.get_close_matches(name, [n for n in self.notes.keys()])[0]
-			print(f"^^ {name} (by close match) ")
-			return self.get(name)
+		if not fuzzy:
+			return None
 
-		except IndexError:
-			print(f"note: `{name_in}` does not exist in the notebook!")
+		matches = difflib.get_close_matches(normalized_name, self.notes.keys(), n=1)
+		if matches:
+			matched_name = matches[0]
+			print(f"^^ {matched_name} (by close match) ")
+			return self.notes[matched_name]
 
+		print(f"note: `{raw_name}` does not exist in the notebook!")
 		return None
 
 	def get_random_note(self):
@@ -346,6 +483,81 @@ class Notebook:
 				t_notes.append(n)
 
 		return t_notes
+
+	def is_publishable(self, note)->bool:
+		"""Return whether a note is explicitly public and not excluded."""
+		return (
+			note.is_tagged(self.COMMIT_TAG)
+			and not note.is_tagged(self.EXCLUDE_TAG)
+		)
+
+	def _publication_image(self, reference):
+		"""Resolve one flat image reference without allowing IMG_PATH escapes."""
+		reference = reference.strip()
+
+		if not reference or not self.IMG_PATH:
+			raise ValueError(f"Invalid publication image path: {reference!r}")
+
+		root = Path(self.IMG_PATH).expanduser().resolve()
+		supplied = Path(reference).expanduser()
+
+		if supplied.is_absolute() or supplied.name != reference:
+			raise ValueError(f"Invalid publication image path: {reference!r}")
+
+		target = (root / supplied).resolve()
+
+		try:
+			target.relative_to(root)
+		except ValueError as error:
+			raise ValueError(
+				f"Publication image path escapes IMG_PATH: {reference!r}"
+			) from error
+
+		if target.suffix.lower() not in self.PUBLICATION_IMAGE_EXTENSIONS:
+			raise ValueError(f"Unsupported publication image path: {reference!r}")
+
+		if not target.is_file():
+			raise FileNotFoundError(f"Publication image not found: {reference!r}")
+
+		content_type = mimetypes.guess_type(target.name)[0]
+		if content_type is None:
+			content_type = "application/octet-stream"
+
+		return target, content_type
+
+	def _publication_preflight(self, *, include_images=False):
+		"""Validate all publication inputs before writes or HTTP requests."""
+		notes = tuple(note for note in self.notes.values() if self.is_publishable(note))
+		slugs = {}
+
+		for note in notes:
+			slug = note.slugname
+
+			if not slug:
+				raise ValueError(f"Note {note.name!r} has an empty publication slug.")
+
+			if not self.PUBLICATION_SLUG_PATTERN.fullmatch(slug):
+				raise ValueError(
+					f"Note {note.name!r} has an invalid publication slug: {slug!r}."
+				)
+
+			if previous := slugs.get(slug):
+				raise ValueError(
+					f"Notes {previous.name!r} and {note.name!r} share "
+					f"duplicate publication slug {slug!r}."
+				)
+
+			slugs[slug] = note
+
+		images = {}
+		if include_images:
+			for note in notes:
+				for reference in re.findall(Link.MDS_IMG_LNK, note.md):
+					reference = reference.strip()
+					if reference not in images:
+						images[reference] = self._publication_image(reference)
+
+		return notes, images
 
 	def get_linked(self, link)->list:
 		"""
@@ -433,12 +645,12 @@ class Notebook:
 	"""
 	@classmethod
 	def replace_strikethrough(cls, note):
-		""" a regex replace mtd 
+		"""Replace separate ``~~text~~`` spans without crossing whitespace edges.
 		
 		:param note: an Note instance
 		"""
-		p = re.compile(r'(~~)(.*)(~~)')
-		strike_repl = lambda m: f'<s>{m.group(2)}</s>'
+		p = re.compile(r'~~(?=\S)(.+?)(?<=\S)~~')
+		strike_repl = lambda m: f'<s>{m.group(1)}</s>'
 
 		if note.md_out is None:
 			note.md_out = note.md
@@ -449,12 +661,12 @@ class Notebook:
 
 	@classmethod
 	def replace_eqhighlight(cls, note):
-		""" a regex replace mtd 
+		"""Replace separate ``==text==`` spans without treating comparisons as markup.
 		
 		:param note: an Note instance
 		"""
-		p = re.compile(r'(==)(.*)(==)')
-		eqhl_repl = lambda m: f'<mark>{m.group(2)}</mark>'
+		p = re.compile(r'==(?=\S)(.+?)(?<=\S)==')
+		eqhl_repl = lambda m: f'<mark>{m.group(1)}</mark>'
 
 		if note.md_out is None:
 			note.md_out = note.md
@@ -470,12 +682,10 @@ class Notebook:
 		:param note: an Note instance
 		""" 
 		remv = []
-		for name in note.links:
-			if (ln := self.get(name)):
-				if not ln.is_tagged(self.COMMIT_TAG):
-					remv.append(name)
-			else:
-				remv.append(name)
+		for link in note.links:
+			target = self.notes.get(link.note)
+			if target is None or not self.is_publishable(target):
+				remv.append(str(link))
 
 		note.remove_links(remv)
 		# -> md_out is set initially here. 
@@ -497,19 +707,14 @@ class Notebook:
 		return note
 
 	def convert_to_html(self, note):
-		""" apply all the regex method changes to 
-			a single note
+		"""Render one note while keeping literal code spans opaque to extensions.
 
-			md->html str repl methods
-			coupled with mtds from helpers.py
-
-		:param note: an Note instance
-		::
+		:param note: a Note instance
 		"""
 		previous_md_out = note.md_out
 		
 		try:
-			note.md_out = note.current_md
+			note.md_out, markdown_literals = _stash_markdown_literals(note.current_md)
 	
 			if self.PUB_LNK_ONLY:
 				note = self.remove_nonpub_links(note)
@@ -520,17 +725,27 @@ class Notebook:
 			nout = Link.replace_imglinks(note)
 			nout = Link.replace_intlinks(nout)
 			nout = Tag.replace_smdtags(nout)
-			nout = CodeBlock.replace_mermaid(nout)
 			nout = Url.replace_nakedhref(nout)
 
-			nout = Link.add_header_ids(nout)
+			nout.md_out = _restore_literals(nout.md_out, markdown_literals)
+			nout.md_out = md.markdown(
+				nout.md_out,
+				extensions=[
+					'fenced_code',
+					'nl2br',
+					'markdown.extensions.tables',
+					'attr_list',
+					'footnotes',
+					'toc',
+				],
+				use_pygments=True,
+			)
 
-			nout.md_out = md.markdown(nout.md_out, extensions=['fenced_code', 'nl2br', 'markdown.extensions.tables', 'attr_list', 'footnotes'], use_pygments=True)
-
-			nout = CodeBlock.fix_blocked_comments(nout)
+			nout.md_out, html_literals = _stash_html_literals(nout.md_out)
 			nout = Notebook.replace_strikethrough(nout)
 			nout = Notebook.replace_eqhighlight(nout)
 			nout = Url.adjust_externallinks(nout)
+			nout.md_out = _restore_literals(nout.md_out, html_literals)
 
 			return nout.md_out
 	
@@ -544,23 +759,29 @@ class Notebook:
 		"""
 		self._require_clean_notes("publish local HTML")
 		self.open_md()
+		notes, _ = self._publication_preflight()
 
 		print(f'\nlocal commit: {self.HTML_PATH}')
-		for n in self.notes.values():
+		for n in notes:
+			html = self.convert_to_html(note=n)
+			target = Path(self.HTML_PATH) / f"{n.slugname}.html"
+			with target.open('w', encoding='utf-8') as output_file:
+				output_file.write(html)
 
-			if n.is_tagged(self.COMMIT_TAG) and not n.is_tagged(self.EXCLUDE_TAG):
-				html = self.convert_to_html(note=n)
-				of = open(os.path.join(self.HTML_PATH, f"{n.slugname}.html"), 'w')
-				of.write(html)
-				of.close()
-
-				print(f'\t{n.name} ---> {self.HTML_PATH}')
+			print(f'\t{n.name} ---> {self.HTML_PATH}')
 
 	""" pnbp-web api connection methods:
 	"""
 	def get_headers(self):
 		""" the request headers """
 		return {'accept': 'application/json', 'authorization': f'Bearer {self.API_TOKEN}'}
+
+	def _api_request(self, method, path, **kwargs):
+		"""Send one checked API request with a finite connection/read timeout."""
+		kwargs.setdefault('timeout', self.REQUEST_TIMEOUT)
+		response = method(f'{self.API_BASE}{path}', **kwargs)
+		response.raise_for_status()
+		return response
 
 	def refresh_token(self):
 		""" request method to replace the authenticated user's bearer token 
@@ -608,7 +829,7 @@ class Notebook:
 			against current publishments.
 		"""
 		h = self.get_headers()
-		r = requests.get(f'{self.API_BASE}/api/publishments', headers=h)
+		r = self._api_request(requests.get, '/api/publishments', headers=h)
 		pub_data = r.json()
 
 		nameMtime = {}
@@ -625,7 +846,7 @@ class Notebook:
 			against current imgs.
 		"""
 		h = self.get_headers()
-		r = requests.get(f'{self.API_BASE}/api/images', headers=h)
+		r = self._api_request(requests.get, '/api/images', headers=h)
 		img_data = r.json()
 
 		nameMtime = {}
@@ -641,74 +862,94 @@ class Notebook:
 			of Note(s) made non- #public
 		"""
 		h = self.get_headers()
-		r = requests.delete(f'{self.API_BASE}/api/publishment/{rname}', headers=h)
+		r = self._api_request(
+			requests.delete,
+			f'/api/publishment/{rname}',
+			headers=h,
+		)
 		print(f'(removed) {r.json()["pub_name"]} -> {r}')
 		return r
 
-	def post_commits_to_web_api(self, stage_only=False):
+	def post_commits_to_web_api(
+		self,
+		stage_only=False,
+		*,
+		prune=False,
+		refresh_images=False,
+	):
 		""" the main POST method
 
 		:param stage_only: if stage_only, print #public and don't commit
+		:param prune: remove every remote page absent from this notebook
+		:param refresh_images: resend referenced images even when names exist remotely
 		"""
 		self._require_clean_notes("preview or publish remote commits")
 		self.open_md()
+		notes, publication_images = self._publication_preflight(include_images=True)
 		h = self.get_headers()
 
 		pub_pub_data = self.get_pub_commits()
-		pub_pub_names = pub_pub_data.keys()
+		pub_pub_names = tuple(pub_pub_data)
 
 		pub_img_data = self.get_img_commits()
-		pub_img_names = pub_img_data.keys()
+		pub_img_names = set(pub_img_data)
 
 		print(f'\ncommits: (to {self.API_BASE})')
 		post_names = []
-		for n in self.notes.values():
+		uploaded_images = set()
+		for n in notes:
 			to_post = False
 			fname = n.slugname + '.html'
 
-			if n.is_tagged(self.COMMIT_TAG) and not n.is_tagged(self.EXCLUDE_TAG):
-				post_names.append(fname)
-				if fname in pub_pub_names:
-					if pub_pub_data[fname] < n.mtime: # change has occured 
-						to_post = True
-				else: # it's newly #public
+			post_names.append(fname)
+			if fname in pub_pub_names:
+				if pub_pub_data[fname] < n.mtime: # change has occurred
 					to_post = True
+			else: # it's newly #public
+				to_post = True
 
-			if to_post and not stage_only:
+			if stage_only:
+				continue
+
+			if to_post:
 				html = self.convert_to_html(note=n)
-				r = requests.post(f'{self.API_BASE}/api/publishment',
+				r = self._api_request(
+					requests.post,
+					'/api/publishment',
 					json={"name": n.slugname, "content": html},
-					headers=h
-					)
-				
+					headers=h,
+				)
 				print(f'\t{n.name} -> {r}')
 
-				for img in re.findall(Link.MDS_IMG_LNK, n.md):
-					if not img in pub_img_names:
-						try:
-							f = open(os.path.join(self.IMG_PATH, img), 'rb')
-							r = requests.post(f'{self.API_BASE}/api/image',
-								files={"filename": img, "file": f, "content_type": "image/jpeg"},
-								headers=h
-								)
+			for img in re.findall(Link.MDS_IMG_LNK, n.md):
+				img = img.strip()
+				if img in uploaded_images:
+					continue
 
-							print(f'\t\t{img} -> {r}')
-						except FileNotFoundError:
-							print(f'\t\t{img} -> Broken image link!')
-					else:
-						print(f'\t\t{img} -> EXISTS!')
+				if refresh_images or img not in pub_img_names:
+					path, content_type = publication_images[img]
+					with path.open('rb') as image_file:
+						r = self._api_request(
+							requests.post,
+							'/api/image',
+							files={"file": (path.name, image_file, content_type)},
+							headers=h,
+						)
 
-		if not stage_only:
-			for p in pub_pub_names:
-				if p not in post_names:
-					self.delete_unlisted_post(p)
-		else:
+					print(f'\t\t{img} -> {r}')
+					uploaded_images.add(img)
+				else:
+					print(f'\t\t{img} -> EXISTS!')
+
+		removals = [name for name in pub_pub_names if name not in post_names]
+
+		if stage_only:
 			print("\nnew pub: ")
 			for p in [n for n in post_names if not n in pub_pub_names]:
 				print(f'-> {p}')
 
 			print("\nto remove:")
-			for p in [n for n in pub_pub_names if not n in post_names]:
+			for p in removals:
 				print(f'-> {p}')
 
 			print("\nall current pubs: ")
@@ -716,6 +957,15 @@ class Notebook:
 				print(f'-> {p}')
 
 			print("\n\n** stage_only=True, no changes made... ***")
+		elif prune:
+			if removals:
+				print(f'\npruning {len(removals)} remote page(s):')
+			for p in removals:
+				self.delete_unlisted_post(p)
+		elif removals:
+			print("\nremote pages not pruned; use prune=True after reviewing stage output:")
+			for p in removals:
+				print(f'-> {p}')
 
 	def web_settings_post(self):
 		""" request method to POST layout update 
@@ -790,11 +1040,3 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-
-
-
-
-
-
-
-
