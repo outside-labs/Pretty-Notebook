@@ -1,8 +1,3 @@
-import os
-import re
-import inspect
-import subprocess
-
 from pnbp.helpers import pass_nb
 
 """
@@ -15,6 +10,27 @@ from .tasks import _collect_tasks_note
 from .graph import _collect_public_graph, _collect_all_graphs
 from .subl import _collect_subl_projs
 from .commit import _collect_git_diff
+
+
+COLLECTORS = (
+	'_collect_all_stats',
+	'_collect_all_notes',
+	'_collect_all_urls',
+	'_collect_all_public',
+	'_collect_terms',
+	'_collect_all_unlinked',
+	'_collect_all_empty',
+	'_collect_all_unheadered',
+	'_collect_all_moc',
+	'_collect_all_tags',
+	'_collect_nonexistant_links',
+	'_collect_code_blocked',
+	'_collect_tasks_note',
+	'_collect_public_graph',
+	'_collect_all_graphs',
+	'_collect_subl_projs',
+	'_collect_git_diff',
+)
 
 
 """ commands writing collections to specific notebook files:
@@ -216,12 +232,12 @@ def _collect_nonexistant_links(nb=None):
 """
 @pass_nb
 def _collect_all(nb=None):
-	""" perform all collect- commands in succession
+	""" perform each supported leaf collector once
 	"""
-	for k, func in globals().items():
-		if k.startswith('_collect') and inspect.isfunction(func):
-			print(f'{func.__name__} -->')
-			func(nb) #call each function with the nb instance passed 
+	for collector_name in COLLECTORS:
+		func = globals()[collector_name]
+		print(f'{collector_name} -->')
+		func(nb)
 
 
 
