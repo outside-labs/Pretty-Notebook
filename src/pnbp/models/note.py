@@ -3,7 +3,7 @@ import re
 import stat
 import tempfile
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 from pathlib import Path
 
 from .components import Link, Tag, Url, CodeBlock
@@ -24,34 +24,8 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		:param str mtime: the local md most recent modification date
 			-> used against remote blog api to determine if POST required
 		"""
-		all_tags = [f'#{t}' for t in tags]
-
-		# removing "#tags" found within Urls, 
-		# CodeBlocks, and Links :
-		_tags = list(set(all_tags.copy()))
-		_remove = defaultdict(int)
-		for t in _tags:
-			for u in urls:
-				if (num_occur := len(re.findall(t, u))):
-					_remove[t] += num_occur
-			for b in codeblocks:
-				if (num_occur := len(re.findall(t, b))):
-					_remove[t] += num_occur
-			for l in links:
-				if (num_occur := len(re.findall(t, l))):
-					_remove[t] += num_occur
-
-		for tag, occ in _remove.items():
-			for x in range(occ):
-				if tag in all_tags:
-					all_tags.remove(tag)
-		
-		if (m := re.match(r'^#([A-Za-z]+)', md)):
-			# catch a #tag at the very beginning of the md string
-			# without opening pandoras box
-			all_tags.append(f'#{m.groups(1)[0]}')
-
-		tags = [Tag(t) for t in set(all_tags)]
+		tag_values = dict.fromkeys(f"#{str(tag).lstrip('#')}" for tag in tags)
+		tags = [Tag(tag) for tag in tag_values]
 		urls = [Url(u) for u in set(urls)]
 		links = [Link(l) for l in set(links)]
 
@@ -366,11 +340,10 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		:param links: the [[link]] names to remove
 		"""
 		ns = self.current_md
-		links = [l for l in links if not '.' in l] # keep images!
 		
 		for name in links:
 			name = re.escape(str(name))
-			p = re.compile(fr'(\[\[\s?)({name})(\s?\]\])')
+			p = re.compile(fr'(?<!!)(\[\[\s*)({name})(\s*\]\])')
 
 			if (ml := p.findall(ns)):
 				for m in ml:
@@ -535,7 +508,6 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			cont = f'\n\n--- \n{d_today}\n\n'
 			self.prepend_section(cont)
 			self.save(nb)
-
 
 
 
