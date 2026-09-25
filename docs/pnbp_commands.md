@@ -194,6 +194,16 @@ generating flat relationship graphs to .md using **[mermaid js](https://mermaid-
 Hello World!
 ```
 
+Extraction plans every destination before writing and rejects absolute paths,
+parent traversal, and symlinks that escape **NOTE_PATH/code/**. Nested note names
+create matching directories beneath that root. Existing outputs are preserved by
+default; pass **```--overwrite```** to replace them explicitly.
+
+For Python, a first body line such as **```# package/example.py```** selects a
+relative output filename and is not copied into the program body. All remaining
+body text is copied verbatim. JSON bodies are copied as JSON text rather than
+being encoded as JSON strings.
+
 
 --- 
 
