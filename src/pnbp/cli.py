@@ -4,6 +4,7 @@ import sys
 import inspect
 
 import click
+import requests
 
 from .commands import collect
 from .commands import commit
@@ -27,6 +28,14 @@ def cli():
 
 """ Pretty-Notebook/apps/web api connection commands:
 """
+def _publish_notebook(notebook, **kwargs):
+	"""Run publication with concise CLI reporting for transport failures."""
+	try:
+		return notebook.post_commits_to_web_api(**kwargs)
+	except requests.RequestException as error:
+		raise click.ClickException(f'Publication failed: {error}') from error
+
+
 @cli.command()
 def commit_html():
 	""" if note contains #public, -> HTML_PATH/.html 
@@ -39,22 +48,42 @@ def commit_html():
 
 
 @cli.command()
-def commit_remote():
+@click.option(
+	'--prune',
+	is_flag=True,
+	help='Remove every remote page absent from this notebook after successful uploads.',
+)
+@click.option(
+	'--refresh-images',
+	is_flag=True,
+	help='Resend referenced images even when their names already exist remotely.',
+)
+def commit_remote(prune, refresh_images):
 	""" if note contains #public, -> 
 		selective update POST to .../apps/web api
 		@ {API_BASE}/api/publishment
 	"""
 	nb = Notebook()
-	nb.post_commits_to_web_api()
+	_publish_notebook(nb, prune=prune, refresh_images=refresh_images)
 
 
 @cli.command()
-def commit_local():
+@click.option(
+	'--prune',
+	is_flag=True,
+	help='Remove every remote page absent from this notebook after successful uploads.',
+)
+@click.option(
+	'--refresh-images',
+	is_flag=True,
+	help='Resend referenced images even when their names already exist remotely.',
+)
+def commit_local(prune, refresh_images):
 	""" commit -> localhost .../apps/web instance
 	""" # a convenience command
 	nb = Notebook()
 	nb.API_BASE = 'http://127.0.0.1:8000'
-	nb.post_commits_to_web_api()
+	_publish_notebook(nb, prune=prune, refresh_images=refresh_images)
 
 
 @cli.command()
@@ -63,7 +92,7 @@ def commit_stage():
 		to the terminal (staging view)
 	"""
 	nb = Notebook()
-	nb.post_commits_to_web_api(stage_only=True)
+	_publish_notebook(nb, stage_only=True)
 
 
 @cli.command()
@@ -209,7 +238,5 @@ create_all_commands()
 if __name__ == '__main__':
 	cli()
 	
-
-
 
 
