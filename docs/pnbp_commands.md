@@ -21,7 +21,7 @@ Commands that accept `--note` require an exact or terminal-extension-normalized 
 
 | cmd | desc |
 | :----: | :----: |
-| pnbp delete-all-empty | delete all empty notes from nb/all empty.md |
+| pnbp delete-all-empty | delete notes listed in nb/all empty.md only if they are still empty |
 | ... | ... |
 | pnbp prepend-leading-newline | add '\n' if not to top note |
 | pnbp remove-leading-newline | remove '\n' if exists from top note |
