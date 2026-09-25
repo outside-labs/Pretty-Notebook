@@ -37,8 +37,8 @@
 
 | cmd | desc |
 | :----: | :----: |
-| **pnbp git-commit-notebook** | commit to local git |
-| pnbp collect-git-diff | git diff -> nb/all diff.md |
+| **pnbp git-commit-notebook** | safely commit the notebook to local Git |
+| pnbp collect-git-diff | notebook-scoped git diff -> nb/all diff.md |
 
 --- 
 
@@ -222,19 +222,30 @@ Hello World!
 
 | cmd | desc |
 | :----: | :----: |
+| **pnbp git-commit-notebook** | `--repo-root PATH` |
+| **pnbp collect-git-diff** | `--repo-root PATH` |
 | **pnbp init-git-ignore** | --path="." |
+
+`git-commit-notebook` expects `NOTE_PATH` to be the repository root by default. If the notebook intentionally lives inside a larger repository, pass that repository's exact root with `--repo-root`. Without this explicit authorization, the command refuses to operate on a parent repository.
+
+The command refuses to run when the Git index already contains staged changes. It stages only the notebook subtree, never commits the root `pnbp_settings.json`, checks each Git command, and restores notebook changes to an unstaged state if the commit fails. `collect-git-diff` applies the same root and notebook-scope checks.
+
+```shell
+pnbp git-commit-notebook
+pnbp git-commit-notebook --repo-root="/Users/alice/myproject"
+pnbp collect-git-diff --repo-root="/Users/alice/myproject"
+```
 
 ```pnbp init-git-ignore```
 ```pnbp init-git-ignore --path="/Users/alice/myproject"```
 
-Command to initiate a templated **.gitignore** file to the current working dir.
-- that has nothing inherently to do with the **Notebook** (is available for general convenience)
+`init-git-ignore` appends missing default rules without replacing existing content. Its root-only `/pnbp_settings.json` rule protects the private notebook settings file while retaining `docs/pnbp_settings.json` as a tracked example. The command is also available for general project use outside a notebook.
  
 
 ```
 % mkdir myproject
 % cd myproject
-% nb-init-git-ignore
+% pnbp init-git-ignore
 ```
 
 --- 
