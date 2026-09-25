@@ -396,30 +396,44 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			exclusively. -> ... -> self.prime_md_out_release()
 		"""
 		if self.md_out is not None:
-			raise Exception(f"""You already have updated context for {self.name} in note.md_out.
-							note.save() or n.md_out = '' first...""")
+			raise RuntimeError(
+				f"{self.name} already has pending content. "
+				"Save it or call discard_changes() before protecting the note."
+			)
 
-		ns = self.md 		
-		# pull out all code, links, tags, urls, 
-		# so that they don't get matched with 
-		for i, cb in enumerate(self.codeblocks):
-			_repl = f'cb_{i}.'
-			ns = ns.replace(cb.codeblock, _repl)
-			self.pprotect.update({_repl: cb})
-		for i, l in enumerate(self.links):
-			_repl = f'l_{i}.'
-			ns = ns.replace(f'[[{l.link}]]', _repl)
-			self.pprotect.update({_repl: f'[[{l}]]'})
-		for i, t in enumerate(self.tags):
-			_repl = f't_{i}.'
-			ns = ns.replace(t.tag, _repl)
-			self.pprotect.update({_repl: t})
-		for i, u in enumerate(self.urls):
-			_repl = f'u_{i}.'
-			ns = ns.replace(u.url, _repl)
-			self.pprotect.update({_repl: u})
+		patterns = (
+			re.compile(r'```[^`]*```'),
+			re.compile(Url.MD_EXT_LINK),
+			re.compile(r'!?\[\[[^]]+\]\]'),
+			re.compile(r'https?://[^;,\s\]\*]+'),
+			re.compile(r"(?<![\\/)>\'\w])#[A-Za-z]+"),
+		)
+		spans = []
+		for pattern in patterns:
+			for match in pattern.finditer(self.md):
+				start, end = match.span()
+				if any(start < used_end and end > used_start for used_start, used_end in spans):
+					continue
+				spans.append((start, end))
 
-		self.md_out = ns
+		spans.sort()
+		parts = []
+		protected = {}
+		cursor = 0
+		for index, (start, end) in enumerate(spans):
+			token = f'\x00PNBPPROTECTED{index}\x00'
+			while token in self.md or token in protected:
+				index += 1
+				token = f'\x00PNBPPROTECTED{index}\x00'
+
+			parts.extend((self.md[cursor:start], token))
+			protected[token] = self.md[start:end]
+			cursor = end
+		parts.append(self.md[cursor:])
+
+		self.md_out = ''.join(parts)
+		self.pprotect = protected
+		return self
 
 	def prime_md_out_release(self, nb=None):
 		""" Replace the _keys at self.pprotect to prepare
@@ -430,18 +444,26 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		if self.md_out is None and self.pprotect:
 			raise Exception("Can't return prime note context that was never protected to begin with!")
 
-		ns = self.md_out		
-		for k,v in self.pprotect.items():
-			# put code, links, tags, urls, back in:
-			ns = ns.replace(k, v)
+		ns = self.md_out
+		try:
+			for token, original in self.pprotect.items():
+				if ns.count(token) != 1:
+					raise RuntimeError(
+						f"Protected content marker changed while processing {self.name}."
+					)
+				ns = ns.replace(token, original)
+		except Exception:
+			# Keep both the protected skeleton and its mapping available for recovery.
+			raise
 
 		self.md_out = ns
 		self.pprotect = {}
 		if nb:
 			# save the note:
-			self.save(nb)
+			return self.save(nb)
 		else:
 			print("Sucessful pprotect release. Don't forget to save!")
+		return self
 
 	def prepend_section(self, content):
 		""" add an section to the beginning of the .md content

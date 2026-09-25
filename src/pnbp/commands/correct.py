@@ -7,6 +7,14 @@ from pnbp.helpers import pass_nb
 
 
 
+def _mention_pattern(name):
+	"""Compile a literal note-name matcher that also works at document edges."""
+	return re.compile(
+		rf'(?<![\w\[\x00])(?P<mention>{re.escape(str(name))})(?![\w\]\x00])'
+	)
+
+
+
 """ 
 """
 @pass_nb
@@ -73,22 +81,30 @@ def _link_unlinked_mentions(note:Note, nb=None):
 	"""
 	n = note
 
-	n.prime_md_out_protect()
-	ns = n.md_out
-	nnames = sorted(nb.notes.keys(), reverse=True)
-	
-	# replace the unlinked mentions
-	# within the .md text body:
-	print(n.name, ':')
-	for name in nnames:
-		p = re.compile(rf'([^\[]\b)({name})(\b[^\]])')
-		if (ml := p.findall(ns)):
-			for m in ml:
-				print(m[1], f'--> [[{m[1]}]]')
-		ns = p.sub(Link.add_link_mention, ns)
+	previous_md_out = n.md_out
+	previous_pprotect = n.pprotect.copy()
+	try:
+		n.prime_md_out_protect()
+		ns = n.md_out
+		nnames = sorted(nb.notes.keys(), reverse=True)
 
-	n.md_out = ns
-	n.prime_md_out_release(nb) # saved in-line
+		# replace the unlinked mentions
+		# within the .md text body:
+		print(n.name, ':')
+		for name in nnames:
+			p = _mention_pattern(name)
+			matches = list(p.finditer(ns))
+			for match in matches:
+				mention = match.group('mention')
+				print(mention, f'--> [[{mention}]]')
+			ns = p.sub(lambda match: f"[[{match.group('mention')}]]", ns)
+
+		n.md_out = ns
+		n.prime_md_out_release(nb) # saved in-line
+	except Exception:
+		n.md_out = previous_md_out
+		n.pprotect = previous_pprotect
+		raise
 
 
 @pass_nb
@@ -108,12 +124,13 @@ def _collect_unlinked_mentions(nb=None):
 			print(f'\n[[{n.name}]] :\n\t --> ')
 			ns += f'\n[[{n.name}]] :'
 			for name in nnames:
-				p = re.compile(rf'([^\[]\b)({name})(\b[^\]])')
-				if (ml := p.findall(_md)):
+				p = _mention_pattern(name)
+				if (matches := list(p.finditer(_md))):
 					ns += '\n\t --> '
-					for m in ml:
-						print(rf'\[\[{m[1]}\]\], ')
-						ns += rf'\[\[{m[1]}\]\], '
+					for match in matches:
+						mention = match.group('mention')
+						print(rf'\[\[{mention}\]\], ')
+						ns += rf'\[\[{mention}\]\], '
 			ns += '\n'
 		finally:
 			n.md_out = previous_md_out
@@ -172,9 +189,6 @@ def _touch_all_public(nb=None):
 	"""
 	for pub in [n.name+'md' for n in nb.get_tagged(nb.COMMIT_TAG)]:
 		subprocess.run(['touch', os.path.join(nb.NOTE_PATH, pub)])
-
-
-
 
 
 
