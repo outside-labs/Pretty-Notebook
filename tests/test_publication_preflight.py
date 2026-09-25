@@ -13,6 +13,9 @@ class FakeResponse:
 	def json(self):
 		return self.payload
 
+	def raise_for_status(self):
+		return None
+
 	def __str__(self):
 		return "<FakeResponse [201]>"
 

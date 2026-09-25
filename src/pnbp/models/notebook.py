@@ -26,6 +26,7 @@ class Notebook:
 	SKIP_DIRECTORIES = {".git", ".obsidian", "__pycache__"}
 	PUBLICATION_SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 	PUBLICATION_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+	REQUEST_TIMEOUT = (5, 30)
 
 	def __init__(self):
 
@@ -691,6 +692,13 @@ class Notebook:
 		""" the request headers """
 		return {'accept': 'application/json', 'authorization': f'Bearer {self.API_TOKEN}'}
 
+	def _api_request(self, method, path, **kwargs):
+		"""Send one checked API request with a finite connection/read timeout."""
+		kwargs.setdefault('timeout', self.REQUEST_TIMEOUT)
+		response = method(f'{self.API_BASE}{path}', **kwargs)
+		response.raise_for_status()
+		return response
+
 	def refresh_token(self):
 		""" request method to replace the authenticated user's bearer token 
 		"""
@@ -737,7 +745,7 @@ class Notebook:
 			against current publishments.
 		"""
 		h = self.get_headers()
-		r = requests.get(f'{self.API_BASE}/api/publishments', headers=h)
+		r = self._api_request(requests.get, '/api/publishments', headers=h)
 		pub_data = r.json()
 
 		nameMtime = {}
@@ -754,7 +762,7 @@ class Notebook:
 			against current imgs.
 		"""
 		h = self.get_headers()
-		r = requests.get(f'{self.API_BASE}/api/images', headers=h)
+		r = self._api_request(requests.get, '/api/images', headers=h)
 		img_data = r.json()
 
 		nameMtime = {}
@@ -770,14 +778,26 @@ class Notebook:
 			of Note(s) made non- #public
 		"""
 		h = self.get_headers()
-		r = requests.delete(f'{self.API_BASE}/api/publishment/{rname}', headers=h)
+		r = self._api_request(
+			requests.delete,
+			f'/api/publishment/{rname}',
+			headers=h,
+		)
 		print(f'(removed) {r.json()["pub_name"]} -> {r}')
 		return r
 
-	def post_commits_to_web_api(self, stage_only=False):
+	def post_commits_to_web_api(
+		self,
+		stage_only=False,
+		*,
+		prune=False,
+		refresh_images=False,
+	):
 		""" the main POST method
 
 		:param stage_only: if stage_only, print #public and don't commit
+		:param prune: remove every remote page absent from this notebook
+		:param refresh_images: resend referenced images even when names exist remotely
 		"""
 		self._require_clean_notes("preview or publish remote commits")
 		self.open_md()
@@ -785,13 +805,14 @@ class Notebook:
 		h = self.get_headers()
 
 		pub_pub_data = self.get_pub_commits()
-		pub_pub_names = pub_pub_data.keys()
+		pub_pub_names = tuple(pub_pub_data)
 
 		pub_img_data = self.get_img_commits()
-		pub_img_names = pub_img_data.keys()
+		pub_img_names = set(pub_img_data)
 
 		print(f'\ncommits: (to {self.API_BASE})')
 		post_names = []
+		uploaded_images = set()
 		for n in notes:
 			to_post = False
 			fname = n.slugname + '.html'
@@ -803,40 +824,48 @@ class Notebook:
 			else: # it's newly #public
 				to_post = True
 
-			if to_post and not stage_only:
+			if stage_only:
+				continue
+
+			if to_post:
 				html = self.convert_to_html(note=n)
-				r = requests.post(f'{self.API_BASE}/api/publishment',
+				r = self._api_request(
+					requests.post,
+					'/api/publishment',
 					json={"name": n.slugname, "content": html},
-					headers=h
-					)
-				
+					headers=h,
+				)
 				print(f'\t{n.name} -> {r}')
 
-				for img in re.findall(Link.MDS_IMG_LNK, n.md):
-					img = img.strip()
-					if not img in pub_img_names:
-						path, content_type = publication_images[img]
-						with path.open('rb') as image_file:
-							r = requests.post(f'{self.API_BASE}/api/image',
-								files={"file": (path.name, image_file, content_type)},
-								headers=h
-								)
+			for img in re.findall(Link.MDS_IMG_LNK, n.md):
+				img = img.strip()
+				if img in uploaded_images:
+					continue
 
-						print(f'\t\t{img} -> {r}')
-					else:
-						print(f'\t\t{img} -> EXISTS!')
+				if refresh_images or img not in pub_img_names:
+					path, content_type = publication_images[img]
+					with path.open('rb') as image_file:
+						r = self._api_request(
+							requests.post,
+							'/api/image',
+							files={"file": (path.name, image_file, content_type)},
+							headers=h,
+						)
 
-		if not stage_only:
-			for p in pub_pub_names:
-				if p not in post_names:
-					self.delete_unlisted_post(p)
-		else:
+					print(f'\t\t{img} -> {r}')
+					uploaded_images.add(img)
+				else:
+					print(f'\t\t{img} -> EXISTS!')
+
+		removals = [name for name in pub_pub_names if name not in post_names]
+
+		if stage_only:
 			print("\nnew pub: ")
 			for p in [n for n in post_names if not n in pub_pub_names]:
 				print(f'-> {p}')
 
 			print("\nto remove:")
-			for p in [n for n in pub_pub_names if not n in post_names]:
+			for p in removals:
 				print(f'-> {p}')
 
 			print("\nall current pubs: ")
@@ -844,6 +873,15 @@ class Notebook:
 				print(f'-> {p}')
 
 			print("\n\n** stage_only=True, no changes made... ***")
+		elif prune:
+			if removals:
+				print(f'\npruning {len(removals)} remote page(s):')
+			for p in removals:
+				self.delete_unlisted_post(p)
+		elif removals:
+			print("\nremote pages not pruned; use prune=True after reviewing stage output:")
+			for p in removals:
+				print(f'-> {p}')
 
 	def web_settings_post(self):
 		""" request method to POST layout update 
@@ -918,8 +956,5 @@ class Notebook:
 		print(r)
 		print(r.json())
 		return r
-
-
-
 
 
