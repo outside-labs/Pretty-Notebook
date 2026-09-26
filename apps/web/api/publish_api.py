@@ -11,6 +11,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 from .auth_api import get_current_user
+from .atomic_io import atomic_write_text
 
 
 router = fastapi.APIRouter()
@@ -52,8 +53,7 @@ async def add_publishment(name: str, content: str) -> Publishment:
 
 	target = publication_path(name)
 	
-	async with aiofiles.open(target, 'w', encoding='utf-8') as pf:
-		await pf.write(content)
+	await atomic_write_text(target, content)
 
 	pub = Publishment(
 		name=name,
@@ -160,7 +160,6 @@ async def publishment_delete(pub_name: str):
 	target.unlink()
 
 	return {"pub_name": target.name}
-
 
 
 
