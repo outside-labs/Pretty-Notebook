@@ -1,11 +1,11 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from tortoise.models import Model
-from tortoise import fields
+from tortoise import connections, fields
 from tortoise.contrib.fastapi import register_tortoise
 from tortoise.contrib.pydantic import pydantic_model_creator
 
@@ -67,26 +67,43 @@ async def get_optional_user(token: str = Depends(optional_oauth2_scheme)):
 
 	return user
 
-@router.post('/api/users', response_model=User_Pydantic)
-async def create_user(user: UserIn_Pydantic, curr_user: User_Pydantic = Depends(get_optional_user)):
-	""" Create User 
-	"""
-	# print(curr_user)
+async def _has_ever_created_user() -> bool:
+	"""Keep anonymous bootstrap closed after the first user is deleted."""
+	if await User.all().exists():
+		return True
 
-	root_user = await User.filter(id=1)
+	# AUTOINCREMENT keeps this sequence after the owner row is deleted.
+	connection = connections.get('default')
+	rows = await connection.execute_query_dict(
+		'SELECT seq FROM sqlite_sequence WHERE name = ? LIMIT 1',
+		[User._meta.db_table],
+	)
+	return bool(rows)
 
-	if root_user:
-		# only allowing our init generated root user
-		# without creds 
-		if not curr_user:
-			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Cannot access.")
-		# for user creation
-		if not curr_user.id == 1:
-			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not allowed.")
 
+async def _save_user(user: UserIn_Pydantic) -> User_Pydantic:
 	user_obj = User(username=user.username, password_hash=bcrypt.hash(user.password_hash))
 	await user_obj.save()
 	return await User_Pydantic.from_tortoise_orm(user_obj)
+
+
+@router.post('/api/users', response_model=User_Pydantic)
+async def create_user(
+	user: UserIn_Pydantic,
+	request: Request,
+	curr_user: User_Pydantic = Depends(get_optional_user),
+):
+	"""Allow one anonymous owner claim, then only owner-created accounts."""
+	if curr_user is None:
+		async with request.app.state.bootstrap_lock:
+			if await _has_ever_created_user():
+				raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Cannot access.')
+			return await _save_user(user)
+
+	if curr_user.id != 1 or not await User.filter(id=1).exists():
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Not allowed.')
+
+	return await _save_user(user)
 
 
 async def authenticate_user(username: str, password: str):
@@ -200,8 +217,6 @@ async def api_index(user: User_Pydantic = Depends(get_current_user)):
 	""" basic index, returns if authorized 
 	"""
 	return {"authenticated": True, "username": user.username}
-
-
 
 
 
