@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import closing
 
 import pytest
 from api import layout_api
@@ -100,7 +101,7 @@ def test_contact_form_saves_to_local_inbox(web_storage, tmp_path):
     assert response.status_code == 303
     assert response.headers["location"] == "/contact?sent=1"
     assert "Your message was saved locally" in confirmation.text
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection:
         rows = connection.execute(
             "SELECT form_name, payload FROM formsubmission"
         ).fetchall()
