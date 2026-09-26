@@ -114,6 +114,13 @@ REMINDER: Never commit the generated value.
 >>> nb.refresh_token() # even while same password, now old token rejected
 ```
 
+The first API user can be created without a token exactly once per SQLite
+database. Later accounts require that owner's token. Removing the owner does
+not reopen anonymous registration; recover an owner from a database backup
+instead of resetting SQLite's user ID sequence. This bootstrap guard supports
+one application process. Multi-process deployment remains outside the
+experimental web scope.
+
 --- 
 
 ##### (5) -> personalize ( [**pnbp_settings.json**](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/pnbp_settings.json) ) :

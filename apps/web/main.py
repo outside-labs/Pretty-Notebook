@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import fastapi
@@ -13,6 +14,7 @@ DEFAULT_DATABASE_URL = "sqlite://db.sqlite3"
 def create_app(*, db_url: str = DEFAULT_DATABASE_URL) -> fastapi.FastAPI:
     """Create the web application with an explicit persistence boundary."""
     app = fastapi.FastAPI()
+    app.state.bootstrap_lock = asyncio.Lock()
     app.mount("/static", StaticFiles(directory=WEB_ROOT / "static"), name="static")
     app.include_router(publish_api.router)
     app.include_router(auth_api.router)

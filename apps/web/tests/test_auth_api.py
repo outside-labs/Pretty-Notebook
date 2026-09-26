@@ -1,8 +1,12 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from threading import Barrier
 
 import jwt
 import pytest
 from api import auth_api
+from fastapi.testclient import TestClient
+from main import create_app
 
 
 def token_payload(token: str) -> dict:
@@ -16,6 +20,56 @@ def test_create_user_redacts_authentication_secrets(client, root_credentials):
     assert response.json() == {"id": 1, "username": root_credentials["username"]}
     assert "password" not in response.text
     assert "tok_uuid" not in response.text
+
+
+def test_concurrent_anonymous_requests_claim_only_one_owner(client):
+    barrier = Barrier(3)
+
+    def register(username):
+        barrier.wait()
+        return client.post(
+            "/api/users",
+            json={"username": username, "password_hash": "owner password"},
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        first = executor.submit(register, "first")
+        second = executor.submit(register, "second")
+        barrier.wait()
+        responses = [first.result(), second.result()]
+
+    assert sorted(response.status_code for response in responses) == [200, 401]
+
+    async def count_users():
+        return await auth_api.User.all().count()
+
+    assert client.portal.call(count_users) == 1
+
+
+def test_deleted_owner_does_not_reopen_anonymous_registration(
+    tmp_path,
+    web_storage,
+    root_credentials,
+):
+    database_url = f"sqlite://{tmp_path / 'site.db'}"
+
+    with TestClient(create_app(db_url=database_url)) as client:
+        response = client.post("/api/users", json=root_credentials)
+        assert response.status_code == 200
+
+        async def delete_owner():
+            await auth_api.User.filter(id=response.json()["id"]).delete()
+
+        client.portal.call(delete_owner)
+
+    with TestClient(create_app(db_url=database_url)) as restarted:
+        response = restarted.post(
+            "/api/users",
+            json={"username": "new-owner", "password_hash": "new password"},
+        )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Cannot access."}
 
 
 def test_valid_credentials_issue_bearer_token_and_identify_user(
