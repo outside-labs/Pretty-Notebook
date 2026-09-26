@@ -9,6 +9,7 @@ from pydantic import BaseModel
 import aiofiles
 
 from .auth_api import get_current_user
+from .atomic_io import atomic_write_text
 
 
 router = fastapi.APIRouter()
@@ -94,8 +95,7 @@ async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, TITLE: str
 		merm_dark=merm_dark
 		)
 	
-	async with aiofiles.open(WEB_SETTINGS_PATH, mode='w') as pf:
-		await pf.write(json.dumps(lout, indent=4))
+	await atomic_write_text(WEB_SETTINGS_PATH, json.dumps(lout, indent=4))
 
 	return lout
 
@@ -116,7 +116,6 @@ async def layout_post(lout_in: PNBPWebLayout):
 	mmd = lout_in.merm_dark
 
 	return await update_layout(nb, np, f, t, dm, hll, hld, mml, mmd)
-
 
 
 

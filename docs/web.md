@@ -25,6 +25,11 @@ via **pnbp**
 -  only notes newer than their remote copy are POST-ed. Use **```pnbp touch-all-public```** to mark every currently publishable note for upload.
 -  images transfer when their names are missing remotely. Use **```--refresh-images```** to resend all images referenced by publishable notes; removing a note does not remove its previously uploaded images.
 
+Page and layout updates write a temporary file beside the destination and
+replace the destination only after the write succeeds. A failed update leaves
+the previous file intact. Readers see a complete old or new file; when updates
+to the same file overlap, the last successful replacement wins.
+
 --- 
 
 #### **installation (for local development)** :
