@@ -1,50 +1,39 @@
+from pathlib import Path
+
 import fastapi
-import uvicorn
+from api import auth_api, layout_api, publish_api
 from starlette.staticfiles import StaticFiles
 from tortoise.contrib.fastapi import register_tortoise
-
-from api import publish_api, auth_api, layout_api
 from views import home
 
+WEB_ROOT = Path(__file__).resolve().parent
+DEFAULT_DATABASE_URL = "sqlite://db.sqlite3"
 
 
-api = fastapi.FastAPI()
+def create_app(*, db_url: str = DEFAULT_DATABASE_URL) -> fastapi.FastAPI:
+    """Create the web application with an explicit persistence boundary."""
+    app = fastapi.FastAPI()
+    app.mount("/static", StaticFiles(directory=WEB_ROOT / "static"), name="static")
+    app.include_router(publish_api.router)
+    app.include_router(auth_api.router)
+    app.include_router(layout_api.router)
+    # The public single-slug catch-all must remain after every API route.
+    app.include_router(home.router)
+
+    register_tortoise(
+        app,
+        db_url=db_url,
+        modules={"models": ["api.auth_api"]},
+        generate_schemas=True,
+        add_exception_handlers=True,
+    )
+    return app
 
 
-
-def configure_routing():
-	""" mounting routes 
-	"""
-	api.mount('/static', StaticFiles(directory='static'), name='static') 
-	api.include_router(home.router)
-	api.include_router(publish_api.router)
-	api.include_router(auth_api.router)
-	api.include_router(layout_api.router)
+api = create_app()
 
 
-def configure():
-	""" main 
-	"""
-	configure_routing()
-	register_tortoise(
-		api,
-		db_url='sqlite://db.sqlite3',
-		modules={'models': ['api.auth_api']},
-		generate_schemas=True,
-		add_exception_handlers=True
-		)
+if __name__ == "__main__":
+    import uvicorn
 
-
-
-
-
-if __name__ == '__main__':
-	configure()
-	uvicorn.run(api, port=8000, host='127.0.0.1')
-else:
-	configure() # <- a production necessary thing
-	# uvicorn main:api <- run server
-
-
-
-
+    uvicorn.run(api, port=8000, host="127.0.0.1")

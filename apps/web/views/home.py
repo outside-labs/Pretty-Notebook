@@ -1,5 +1,6 @@
 import json
 import random
+from pathlib import Path
 
 import fastapi
 from fastapi import Form, status, Depends
@@ -15,7 +16,8 @@ from api.layout_api import get_layout_content
 
 
 router = fastapi.APIRouter()
-templates = Jinja2Templates('templates')
+WEB_ROOT = Path(__file__).resolve().parents[1]
+templates = Jinja2Templates(WEB_ROOT / 'templates')
 
 
 
@@ -85,7 +87,12 @@ async def content(request: Request, content: str):
 		return templates.TemplateResponse(request, f'pages/{content}.html', cont)
 	except TemplateNotFound:
 		cont.update({'unavailable_content': content})
-		return templates.TemplateResponse(request, f'shared/404.html', cont)
+		return templates.TemplateResponse(
+			request,
+			f'shared/404.html',
+			cont,
+			status_code=status.HTTP_404_NOT_FOUND,
+		)
 
 
 @router.post('/', include_in_schema=False)
@@ -110,8 +117,6 @@ async def cookie_post(request: Request, darkmode=Form(...), content:str=''):
 def favicon():
 	""" """
 	return fastapi.responses.RedirectResponse(url='static/img/favicon.ico')
-
-
 
 
 
