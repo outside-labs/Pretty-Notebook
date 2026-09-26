@@ -1,5 +1,5 @@
 > [!WARNING]
-> **0.9.0rc1 status:** the `pnano.app` and `ppnbp.app` protocol handlers are experimental and unsupported. Do not treat their installation instructions as a supported 0.9.0rc1 integration.
+> **0.9 status:** the `pnano.app` and `ppnbp.app` protocol handlers are experimental and unsupported. Do not install or register them as part of a supported 0.9 setup. Their scripts do not safely validate URL input.
 
 **pnano** ("protocol-ed nano") is ultimately a non-nano name to call some monkey patch that handles for the (unused) URI protocol namespace of ```nano://``` to open files directly to the nano text editor. (e.g. as written for macos, when clicking ```nano:///Users/alice/hello.py```, ```hello.py``` will be opened in ```nano``` to the second (to the right) pane in a split-pane iTerm2 window (closed/->reopened).
 
@@ -88,49 +88,6 @@ while making edits in nano on the right:
 ![right](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano_right.png)
 
 
---- 
+---
 
-**macos set-up instructions** :
-- In Finder, navigate to and open /Applications/Utilities/**Script Editor.app**
-	- click **New Document** in the pop-up window
-	- paste the contents of [pnano.app](https://github.com/outside-labs/Pretty-Notebook/blob/main/apps/pnano/pnano/pnano.app)
-	- -> save (command+s)
-		- File Format: **Application**
-		- Save As: pnano.app
-		- click **Save**
-- In Finder, navigate to **/Applications/pnano.app**, secondary click (control+click, 2 finger trackpad, or right-click) -> click **Show Package Contents**
-	- navigate to and open **Contents/Info.plist** ( \*\* )
-	- -> between the last ```CFBundle``` ```</key>``` and the ```<key>LSMinimumSystemVersionByArchitecture</key>``` enter this (and save):
-
-```xml
-<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>Pnano URL</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>nano</string>
-			</array>
-		</dict>
-	</array>
-```
-
-You may need to reboot, but can try entering e.g. ```nano:///Users/alice/hello.py``` into a web browser. It should open to a split pane with ```hello.py``` opened (empty/new or as exists) in a buffer with  ```nano -m```. 
-
-... 
-The same thing can then be done to handle for "protocol" ```pnbp``` -> ```pnbp://``` by following the same steps above, but using the contents of [ppnbp.app](https://github.com/outside-labs/Pretty-Notebook/blob/main/apps/pnano/ppnbp/ppnbp.app) and making adjustments to ppnb/Contents/[Info.plist](https://github.com/prettynb/pnano/blob/main/ppnbp/Info.plist), changing to ```<string>Ppnbp URL</string>``` and ```<string>pnbp</string>``` accordingly within the above xml snippit).
-
---- 
-
-\*\* You will need something to properly open and save ```.plist``` files. I recommend [Sublime Text](https://www.sublimetext.com/download) and the Package Control available [BinaryPlist](https://packagecontrol.io/packages/BinaryPlist). 
-
-\*\* You will want to install a newer version of ```nano``` than ```/usr/bin/nano```.
-As written, the ".app" (scripts... ) point to open using ```/usr/local/Cellar/nano/5.8/bin/nano```, which happened to be the current installation path (and version) via ```brew install nano```  ([homebrew](https://formulae.brew.sh/formula/nano#default)). This way, syntax highlighting can be enabled:  ```echo 'include "/usr/local/share/nano/markdown.nanorc"' >> ~/.nanorc```.
-
-
---- 
-
-<p align=center>
-  <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
-</p>
+The macOS URL-handler setup is intentionally omitted while these apps are unsupported.
