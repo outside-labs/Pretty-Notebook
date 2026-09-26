@@ -123,6 +123,32 @@ experimental web scope.
 
 --- 
 
+#### Public forms (experimental)
+
+The contact page posts to `/forms/contact`. The server validates the email
+address and message, saves them in the local SQLite `formsubmission` table,
+then redirects to `/contact?sent=1`. A failed validation returns the form with
+an error; a failed database write never shows the saved confirmation. The
+default database is `apps/web/db.sqlite3` when the server runs from `apps/web`.
+Back up this database with the rest of the site's local data and restrict file
+access because submissions contain personal messages. Nothing sends email or
+forwards submissions to an external service yet.
+
+The owner can retrieve submissions as JSON from
+`GET /api/forms/contact/submissions` with the existing bearer token. The
+newest entries come first; `limit` (1–100, default 100) and `offset` support
+pagination. Each entry includes its ID, form name, validated fields, and
+creation time. This read endpoint is authenticated; the browser submit route
+remains public while the web app is experimental.
+
+The reusable form flow is in `views/forms.py`: add a validated field model and
+a `FORMS` registry entry for a new form. `api/forms.py` stores the accepted
+fields with the form name and timestamp. A future email or customer service
+adapter can run after `save_submission` succeeds, with delivery and retry
+behavior specified separately. Public deployment remains deferred.
+
+---
+
 ##### (5) -> personalize ( [**pnbp_settings.json**](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/pnbp_settings.json) ) :
 
 ```json
