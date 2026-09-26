@@ -18,7 +18,8 @@
 
         <li class="nav-item">
           <a class="nav-link">
-            <form action="" method="POST">
+            <form action="/theme" method="POST">
+              <input type="hidden" name="return_to" value="{{ request.url.path }}">
               {% if darkmode %}
               <button type="submit" class="btn btn-outline-light" name="darkmode" value="lightmode">
                 <label for="darkmode"><i class="bi bi-eye-fill"></i></label>

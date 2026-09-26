@@ -2,10 +2,10 @@ import asyncio
 from pathlib import Path
 
 import fastapi
-from api import auth_api, layout_api, publish_api
+from api import auth_api, forms as forms_api, layout_api, publish_api
 from starlette.staticfiles import StaticFiles
 from tortoise.contrib.fastapi import register_tortoise
-from views import home
+from views import forms, home
 
 WEB_ROOT = Path(__file__).resolve().parent
 DEFAULT_DATABASE_URL = "sqlite://db.sqlite3"
@@ -19,13 +19,15 @@ def create_app(*, db_url: str = DEFAULT_DATABASE_URL) -> fastapi.FastAPI:
     app.include_router(publish_api.router)
     app.include_router(auth_api.router)
     app.include_router(layout_api.router)
+    app.include_router(forms_api.router)
+    app.include_router(forms.router)
     # The public single-slug catch-all must remain after every API route.
     app.include_router(home.router)
 
     register_tortoise(
         app,
         db_url=db_url,
-        modules={"models": ["api.auth_api"]},
+        modules={"models": ["api.auth_api", "api.forms"]},
         generate_schemas=True,
         add_exception_handlers=True,
     )
