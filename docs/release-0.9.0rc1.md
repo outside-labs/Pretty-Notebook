@@ -40,7 +40,7 @@ The installable `pnbp` package is the scope of this release candidate. These rep
 
 - `apps/web` is experimental and is not supported for public deployment until the separate web deployment safety gate is completed.
 - `pnano.app` and `ppnbp.app` protocol handlers are experimental/unsupported.
-- Publication ownership across multiple independent notebooks/users is not yet a supported contract; do not share one destructive prune namespace between them.
+- For 0.9, one notebook must own the complete publication namespace to use `--prune`. Publication ownership across multiple independent notebooks/users is not yet supported; do not share one destructive prune namespace between them.
 
 ## Candidate verification before publication
 
