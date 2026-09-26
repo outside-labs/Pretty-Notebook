@@ -90,3 +90,45 @@ jobs:
           NOTE_PATH="$note_path" PNBP_SETTINGS=off \
             "$test_venv/bin/python" -c \
             'from pnbp import Notebook; nb = Notebook(); assert "example" in nb.notes'
+
+  web-test:
+    name: Web API (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.14"]
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install web app and test tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --editable ../..
+          python -m pip install --requirement requirements-test.txt ruff
+
+      - name: Compile web sources
+        run: python -W error -m compileall -q api views main.py tests
+
+      - name: Check release-blocking lint rules
+        run: python -m ruff check --select E9,F63,F7,F82,W605 api views main.py tests
+
+      - name: Run web integration tests
+        run: |
+          python -m coverage run --source=api,views,main -m pytest tests
+          python -m coverage report --show-missing --fail-under=90

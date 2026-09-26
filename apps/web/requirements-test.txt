@@ -1,0 +1,15 @@
+-c requirements.txt
+
+aiofiles
+aiosqlite
+bcrypt
+coverage==7.16.1
+fastapi
+httpx2==2.13.1
+Jinja2
+passlib
+PyJWT
+pytest==9.1.1
+python-decouple
+python-multipart
+tortoise-orm

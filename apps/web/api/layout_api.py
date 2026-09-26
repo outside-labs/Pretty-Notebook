@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import fastapi
 from fastapi import Depends
@@ -11,6 +12,7 @@ from .auth_api import get_current_user
 
 
 router = fastapi.APIRouter()
+WEB_SETTINGS_PATH = Path(__file__).resolve().parents[1] / 'web-settings.json'
 
 
 
@@ -68,7 +70,7 @@ async def render_nav(pages: dict):
 
 async def get_layout_content():
 	""" """
-	async with aiofiles.open('web-settings.json', mode='r') as f:
+	async with aiofiles.open(WEB_SETTINGS_PATH, mode='r') as f:
 		_cont = await f.read()
 		_cont = json.loads(_cont)
 		_cont['NAV_PAGES'] = await render_nav(_cont['NAV_PAGES'])
@@ -92,8 +94,8 @@ async def update_layout(NAV_BRAND: str, NAV_PAGES: dict, FOOTER: str, TITLE: str
 		merm_dark=merm_dark
 		)
 	
-	with open('web-settings.json', 'w') as pf:
-		json.dump(lout, pf, indent=4)
+	async with aiofiles.open(WEB_SETTINGS_PATH, mode='w') as pf:
+		await pf.write(json.dumps(lout, indent=4))
 
 	return lout
 
@@ -114,7 +116,6 @@ async def layout_post(lout_in: PNBPWebLayout):
 	mmd = lout_in.merm_dark
 
 	return await update_layout(nb, np, f, t, dm, hll, hld, mml, mmd)
-
 
 
 

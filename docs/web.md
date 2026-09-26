@@ -55,6 +55,19 @@ cd pnbp_web/apps/web
 pip install -r requirements.txt
 ```
 
+The integration suite requires a full repository checkout rather than the
+web-only sparse checkout above. From `apps/web`, run:
+
+```bash
+python -m pip install --editable ../..
+python -m pip install --requirement requirements-test.txt
+python -m coverage run --source=api,views,main -m pytest tests
+python -m coverage report --show-missing --fail-under=90
+```
+
+The suite creates a fresh in-memory SQLite database and temporary page, image,
+and settings directories for every test.
+
 --- 
 
 ##### (2) -> **pnbp_web/** **.env** :

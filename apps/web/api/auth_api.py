@@ -30,7 +30,7 @@ optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token', auto_error=False
 
 class User(Model):
 	""" """
-	id = fields.IntField(pk=True)
+	id = fields.IntField(primary_key=True)
 	username = fields.CharField(max_length=50, unique=True)
 	password_hash = fields.CharField(max_length=128)
 	tok_uuid = fields.TextField(default=lambda: secrets.token_urlsafe(32))
@@ -57,12 +57,12 @@ async def get_optional_user(token: str = Depends(optional_oauth2_scheme)):
 	""" bypassing my own HTTPException handling ->
 		providing access to optional Depends 
 	"""
+	if token is None:
+		return None
+
 	try:
-		# without proper Bearer token, token is None
-		# print(token)
 		user = await get_current_user(token)
-	except:
-		# -> fail quietly
+	except HTTPException:
 		user = None
 
 	return user
@@ -200,8 +200,6 @@ async def api_index(user: User_Pydantic = Depends(get_current_user)):
 	""" basic index, returns if authorized 
 	"""
 	return {"authenticated": True, "username": user.username}
-
-
 
 
 
