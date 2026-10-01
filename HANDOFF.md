@@ -1,0 +1,41 @@
+# DOC-01 handoff
+
+## Current work
+
+- Branch: `docs/final-release-boundaries`, the head branch of PR #47 against `main`.
+- PR #47 already removes unsupported macOS URL-handler setup instructions,
+  documents the one-notebook `--prune` boundary, retains the Bootstrap Icons
+  license notice, and pins the experimental web requirements snapshot to the
+  published `pnbp==0.9.0rc1` package.
+- This pass updates the README and package/CLI entry points to identify the
+  published RC, pin the install example, and make the experimental web boundary
+  visible. It also changes the RC notes from a pre-publication plan to a record
+  of the published candidate and its release workflow.
+
+## Verified release boundary
+
+- PyPI has the `pnbp` 0.9.0rc1 wheel and source distribution, uploaded on
+  September 26, 2026. GitHub has the `v0.9.0rc1` pre-release, and its release
+  workflow completed successfully.
+- The 0.9.0rc1 package exposes the `pnbp` Python library and CLI and requires
+  Python 3.11 or newer. `apps/web` remains experimental and unsupported for
+  public deployment. The macOS URL handlers are unsupported.
+- One notebook must own the complete page namespace before `--prune` is used.
+  Shared ownership across independent notebooks/users is not a supported 0.9
+  contract.
+
+## Remaining separate gates
+
+- DEP-01B: generate and verify a reproducible web deployment lock. The current
+  `apps/web/requirements.txt` is a pinned snapshot.
+- Web deployment safety and any decision to support public deployment remain
+  separate from the published package release.
+- REL-02: exercise the candidate and decide final 0.9.0 release readiness.
+
+## Verification
+
+- PR #47 had passing Python 3.11, Python 3.14, distribution, and web API checks
+  before this docs pass; there were no review comments at inspection time.
+- This pass checks the documentation diff for whitespace errors and verifies
+  the changed relative links and release boundary text. No code tests were
+  rerun for documentation-only edits.
