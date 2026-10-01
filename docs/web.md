@@ -56,8 +56,17 @@ cd pnbp_web/apps/web
 
 ```
 
+For the verified Linux x86_64 CPython 3.11 or 3.14 dependency set, install
+the hash-locked wheels:
+
+```bash
+python -m pip install --require-hashes --only-binary=:all: --requirement requirements.lock
 ```
-python -m pip install -r requirements.txt
+
+Other local development environments can use the pinned snapshot:
+
+```bash
+python -m pip install --requirement requirements.txt
 ```
 
 The integration suite requires a full repository checkout rather than the
@@ -73,10 +82,20 @@ python -m coverage report --show-missing --fail-under=90
 The suite creates a fresh in-memory SQLite database and temporary page, image,
 and settings directories for every test.
 
-`requirements.txt` is a pinned snapshot for the experimental web app, including
-the published `pnbp==0.9.0rc1` package. It is not yet a generated,
-cross-platform deployment lock. A full checkout can instead install the local
-package with the editable command above for development and tests.
+`requirements.txt` is the pinned input for the experimental web app, including
+the published `pnbp==0.9.0rc1` package. `requirements.lock` records hashes for
+its 47 packages. The locked wheel set was verified for Linux x86_64 with
+CPython 3.11 and 3.14. To regenerate it from the repository root, use:
+
+```bash
+uv pip compile apps/web/requirements.txt --generate-hashes \
+  --python-version 3.11 --python-platform x86_64-unknown-linux-gnu \
+  --no-annotate --no-header --output-file apps/web/requirements.lock
+```
+
+Check that the same command with `--python-version 3.14` produces an identical
+lock before committing a dependency update. A full checkout can install the
+local package with the editable command above for development and tests.
 
 --- 
 
