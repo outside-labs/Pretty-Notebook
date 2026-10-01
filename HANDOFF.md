@@ -1,57 +1,25 @@
-# 0.9 release handoff
+# Pretty Notebook 0.9 handoff (October 1, 2026)
 
-## Current work
+## Completed on protected `main`
 
-- DOC-01 merged to protected `main` through PR #47 at `202f7d7555072af0d365d315e8b73b55458279b3`.
-- Branch: `build/dep-01b-web-lock`, based on that `main` commit. It carries
-  the DEP-01B hash lock and web CI install change.
-- PR #47 removed unsupported macOS URL-handler setup instructions,
-  documents the one-notebook `--prune` boundary, retains the Bootstrap Icons
-  license notice, and pins the experimental web requirements snapshot to the
-  published `pnbp==0.9.0rc1` package.
-- This pass updates the README and package/CLI entry points to identify the
-  published RC, pin the install example, and make the experimental web boundary
-  visible. It also changes the RC notes from a pre-publication plan to a record
-  of the published candidate and its release workflow.
+- DOC-01 and LICENSE-01 merged through PR #47 (`202f7d7555072af0d365d315e8b73b55458279b3`). The documentation identifies the published RC, removes unsupported macOS URL-handler setup, explains the single-notebook `--prune` boundary, and retains the Bootstrap Icons MIT notice.
+- DEP-01B merged through PR #49 (`724dcead955ae53f904ed55267d355e10832098c`). `apps/web/requirements.lock` pins 47 packages with hashes for Linux x86_64 CPython 3.11 and 3.14. Web CI installs only hash-locked wheels before running integration tests.
+- PR #49 and the post-merge `main` run passed Python 3.11, Python 3.14, distribution, and both web API checks. The squash commit is `build(web): lock deployment dependencies with hashes`.
+- Project #1 contains PR #49 as a Done Web deployment item; all 25 current Project items are Done. There are no open repository issues. The remaining decisions below have not yet been made into separate Project issues.
+- Dependabot reports 32 open pip alerts on `apps/web/requirements.txt` and `apps/web/requirements-test.txt`: 16 advisories repeated across the two manifests, affecting the pinned PyJWT and urllib3 versions. Two alerts are critical. The hash lock preserves those vulnerable pins; it is reproducible, not a security clearance.
 
-## Verified release boundary
+## Published candidate and scope
 
-- PyPI has the `pnbp` 0.9.0rc1 wheel and source distribution, uploaded on
-  September 26, 2026. GitHub has the `v0.9.0rc1` pre-release, and its release
-  workflow completed successfully.
-- The 0.9.0rc1 package exposes the `pnbp` Python library and CLI and requires
-  Python 3.11 or newer. `apps/web` remains experimental and unsupported for
-  public deployment. The macOS URL handlers are unsupported.
-- One notebook must own the complete page namespace before `--prune` is used.
-  Shared ownership across independent notebooks/users is not a supported 0.9
-  contract.
+- GitHub prerelease `v0.9.0rc1` and PyPI `pnbp==0.9.0rc1` were published September 26, 2026. The release workflow completed successfully.
+- The supported candidate is the `pnbp` Python library and CLI on Python 3.11 or newer. `apps/web` remains experimental and unsupported for public deployment; `pnano.app` and `ppnbp.app` URL handlers are unsupported.
+- A single notebook must own the complete server page namespace before `--prune` is used. Shared ownership across independent notebooks or users is not a supported 0.9 contract.
+- The web lock covers the two verified Linux targets. Other deployment platforms and Python versions have not been verified against it.
 
-## Remaining separate gates
+## Next gates
 
-- DEP-01B: the 47-package hash lock is in `apps/web/requirements.lock` for
-  Linux x86_64 CPython 3.11 and 3.14. The web CI job installs it with hashes
-  and wheels only before running the integration suite. Public deployment
-  remains gated on web deployment safety.
-- Web deployment safety and any decision to support public deployment remain
-  separate from the published package release.
-- REL-02: exercise the candidate and decide final 0.9.0 release readiness.
+1. REL-02: exercise the published RC against representative notebooks and workflows, collect feedback, fix any release-blocking defects through protected PRs, and decide whether `0.9.0` is ready.
+2. Final package release, after that decision: update the package version and final notes, review the tag/version guard and built artifacts, then publish the final GitHub Release and PyPI package with explicit release authorization.
+3. Address the open PyJWT and urllib3 advisories in the web requirements, regenerate and verify the hash lock, and confirm Dependabot alert closure. This is part of the separate web deployment safety gate.
+4. Separately decide the support scope for public web deployment, multi-notebook publication ownership (PUB-04), and macOS URL handlers (APP-01). The completed lock does not approve public web deployment.
 
-## Verification
-
-- PR #47 passed Python 3.11, Python 3.14, distribution, and web API checks,
-  had no review comments, and merged through branch protection.
-- This pass checks the documentation diff for whitespace errors and verifies
-  the changed relative links and release boundary text. No code tests were
-  rerun for documentation-only edits.
-
-## DEP-01B follow-up (October 1, 2026)
-
-- Generated `apps/web/requirements.lock` from the RC1-pinned snapshot using
-  uv 0.12.19. Linux x86_64 resolutions for CPython 3.11 and 3.14 produced
-  byte-identical lock contents after removing uv's annotations and header.
-- `pip download --require-hashes --only-binary=:all:` fetched and verified all
-  locked Linux wheels for each Python version. The web CI install now uses the
-  lock; its stacked PR #48 passed all five checks before being superseded by a
-  clean branch based on merged `main`. Confirm the replacement PR checks pass.
-- REL-02 candidate exercise and the separate web deployment safety decision
-  remain open. Do not treat the lock alone as public deployment approval.
+Use Conventional Commit subjects for future commits and PRs. Keep protected checks and review comments resolved before merging. Do not infer final-release authorization from the RC publication.
