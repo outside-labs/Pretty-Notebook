@@ -6,6 +6,7 @@
 - DEP-01B merged through PR #49 (`724dcead955ae53f904ed55267d355e10832098c`). `apps/web/requirements.lock` pins 47 packages with hashes for Linux x86_64 CPython 3.11 and 3.14. Web CI installs only hash-locked wheels before running integration tests.
 - PR #49 and the post-merge `main` run passed Python 3.11, Python 3.14, distribution, and both web API checks. The squash commit is `build(web): lock deployment dependencies with hashes`.
 - Project #1 contains PR #49 as a Done Web deployment item; all 25 current Project items are Done. There are no open repository issues. The remaining decisions below have not yet been made into separate Project issues.
+- Dependabot reports 32 open pip alerts on `apps/web/requirements.txt` and `apps/web/requirements-test.txt`: 16 advisories repeated across the two manifests, affecting the pinned PyJWT and urllib3 versions. Two alerts are critical. The hash lock preserves those vulnerable pins; it is reproducible, not a security clearance.
 
 ## Published candidate and scope
 
@@ -18,6 +19,7 @@
 
 1. REL-02: exercise the published RC against representative notebooks and workflows, collect feedback, fix any release-blocking defects through protected PRs, and decide whether `0.9.0` is ready.
 2. Final package release, after that decision: update the package version and final notes, review the tag/version guard and built artifacts, then publish the final GitHub Release and PyPI package with explicit release authorization.
-3. Separately decide the support scope for public web deployment, multi-notebook publication ownership (PUB-04), and macOS URL handlers (APP-01). The completed lock does not approve public web deployment.
+3. Address the open PyJWT and urllib3 advisories in the web requirements, regenerate and verify the hash lock, and confirm Dependabot alert closure. This is part of the separate web deployment safety gate.
+4. Separately decide the support scope for public web deployment, multi-notebook publication ownership (PUB-04), and macOS URL handlers (APP-01). The completed lock does not approve public web deployment.
 
 Use Conventional Commit subjects for future commits and PRs. Keep protected checks and review comments resolved before merging. Do not infer final-release authorization from the RC publication.
