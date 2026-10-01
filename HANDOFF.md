@@ -26,8 +26,10 @@
 
 ## Remaining separate gates
 
-- DEP-01B: generate and verify a reproducible web deployment lock. The current
-  `apps/web/requirements.txt` is a pinned snapshot.
+- DEP-01B: the 47-package hash lock is in `apps/web/requirements.lock` for
+  Linux x86_64 CPython 3.11 and 3.14. The web CI job installs it with hashes
+  and wheels only before running the integration suite. Public deployment
+  remains gated on web deployment safety.
 - Web deployment safety and any decision to support public deployment remain
   separate from the published package release.
 - REL-02: exercise the candidate and decide final 0.9.0 release readiness.
@@ -39,3 +41,14 @@
 - This pass checks the documentation diff for whitespace errors and verifies
   the changed relative links and release boundary text. No code tests were
   rerun for documentation-only edits.
+
+## DEP-01B follow-up (October 1, 2026)
+
+- Generated `apps/web/requirements.lock` from the RC1-pinned snapshot using
+  uv 0.12.19. Linux x86_64 resolutions for CPython 3.11 and 3.14 produced
+  byte-identical lock contents after removing uv's annotations and header.
+- `pip download --require-hashes --only-binary=:all:` fetched and verified all
+  locked Linux wheels for each Python version. The web CI install now uses the
+  lock; the next PR check must confirm its install and integration tests pass.
+- REL-02 candidate exercise and the separate web deployment safety decision
+  remain open. Do not treat the lock alone as public deployment approval.
