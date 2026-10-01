@@ -1,5 +1,10 @@
 pnbp = **"pretty notebook parser"**
 
+> **0.9.0rc1:** The published package supports the Python library and `pnbp`
+> command-line interface on Python 3.11 or newer. Install this release candidate
+> with `python -m pip install pnbp==0.9.0rc1`. See the
+> [release notes](release-0.9.0rc1.md) for migration and support details.
+
 --- 
 
 **pnbp** provides programmatic access to a **notebook** via :
@@ -23,7 +28,7 @@ https://obsidian.md/ is the best example of this in action.
 
 --- 
 
-##### (0) -> ```pip install pnbp```
+##### (0) -> ```python -m pip install pnbp==0.9.0rc1```
 
 ##### (1) -> [access via the Notebook model](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)
 
@@ -38,11 +43,9 @@ https://obsidian.md/ is the best example of this in action.
 ##### (-1) -> **git clone** the repo.
 
 ```bash
-pip uninstall pnbp
 git clone https://github.com/outside-labs/Pretty-Notebook/ pnbp
 cd pnbp/
-pip install . # pyproject.toml defined requirements 
-pip install --editable . # pnbp/cli.py defined “pnbp command”s 
+python -m pip install --editable . # development checkout, including the pnbp CLI
 ```
 
 --- 

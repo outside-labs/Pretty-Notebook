@@ -4,7 +4,7 @@
 
 ## Installation
 
-Release candidates are pre-releases. After the candidate is published, install this exact build with:
+The release candidate is published on [PyPI](https://pypi.org/project/pnbp/0.9.0rc1/). Install this exact pre-release build with:
 
 ```sh
 python -m pip install pnbp==0.9.0rc1
@@ -40,10 +40,10 @@ The installable `pnbp` package is the scope of this release candidate. These rep
 
 - `apps/web` is experimental and is not supported for public deployment until the separate web deployment safety gate is completed.
 - `pnano.app` and `ppnbp.app` protocol handlers are experimental/unsupported.
-- Publication ownership across multiple independent notebooks/users is not yet a supported contract; do not share one destructive prune namespace between them.
+- For 0.9, one notebook must own the complete publication namespace to use `--prune`. Publication ownership across multiple independent notebooks/users is not yet supported; do not share one destructive prune namespace between them.
 
-## Candidate verification before publication
+## Candidate publication and verification
 
-Before publishing the release candidate, the release workflow must verify that the Git tag is exactly `v0.9.0rc1`, run warnings-as-errors compilation, the release-blocking Ruff rules, and the regression suite, build the source and wheel distributions, run strict Twine metadata checks, install the built wheel in a fresh environment, run `pip check`, import `pnbp`, run `pnbp --help`, and perform the Notebook smoke test. Publishing remains a separate protected-environment job using PyPI trusted publishing.
+The [v0.9.0rc1 GitHub Release](https://github.com/outside-labs/Pretty-Notebook/releases/tag/v0.9.0rc1) triggered a [successful release workflow](https://github.com/outside-labs/Pretty-Notebook/actions/runs/36261592281). Its build job checks the tag against the package version, compiles Python with warnings as errors, runs the release-blocking Ruff rules and regression suite, builds the source and wheel distributions, checks metadata with Twine, and smoke-tests an installed wheel with `pip check`, `import pnbp`, `pnbp --help`, and a Notebook load. A separate protected-environment job publishes to PyPI through trusted publishing.
 
-The final `0.9.0` release should follow candidate exercise/feedback plus the remaining final-release documentation, license-notice, and support-status decisions.
+The final `0.9.0` release still requires candidate exercise and feedback, plus separate decisions on web deployment safety, reproducible web dependencies, and support status. The published RC does not make the experimental web app a supported public deployment.
