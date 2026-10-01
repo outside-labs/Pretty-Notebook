@@ -20,7 +20,7 @@ via **pnbp**
     -  ... **```pnbp commit-stage```** to see the staged changes before updating
 
 **...** 
--  add **```--prune```** only after reviewing **```pnbp commit-stage```** when this notebook owns the server's entire publication namespace. Pruning deletes every remote page absent from this notebook; it is not safe for a site shared by independent notebooks or users without separate ownership tracking.
+-  for 0.9, the publication model is one notebook owning the server's entire page namespace. Add **```--prune```** only after reviewing **```pnbp commit-stage```** and confirming that ownership. Pruning deletes every remote page absent from this notebook; a site shared by independent notebooks or users needs durable ownership tracking before pruning can be supported.
 -  a failed page or image upload stops the operation before pruning. HTTP failures return a nonzero command status.
 -  only notes newer than their remote copy are POST-ed. Use **```pnbp touch-all-public```** to mark every currently publishable note for upload.
 -  images transfer when their names are missing remotely. Use **```--refresh-images```** to resend all images referenced by publishable notes; removing a note does not remove its previously uploaded images.
@@ -57,7 +57,7 @@ cd pnbp_web/apps/web
 ```
 
 ```
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 The integration suite requires a full repository checkout rather than the
@@ -72,6 +72,11 @@ python -m coverage report --show-missing --fail-under=90
 
 The suite creates a fresh in-memory SQLite database and temporary page, image,
 and settings directories for every test.
+
+`requirements.txt` is a pinned snapshot for the experimental web app, including
+the published `pnbp==0.9.0rc1` package. It is not yet a generated,
+cross-platform deployment lock. A full checkout can instead install the local
+package with the editable command above for development and tests.
 
 --- 
 
@@ -226,7 +231,7 @@ from the command-line :
 --- 
 
 **\*\***
--  the only [included css](https://github.com/outside-labs/Pretty-Notebook/tree/main/apps/web/static/css) files are to support inline \<i\> [bootstrap icons](https://icons.getbootstrap.com/) \</i\>. 
+-  the only [included css](https://github.com/outside-labs/Pretty-Notebook/tree/main/apps/web/static/css) files are to support inline \<i\> [Bootstrap Icons](https://icons.getbootstrap.com/) \</i\>. The vendored version and license are recorded in [third-party notices](../apps/web/static/THIRD_PARTY_NOTICES.md).
 
 --- 
 
