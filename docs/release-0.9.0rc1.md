@@ -46,4 +46,8 @@ The installable `pnbp` package is the scope of this release candidate. These rep
 
 The [v0.9.0rc1 GitHub Release](https://github.com/outside-labs/Pretty-Notebook/releases/tag/v0.9.0rc1) triggered a [successful release workflow](https://github.com/outside-labs/Pretty-Notebook/actions/runs/36261592281). Its build job checks the tag against the package version, compiles Python with warnings as errors, runs the release-blocking Ruff rules and regression suite, builds the source and wheel distributions, checks metadata with Twine, and smoke-tests an installed wheel with `pip check`, `import pnbp`, `pnbp --help`, and a Notebook load. A separate protected-environment job publishes to PyPI through trusted publishing.
 
-The final `0.9.0` release still requires candidate exercise, feedback, and a release-readiness decision. The experimental web app now has a hash-locked dependency set verified for Linux x86_64 on Python 3.11 and 3.14. Web deployment safety and support status remain separate decisions; the published RC does not make the web app a supported public deployment.
+The subsequent [final-release readiness exercise](release-0.9.0-readiness.md)
+validated the candidate on Python 3.11 and 3.14 and recorded a GO decision for
+final `0.9.0` preparation. Web deployment safety remained a separate decision;
+it was later approved only for the constrained topology in the
+[web deployment contract](web.md).
