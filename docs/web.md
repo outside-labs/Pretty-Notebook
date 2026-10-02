@@ -35,7 +35,7 @@ as a server-side Jinja template.
 ## Install a reviewed checkout
 
 Use a dedicated service account and a reviewed tag or commit. The 0.9 release
-tag is `v0.9.0` once published.
+tag is `v0.9.0`.
 
 ```bash
 git clone https://github.com/outside-labs/Pretty-Notebook.git pnbp
