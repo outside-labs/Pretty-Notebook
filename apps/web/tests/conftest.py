@@ -17,6 +17,7 @@ if str(WEB_ROOT) not in sys.path:
 
 os.environ["JWT_SECRET"] = "test-only-jwt-secret-do-not-use-1234"
 os.environ["JWT_ALGO"] = "HS256"
+os.environ["PNBP_BOOTSTRAP_TOKEN"] = "test-only-bootstrap-token-do-not-use"
 
 layout_api = importlib.import_module("api.layout_api")
 publish_api = importlib.import_module("api.publish_api")
@@ -69,8 +70,17 @@ def root_credentials():
 
 
 @pytest.fixture()
-def root_user(client, root_credentials):
-    response = client.post("/api/users", json=root_credentials)
+def bootstrap_headers():
+    return {"X-PNBP-Bootstrap-Token": os.environ["PNBP_BOOTSTRAP_TOKEN"]}
+
+
+@pytest.fixture()
+def root_user(client, root_credentials, bootstrap_headers):
+    response = client.post(
+        "/api/users",
+        json=root_credentials,
+        headers=bootstrap_headers,
+    )
     assert response.status_code == 200, response.text
     return response.json()
 

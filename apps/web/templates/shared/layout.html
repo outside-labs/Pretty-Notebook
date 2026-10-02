@@ -15,10 +15,10 @@
     <!-- highlight JS CSS (Code syntax) -->
     {% if darkmode %}
     <link rel="stylesheet"
-          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_dark }}.min.css">
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_dark }}.min.css">
     {% else %}
     <link rel="stylesheet"
-          href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_light }}.min.css">
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/{{ hljs_light }}.min.css">
     {% endif %}
     
     <title>{{ TITLE }}</title>
@@ -56,15 +56,19 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
 
     <!-- Mermaid JS -->
-    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@12.0.0/dist/mermaid.min.js"
+            integrity="sha384-xzghz1GQ5u9HCpVskeDPqMsdogD1yvuMQbEK53+wi+G70+6J1AG0L2cfi9PHjDWI"
+            crossorigin="anonymous"></script>
     {% if darkmode %}
-    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000, 'theme': '{{ merm_dark }}'});</script>
+    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 100000, 'theme': '{{ merm_dark }}'});</script>
     {% else %}
-    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 1000000, 'theme': '{{ merm_light }}'});</script>
+    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 100000, 'theme': '{{ merm_light }}'});</script>
     {% endif %}
     
     <!-- highlight JS (Code syntax) -->
-    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"
+            integrity="sha384-3s6jGaYCRJMSo8TSyvHYG4ejjGQaqxMeQYtHIY2dahoVW25bu+lzC0UhJ3RXN5nK"
+            crossorigin="anonymous"></script>
     <script>hljs.highlightAll();</script>
     {% if darkmode %}
      <style>

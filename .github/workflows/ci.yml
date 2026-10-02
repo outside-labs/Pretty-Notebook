@@ -125,12 +125,50 @@ jobs:
           python -m pip check
 
       - name: Compile web sources
-        run: python -W error -m compileall -q api views main.py tests
+        run: python -W error -m compileall -q api views main.py web_config.py tests
 
       - name: Check release-blocking lint rules
-        run: python -m ruff check --select E9,F63,F7,F82,W605 api views main.py tests
+        run: python -m ruff check --select E9,F63,F7,F82,W605 api views main.py web_config.py tests
 
       - name: Run web integration tests
         run: |
           python -m coverage run --source=api,views,main -m pytest tests
           python -m coverage report --show-missing --fail-under=90
+
+      - name: Exercise supported deployment command
+        env:
+          JWT_ALGO: HS256
+          JWT_SECRET: ci-deployment-smoke-jwt-secret-32-bytes
+          PNBP_ALLOWED_HOSTS: 127.0.0.1
+          PNBP_BOOTSTRAP_TOKEN: ci-deployment-smoke-bootstrap-token-32-bytes
+          PNBP_DATA_DIR: ${{ runner.temp }}/pnbp-web-state
+        run: |
+          gunicorn main:api \
+            --workers 1 \
+            --worker-class uvicorn_worker.UvicornWorker \
+            --bind 127.0.0.1:8765 &
+          server_pid=$!
+          cleanup() {
+            kill "$server_pid" 2>/dev/null || true
+            wait "$server_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          healthy=false
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error \
+              --header 'Host: 127.0.0.1' \
+              http://127.0.0.1:8765/healthz; then
+              healthy=true
+              break
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 0.5
+          done
+
+          test "$healthy" = true
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --header 'Host: untrusted.example' \
+            http://127.0.0.1:8765/healthz)" = 400

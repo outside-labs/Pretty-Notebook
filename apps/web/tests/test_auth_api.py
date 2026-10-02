@@ -13,8 +13,16 @@ def token_payload(token: str) -> dict:
     return jwt.decode(token, options={"verify_signature": False})
 
 
-def test_create_user_redacts_authentication_secrets(client, root_credentials):
-    response = client.post("/api/users", json=root_credentials)
+def test_create_user_redacts_authentication_secrets(
+    client,
+    root_credentials,
+    bootstrap_headers,
+):
+    response = client.post(
+        "/api/users",
+        json=root_credentials,
+        headers=bootstrap_headers,
+    )
 
     assert response.status_code == 200
     assert response.json() == {"id": 1, "username": root_credentials["username"]}
@@ -22,7 +30,54 @@ def test_create_user_redacts_authentication_secrets(client, root_credentials):
     assert "tok_uuid" not in response.text
 
 
-def test_concurrent_anonymous_requests_claim_only_one_owner(client):
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {},
+        {"X-PNBP-Bootstrap-Token": "incorrect-bootstrap-token-value"},
+    ],
+)
+def test_initial_owner_requires_bootstrap_secret(client, root_credentials, headers):
+    response = client.post("/api/users", json=root_credentials, headers=headers)
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "A valid bootstrap token is required."}
+
+
+def test_invalid_bearer_token_is_not_downgraded_to_anonymous_bootstrap(
+    client,
+    root_credentials,
+    bootstrap_headers,
+):
+    response = client.post(
+        "/api/users",
+        json=root_credentials,
+        headers={**bootstrap_headers, "Authorization": "Bearer invalid"},
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Could not validate credentials"}
+
+
+@pytest.mark.parametrize(
+    "password",
+    ["short", "é" * 37],
+)
+def test_owner_creation_enforces_bcrypt_password_bounds(
+    client,
+    bootstrap_headers,
+    password,
+):
+    response = client.post(
+        "/api/users",
+        json={"username": "owner", "password_hash": password},
+        headers=bootstrap_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_concurrent_anonymous_requests_claim_only_one_owner(client, bootstrap_headers):
     barrier = Barrier(3)
 
     def register(username):
@@ -30,6 +85,7 @@ def test_concurrent_anonymous_requests_claim_only_one_owner(client):
         return client.post(
             "/api/users",
             json={"username": username, "password_hash": "owner password"},
+            headers=bootstrap_headers,
         )
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -50,11 +106,16 @@ def test_deleted_owner_does_not_reopen_anonymous_registration(
     tmp_path,
     web_storage,
     root_credentials,
+    bootstrap_headers,
 ):
     database_url = f"sqlite://{tmp_path / 'site.db'}"
 
     with TestClient(create_app(db_url=database_url)) as client:
-        response = client.post("/api/users", json=root_credentials)
+        response = client.post(
+            "/api/users",
+            json=root_credentials,
+            headers=bootstrap_headers,
+        )
         assert response.status_code == 200
 
         async def delete_owner():
@@ -86,6 +147,8 @@ def test_valid_credentials_issue_bearer_token_and_identify_user(
     )
 
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["pragma"] == "no-cache"
     assert response.json()["token_type"] == "bearer"
     token = response.json()["access_token"]
     payload = token_payload(token)
@@ -117,6 +180,13 @@ def test_invalid_credentials_are_rejected(client, root_user, username, password)
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid username or password"}
+
+
+def test_jwt_configuration_requires_hs256_and_strong_secret():
+    with pytest.raises(RuntimeError, match="HS256"):
+        auth_api.validate_jwt_settings("x" * 32, "HS512")
+    with pytest.raises(RuntimeError, match="32 bytes"):
+        auth_api.validate_jwt_settings("too-short", "HS256")
 
 
 @pytest.mark.parametrize(

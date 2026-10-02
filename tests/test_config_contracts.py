@@ -1,4 +1,5 @@
 import json
+from stat import S_IMODE
 
 from click.testing import CliRunner
 
@@ -39,6 +40,7 @@ def test_generated_settings_include_required_title(monkeypatch, tmp_path):
 
 	assert "TITLE" in generated
 	assert "TITLE" in nb.config
+	assert S_IMODE((tmp_path / "pnbp_settings.json").stat().st_mode) == 0o600
 
 
 def test_commit_settings_uses_remote_by_default_and_local_only_when_requested(monkeypatch):
@@ -82,9 +84,15 @@ def test_refresh_token_redacts_token_output(monkeypatch, tmp_path, capsys):
 		def __str__(self):
 			return "<Response [200]>"
 
+	captured = {}
+
+	def post(*args, **kwargs):
+		captured.update(kwargs)
+		return Response()
+
 	monkeypatch.setattr("builtins.input", lambda prompt="": "ella")
 	monkeypatch.setattr("getpass.getpass", lambda prompt="": "password")
-	monkeypatch.setattr("pnbp.models.notebook.requests.post", lambda *args, **kwargs: Response())
+	monkeypatch.setattr("pnbp.models.notebook.requests.post", post)
 
 	nb.refresh_token()
 	output = capsys.readouterr().out
@@ -93,5 +101,43 @@ def test_refresh_token_redacts_token_output(monkeypatch, tmp_path, capsys):
 	assert "old-token" not in output
 	assert "<redacted>" in output
 	assert nb.API_TOKEN == "new-secret-token"
+	assert "authorization" not in captured["headers"]
+	assert captured["timeout"] == nb.REQUEST_TIMEOUT
 	persisted = json.loads((tmp_path / "pnbp_settings.json").read_text(encoding="utf-8"))
 	assert persisted["API_TOKEN"] == "new-secret-token"
+	assert S_IMODE((tmp_path / "pnbp_settings.json").stat().st_mode) == 0o600
+
+
+def test_initial_user_creation_sends_bootstrap_secret_without_bearer_none(
+	monkeypatch,
+	tmp_path,
+):
+	monkeypatch.setenv("NOTE_PATH", str(tmp_path))
+	monkeypatch.setenv("PNBP_SETTINGS", "off")
+	nb = Notebook()
+	nb.API_BASE = "https://notes.example"
+	captured = {}
+
+	class Response:
+		status_code = 200
+
+		def json(self):
+			return {"id": 1, "username": "ella"}
+
+		def __str__(self):
+			return "<Response [200]>"
+
+	passwords = iter(["correct horse battery staple", "correct horse battery staple"])
+	monkeypatch.setattr("getpass.getpass", lambda _message="": next(passwords))
+
+	def post(url, **kwargs):
+		captured.update({"url": url, **kwargs})
+		return Response()
+
+	monkeypatch.setattr("pnbp.models.notebook.requests.post", post)
+
+	nb.create_api_user(username="ella", bootstrap_token="bootstrap-secret")
+
+	assert captured["headers"]["X-PNBP-Bootstrap-Token"] == "bootstrap-secret"
+	assert "authorization" not in captured["headers"]
+	assert captured["timeout"] == nb.REQUEST_TIMEOUT

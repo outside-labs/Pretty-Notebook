@@ -1,259 +1,311 @@
-> [!WARNING]
-> `apps/web` is experimental in `0.9.0rc1` and is not supported for public deployment. The package release candidate focuses on the `pnbp` library/CLI; the web deployment security gate is still open.
+# Pretty Notebook web publisher
 
-Pretty-Notebook/apps/web api
+> [!IMPORTANT]
+> `apps/web` is supported for public deployment only in the constrained
+> topology described here. A deployment outside this profile has not passed
+> the 0.9 safety gate.
 
-RESTful management of web pages implemented in FastAPI for / using [pnbp](https://github.com/outside-labs/Pretty-Notebook/docs/pnbp.md).
+The FastAPI application publishes HTML and images produced by `pnbp`, serves a
+small public site, and stores contact-form messages in a local inbox. The web
+application is deployed from the repository; it is not included in the `pnbp`
+wheel.
 
---- 
+## Supported deployment profile
 
-**web** 
-- (1) receives HTML and images (wrapping HTMLwith jinja2 template tags),
-- (2) saves each page statically to an .html file,
-- (3) -> catching and rendering by name via existence as a single slug through a general {content} view function ...
-- e.g.  notebook/[[My Next Best Note]] -> myweburl.com/my-next-best-note 
+| Area | Supported contract |
+| --- | --- |
+| Platform | Linux x86_64 with CPython 3.11 or 3.14 and the hash-locked wheel set |
+| Application | One Gunicorn instance with exactly one `uvicorn_worker.UvicornWorker` |
+| State | One local persistent data directory containing one SQLite database, pages, images, and layout settings |
+| Publication ownership | One notebook owns the server's complete page namespace |
+| Editors | Every API account is a trusted site editor; user ID 1 is the owner that may create more accounts |
+| Network | The application binds to loopback behind a TLS-terminating reverse proxy |
+| Operations | One host, stopped-site backups, and version-matched restores |
 
-via **pnbp**
--  (1) conversion of **\#public** notes to HTML,
--  (2) communicating with : 
-    -  ... **```pnbp commit-remote```** (or **```pnbp commit-local```**) to upload changes without deleting remote pages
-    -  ... **```pnbp commit-stage```** to see the staged changes before updating
+Multiple workers, multiple application instances, shared or network filesystems,
+remote databases, untrusted editors, and independent notebooks sharing a page
+namespace are not supported. The macOS URL handlers are also outside this
+support decision.
 
-**...** 
--  for 0.9, the publication model is one notebook owning the server's entire page namespace. Add **```--prune```** only after reviewing **```pnbp commit-stage```** and confirming that ownership. Pruning deletes every remote page absent from this notebook; a site shared by independent notebooks or users needs durable ownership tracking before pruning can be supported.
--  a failed page or image upload stops the operation before pruning. HTTP failures return a nonzero command status.
--  only notes newer than their remote copy are POST-ed. Use **```pnbp touch-all-public```** to mark every currently publishable note for upload.
--  images transfer when their names are missing remotely. Use **```--refresh-images```** to resend all images referenced by publishable notes; removing a note does not remove its previously uploaded images.
+Published page HTML, `NAV_BRAND`, and `FOOTER` are intentionally rendered as
+trusted owner-authored HTML. They are not safe contribution surfaces for
+untrusted users. Published page content is stored as data and is never compiled
+as a server-side Jinja template.
 
-Page and layout updates write a temporary file beside the destination and
-replace the destination only after the write succeeds. A failed update leaves
-the previous file intact. Readers see a complete old or new file; when updates
-to the same file overlap, the last successful replacement wins.
+## Install a reviewed checkout
 
---- 
-
-#### **installation (for local development)** :
-
---- 
-
-##### (1) -> ```pnbp git-clone-pnbp-web```
-
-or do it manually : 
+Use a dedicated service account and a reviewed tag or commit. The 0.9 release
+tag is `v0.9.0` once published.
 
 ```bash
-git clone \
-  --filter=blob:none \
-  --sparse \
-  --depth 1 \
-  --single-branch \
-  --branch main \
-  https://github.com/outside-labs/Pretty-Notebook.git \
-  pnbp_web
+git clone https://github.com/outside-labs/Pretty-Notebook.git pnbp
+cd pnbp
+git checkout v0.9.0
 
-git -C pnbp_web sparse-checkout set apps/web
-
-cd pnbp_web/apps/web
-
+python3.11 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install \
+  --require-hashes \
+  --only-binary=:all: \
+  --requirement apps/web/requirements.lock
+.venv/bin/python -m pip install --editable . --no-deps
+.venv/bin/python -m pip check
 ```
 
-For the verified Linux x86_64 CPython 3.11 or 3.14 dependency set, install
-the hash-locked wheels:
+The lock is verified for Linux x86_64 on CPython 3.11 and 3.14. Other
+platforms are not part of the supported public-deployment profile.
+
+For dependency updates, regenerate from the repository root and confirm that
+both Python targets produce the same file:
 
 ```bash
-python -m pip install --require-hashes --only-binary=:all: --requirement requirements.lock
+uv pip compile apps/web/requirements.txt --generate-hashes \
+  --python-version 3.11 --python-platform x86_64-unknown-linux-gnu \
+  --no-annotate --no-header --output-file apps/web/requirements.lock
+
+uv pip compile apps/web/requirements.txt --generate-hashes \
+  --python-version 3.14 --python-platform x86_64-unknown-linux-gnu \
+  --no-annotate --no-header --output-file /tmp/requirements-3.14.lock
+
+cmp apps/web/requirements.lock /tmp/requirements-3.14.lock
 ```
 
-Other local development environments can use the pinned snapshot:
+## Configure secrets and persistent state
+
+Create a private persistent directory outside the checkout. Keep the database
+inside it so one stopped-site backup contains all server state.
 
 ```bash
-python -m pip install --requirement requirements.txt
+install -d -m 0700 /srv/pnbp-web
+umask 077
+python -c 'import secrets; print(secrets.token_urlsafe(32))'
+python -c 'import secrets; print(secrets.token_urlsafe(32))'
 ```
 
-The integration suite requires a full repository checkout rather than the
-web-only sparse checkout above. From `apps/web`, run:
+Put the two different generated values in an untracked `apps/web/.env` file:
+
+```dotenv
+PNBP_DATA_DIR=/srv/pnbp-web
+PNBP_ALLOWED_HOSTS=notes.example.com
+PNBP_DATABASE_URL=sqlite:///srv/pnbp-web/db.sqlite3
+JWT_SECRET=PASTE_FIRST_GENERATED_VALUE_HERE
+JWT_ALGO=HS256
+PNBP_BOOTSTRAP_TOKEN=PASTE_SECOND_GENERATED_VALUE_HERE
+```
+
+`JWT_SECRET` and `PNBP_BOOTSTRAP_TOKEN` must each contain at least 32 UTF-8
+bytes. `PNBP_ALLOWED_HOSTS` is a comma-separated list of exact hostnames; a
+wildcard is rejected. Protect the environment file with mode `0600`. Never
+commit it.
+
+The bootstrap token is temporary. It authorizes only the initial owner claim
+and should be removed after that claim succeeds. `JWT_SECRET` is durable state:
+changing it invalidates every bearer token.
+
+## Start the supported process
+
+Run from `apps/web` with a restrictive umask:
 
 ```bash
+cd apps/web
+umask 077
+exec ../../.venv/bin/gunicorn main:api \
+  --workers 1 \
+  --worker-class uvicorn_worker.UvicornWorker \
+  --bind 127.0.0.1:8000 \
+  --access-logfile -
+```
+
+Do not expose port 8000 directly. Configure the reverse proxy to:
+
+- terminate TLS, redirect HTTP to HTTPS, and set HSTS;
+- preserve a `Host` value listed in `PNBP_ALLOWED_HOSTS`;
+- connect only to the loopback listener and trust forwarded headers only from
+  that proxy;
+- allow slightly more than 10 MiB of request body for multipart image
+  overhead, while rejecting larger requests before they reach the app;
+- rate-limit `/api/token`, `/api/users`, authenticated write routes, and
+  `/forms/contact`;
+- apply finite connection, header, and request timeouts; and
+- avoid logging authorization headers, passwords, tokens, or form bodies.
+
+Monitor `GET /healthz` over the loopback listener. It checks SQLite and the
+validated layout file and returns `503` when either is unavailable. It does not
+test free disk space, a writable filesystem, or external CDNs.
+
+The rendered site loads version-pinned Bootstrap, Mermaid, and Highlight.js
+assets from public CDNs. Executable CDN scripts and Bootstrap CSS use
+subresource integrity. The selected Highlight.js theme CSS is version-pinned
+but does not have an integrity attribute, so CDN availability and stylesheet
+delivery remain external dependencies.
+
+## Claim the initial owner
+
+Configure a notebook client's `API_BASE` with the public HTTPS URL and leave
+`API_TOKEN` empty. Then create the initial owner:
+
+```py
+import pnbp
+
+nb = pnbp.Notebook()
+nb.create_api_user(username="alice")  # asks for password and bootstrap token
+nb.refresh_token()                    # asks for username and password
+nb.get_authed_user()
+```
+
+Passwords must contain at least 12 characters and no more than 72 UTF-8 bytes.
+After the owner is created:
+
+1. Remove `PNBP_BOOTSTRAP_TOKEN` from the server environment.
+2. Restart the single application process.
+3. Confirm `/healthz` and `nb.get_authed_user()`.
+
+Anonymous registration never reopens, even if the owner row is deleted.
+Recover the owner database from backup instead. Later accounts can be created
+only while authenticated as user ID 1. All accounts can publish arbitrary HTML,
+upload images, change layout settings, and read the local inbox, so create
+accounts only for equally trusted site editors.
+
+Tokens last 30 days. Issuing a new token or resetting a password revokes that
+account's previous token. Store the notebook's `pnbp_settings.json` with mode
+`0600`, exclude it from version control and backups shared with others, and
+treat its `API_TOKEN` as a password.
+
+## Publish from one notebook
+
+Review changes before sending them:
+
+```bash
+pnbp commit-stage
+pnbp commit-remote
+```
+
+Publishing updates only pages newer than their remote copy and uploads missing
+referenced images. `pnbp touch-all-public` marks all publishable notes for a
+refresh; `--refresh-images` resends referenced images.
+
+Pruning is intentionally explicit. Use `--prune` only after reviewing
+`pnbp commit-stage` and confirming that this notebook owns the entire server
+namespace. It deletes every remote page absent from the notebook. Shared
+multi-notebook ownership is not a supported 0.9 contract.
+
+The server accepts publication slugs made from lowercase letters, digits, and
+single hyphens. It limits publication bodies to 2,000,000 characters. Image
+uploads are limited to 10 MiB, must use PNG, JPEG, GIF, or WebP extensions, and
+must match the corresponding file signature. SVG and arbitrary file uploads
+are rejected.
+
+A publication run is not a transaction across the whole site. Each individual
+page, image, or layout replacement is atomic, and a failed upload stops the
+client before pruning. Earlier successful uploads from that run remain in
+place and can safely be retried.
+
+## Public routes and local inbox
+
+The home page, published single-slug pages, images, theme switch, contact page,
+and contact submission endpoint are public. Management APIs and the inbox read
+endpoint require bearer authentication.
+
+`POST /forms/contact` validates the email address and a message of at most 5,000
+characters, then stores it in the SQLite `formsubmission` table. It does not
+send email. Retrieve entries with an authenticated request to
+`GET /api/forms/contact/submissions`; `limit` accepts 1–100 and `offset`
+supports pagination.
+
+Contact messages are personal data. Limit retention, restrict filesystem and
+backup access, and rate-limit the public form at the reverse proxy.
+
+## Persistent data and migration
+
+The data directory contains:
+
+| Path | Contents |
+| --- | --- |
+| `db.sqlite3` | Accounts, token revocation state, and contact submissions |
+| `pages/*.html` | Owner-authored published page bodies |
+| `images/*` | Validated published images |
+| `web-settings.json` | Navigation, title, theme, and owner-authored layout HTML |
+
+New directories are created with mode `0700`, and a newly seeded settings file
+uses mode `0600`. The service account must be the only writer. Existing paths
+keep their current permissions, so verify them during every deployment.
+
+Older checkouts stored state at `apps/web/db.sqlite3`,
+`apps/web/templates/pages`, `apps/web/static/imgs`, and
+`apps/web/web-settings.json`. Before the first 0.9 start, stop the old process
+and copy those contents into the corresponding paths under `PNBP_DATA_DIR`.
+Keep the originals until the new site, authentication, inbox, and published
+assets have been verified. Legacy wrapped page files are read as plain page
+bodies without evaluating their embedded Jinja syntax.
+
+## Backup, restore, and recovery
+
+Use stopped-site backups. Copying a live SQLite database and files separately
+does not provide a supported point-in-time snapshot.
+
+```bash
+systemctl stop pnbp-web
+install -d -m 0700 /srv/backups/pnbp-web-YYYYMMDD-HHMMSS
+cp -a /srv/pnbp-web/. /srv/backups/pnbp-web-YYYYMMDD-HHMMSS/
+systemctl start pnbp-web
+curl --fail --header 'Host: notes.example.com' http://127.0.0.1:8000/healthz
+```
+
+Store the backup encrypted and separately from the host. Retain the deployed
+commit identifier and the `JWT_SECRET` in the same protected recovery record.
+The temporary bootstrap token is not needed for restore.
+
+To restore, stop the service, preserve the failed data directory under a new
+name, copy one complete backup into a newly created private data directory,
+restore ownership and mode, deploy the matching application version and
+`JWT_SECRET`, then start the service. Verify:
+
+- `/healthz` and the public home page;
+- a representative published page and image;
+- owner authentication and an authenticated API request; and
+- contact inbox pagination.
+
+If an update fails, stop the process and restore both the version-matched code
+and the complete stopped-site backup. Do not combine a database from one backup
+with pages or settings from another.
+
+## Failure behavior
+
+- Page, image, and layout writes use a temporary sibling file followed by an
+  atomic replacement. A failed replacement leaves the old file intact.
+- SQLite commits each successful account or form operation before success is
+  returned.
+- Invalid or missing bearer tokens return `401`; the temporary bootstrap secret
+  cannot turn an invalid bearer token into an anonymous request.
+- Corrupt layout state or an unavailable database makes `/healthz` return
+  `503` without exposing an internal error.
+- Unsupported hosts return `400` before application routing.
+
+## Development verification
+
+The integration suite requires a full checkout:
+
+```bash
+cd apps/web
 python -m pip install --editable ../..
 python -m pip install --requirement requirements-test.txt
 python -m coverage run --source=api,views,main -m pytest tests
 python -m coverage report --show-missing --fail-under=90
 ```
 
-The suite creates a fresh in-memory SQLite database and temporary page, image,
-and settings directories for every test.
+CI runs the suite and the exact one-worker Gunicorn command on Python 3.11 and
+3.14. It also checks that an allowed host reaches `/healthz` and an unlisted
+host is rejected.
 
-`requirements.txt` is the pinned input for the experimental web app, including
-the published `pnbp==0.9.0rc1` package. `requirements.lock` records hashes for
-its 47 packages. The locked wheel set was verified for Linux x86_64 with
-CPython 3.11 and 3.14. To regenerate it from the repository root, use:
+## Explicit support decision
 
-```bash
-uv pip compile apps/web/requirements.txt --generate-hashes \
-  --python-version 3.11 --python-platform x86_64-unknown-linux-gnu \
-  --no-annotate --no-header --output-file apps/web/requirements.lock
-```
+The 0.9 safety gate approves public deployment only for the supported profile
+at the top of this document. The tests cover authentication and owner bootstrap,
+token revocation, secrets validation, public routes, bounded uploads, local
+inbox persistence, atomic filesystem updates, SQLite restart persistence,
+stopped-site backup and restore, health failures, host filtering, and the
+production process command.
 
-Check that the same command with `--python-version 3.14` produces an identical
-lock before committing a dependency update. A full checkout can install the
-local package with the editable command above for development and tests.
-
---- 
-
-##### (2) -> **pnbp_web/** **.env** :
-
-Generate a JWT signing secret:
-
-```bash
-python -c 'import secrets; print(secrets.token_urlsafe(32))'
-```
-
-Copy the resulting value into the deployment’s untracked .env file:
-
-```dotenv
-JWT_SECRET=PASTE_GENERATED_VALUE_HERE
-JWT_ALGO=HS256
-```
-
-REMINDER: Never commit the generated value.
-
-
---- 
-
-##### (3) -> hello, world! : 
-
--->  run server: ```python main.py```
---> see browser: http://127.0.0.1:8000/ 
-
---- 
-
-##### (4) -> create your API user : 
-
-```py
->>> import pnbp
->>> nb = pnbp.Notebook()
->>> nb.create_api_user(username="alice")
->>> nb.refresh_token()
->>> # username: 
->>> # password: 
->>> nb.get_authed_user()
-{"username": "alice"}
->>> # ^^ properly authenticating!
->>> # also available:
->>> nb.reset_api_password()
->>> nb.refresh_token() # even while same password, now old token rejected
-```
-
-The first API user can be created without a token exactly once per SQLite
-database. Later accounts require that owner's token. Removing the owner does
-not reopen anonymous registration; recover an owner from a database backup
-instead of resetting SQLite's user ID sequence. This bootstrap guard supports
-one application process. Multi-process deployment remains outside the
-experimental web scope.
-
---- 
-
-#### Public forms (experimental)
-
-The contact page posts to `/forms/contact`. The server validates the email
-address and message, saves them in the local SQLite `formsubmission` table,
-then redirects to `/contact?sent=1`. A failed validation returns the form with
-an error; a failed database write never shows the saved confirmation. The
-default database is `apps/web/db.sqlite3` when the server runs from `apps/web`.
-Back up this database with the rest of the site's local data and restrict file
-access because submissions contain personal messages. Nothing sends email or
-forwards submissions to an external service yet.
-
-The owner can retrieve submissions as JSON from
-`GET /api/forms/contact/submissions` with the existing bearer token. The
-newest entries come first; `limit` (1–100, default 100) and `offset` support
-pagination. Each entry includes its ID, form name, validated fields, and
-creation time. This read endpoint is authenticated; the browser submit route
-remains public while the web app is experimental.
-
-The reusable form flow is in `views/forms.py`: add a validated field model and
-a `FORMS` registry entry for a new form. `api/forms.py` stores the accepted
-fields with the form name and timestamp. A future email or customer service
-adapter can run after `save_submission` succeeds, with delivery and retry
-behavior specified separately. Public deployment remains deferred.
-
----
-
-##### (5) -> personalize ( [**pnbp_settings.json**](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/pnbp_settings.json) ) :
-
-```json
-    ...
-    "NAV_BRAND": "alice.io",
-    "NAV_PAGES": {
-        "about": "/about/",
-        "content": [
-            {
-                "topic a": "/topic-a/"
-            },
-            {
-                "topic b": "/topic-b/"
-            },
-        ]
-    },
-    "FOOTER": "<p>email: fake@email.com</p>",
-    "TITLE": "Alice's Blog",
-    "darkmode": true,
-    "hljs_light": "sublime",
-    "hljs_dark": "xt256",
-    "merm_light": "forest",
-    "merm_dark": "default",
-    "PUB_LNK_ONLY": true,
-    "COMMIT_TAG": "#blog"
-}
-```
-
-```"TITLE": ""``` ... 
-
-```"NAV_BRAND": ""``` ... 
-
-```"FOOTER": "<p></p>"``` ... 
-
-``` "NAV_PAGES": {}``` *dict*ates what links are in the navbar. Notice you can create a nested drop down with a *list* value. 
-
-```"darkmode": true``` sets the darkmode to default, while white-on-black text is still available by button in the navbar. ```_light``` and ```_dark``` values dictate additional styling on the switch.
-
-```hljs_``` - see the [highlightjs demo pages](https://highlightjs.org/static/demo/) and [this github link](https://github.com/highlightjs/highlight.js/tree/main/src/styles) to find the correct string value for your favorite styles. 
-
-```merm_``` - see [mermaid js](https://mermaid-js.github.io/mermaid/#/) and [this github link](https://github.com/mermaid-js/mermaid/tree/master/src/themes) for the correct string value to your favorite styles.
-
-```"PUB_LNK_ONLY": true``` turns off rendering for any internal \[\[links\]\] to HTML that point to non- \#public notes. 
-
-```"COMMIT_TAG": "#blog"``` - choose which \#tag your notebook publishes against (default: \#public).
-
-```"EXCLUDE_TAG": "#noblog"``` - choose which \#tag your notebook won't publish even if also tagged \#private (default: \#private).
-
-```"HIDE_COMMIT_TAG": true``` - turns off rendering the actual "\#public" tag from the published contents (e.g. "# this is a great #public blog page!" -> "\<h1\>this is a great  blog page!\<\\h1\>") (default: ```false```). 
-
-
---- 
-
-##### -> **POST commits !**
-
-directly in the python repl : 
-
-```py
->>> # --> commit your new settings ! 
->>> nb.web_settings_post()
->>> # --> tag a note #public
->>> # --> 
->>> nb.post_commits_to_web_api()
-```
-
-from the command-line : 
-- ```pnbp commit-settings```
-- ```pnbp commit-remote```
-
---- 
-
-**\*\***
--  the only [included css](https://github.com/outside-labs/Pretty-Notebook/tree/main/apps/web/static/css) files are to support inline \<i\> [Bootstrap Icons](https://icons.getbootstrap.com/) \</i\>. The vendored version and license are recorded in [third-party notices](../apps/web/static/THIRD_PARTY_NOTICES.md).
-
---- 
-
-<p align=center>
-  <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
-</p>
+The gate does not approve horizontal scaling, multiple workers, shared
+multi-notebook pruning, untrusted editors, automated email delivery, or the
+macOS URL handlers.

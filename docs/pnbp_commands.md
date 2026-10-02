@@ -3,10 +3,11 @@
 Commands that accept `--note` require an exact or terminal-extension-normalized note name by default. Add `--fuzzy` to explicitly accept the closest match before the command runs.
 
 The `pnbp` CLI is part of the published 0.9.0rc1 package. Its web publication
-commands can target the experimental `apps/web` app, which is not supported for
-public deployment. Before using `--prune`, review `pnbp commit-stage` and ensure
-one notebook owns the server's entire page namespace; multi-notebook ownership
-is not a supported 0.9 contract. See the [release notes](release-0.9.0rc1.md).
+commands can target the repository's `apps/web` app. Public deployment is
+supported only in the [documented constrained topology](web.md). Before using
+`--prune`, review `pnbp commit-stage` and ensure one notebook owns the server's
+entire page namespace; multi-notebook ownership is not a supported 0.9
+contract. See the [release notes](release-0.9.0rc1.md).
 
 --- 
 
