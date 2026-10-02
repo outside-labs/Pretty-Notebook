@@ -55,6 +55,32 @@ def test_layout_update_rejects_incomplete_payload(
     assert response.status_code == 422
 
 
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("hljs_light", "../../escape"),
+        ("merm_dark", "custom-script"),
+        ("NAV_PAGES", {"unsafe": "javascript:alert(1)"}),
+    ],
+)
+def test_layout_update_rejects_unsafe_client_configuration(
+    client,
+    auth_headers,
+    layout_payload,
+    field,
+    value,
+):
+    layout_payload[field] = value
+
+    response = client.post(
+        "/api/layout",
+        headers=auth_headers,
+        json=layout_payload,
+    )
+
+    assert response.status_code == 422
+
+
 def test_layout_storage_failure_returns_server_error(
     client,
     auth_headers,
@@ -197,6 +223,43 @@ def test_published_page_is_publicly_readable(
     assert "<h1>Public note</h1>" in page.text
 
 
+def test_published_html_is_not_compiled_as_server_side_template(
+    client,
+    auth_headers,
+):
+    source = "<p>{{ 7 * 7 }}</p>{% set dangerous = true %}"
+    created = client.post(
+        "/api/publishment",
+        headers=auth_headers,
+        json={"name": "literal-template-text", "content": source},
+    )
+    page = client.get("/literal-template-text")
+
+    assert created.status_code == 201
+    assert page.status_code == 200
+    assert source in page.text
+    assert "<p>49</p>" not in page.text
+
+
+def test_legacy_wrapped_publication_renders_without_compiling_content(
+    client,
+    web_storage,
+):
+    (web_storage.pages / "legacy.html").write_text(
+        "{% extends 'shared/layout.html' %}\n\n"
+        "{% block content %}\n\n"
+        "<p>{{ 7 * 7 }}</p>\n\n"
+        "{% endblock %}",
+        encoding="utf-8",
+    )
+
+    page = client.get("/legacy")
+
+    assert page.status_code == 200
+    assert "<p>{{ 7 * 7 }}</p>" in page.text
+    assert "{% extends" not in page.text
+
+
 def test_missing_public_page_renders_custom_404_with_404_status(client):
     response = client.get("/missing-page")
 
@@ -273,3 +336,20 @@ def test_theme_rejects_unknown_mode(client):
     response = client.post("/theme", data={"darkmode": "custom"})
 
     assert response.status_code == 422
+
+
+def test_health_check_and_security_headers(client):
+    response = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    assert response.headers["cache-control"] == "no-store"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["x-frame-options"] == "DENY"
+    assert response.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+
+
+def test_unlisted_host_is_rejected(client):
+    response = client.get("/", headers={"Host": "attacker.example"})
+
+    assert response.status_code == 400

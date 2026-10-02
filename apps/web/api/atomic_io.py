@@ -19,7 +19,9 @@ async def atomic_write_text(target: Path, content: str) -> None:
     except FileNotFoundError:
         existing_mode = None
 
-    descriptor, name = mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
+    descriptor, name = mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
+    )
     temporary = Path(name)
 
     try:
@@ -28,6 +30,30 @@ async def atomic_write_text(target: Path, content: str) -> None:
                 fchmod(pending.fileno(), existing_mode)
 
         async with aiofiles.open(temporary, "w", encoding="utf-8") as output:
+            await output.write(content)
+        replace(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+async def atomic_write_bytes(target: Path, content: bytes) -> None:
+    """Atomically replace a small binary file while preserving its mode."""
+    try:
+        existing_mode = S_IMODE(target.stat().st_mode)
+    except FileNotFoundError:
+        existing_mode = None
+
+    descriptor, name = mkstemp(
+        prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
+    )
+    temporary = Path(name)
+
+    try:
+        with fdopen(descriptor, "wb") as pending:
+            if existing_mode is not None:
+                fchmod(pending.fileno(), existing_mode)
+
+        async with aiofiles.open(temporary, "wb") as output:
             await output.write(content)
         replace(temporary, target)
     finally:

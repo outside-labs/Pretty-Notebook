@@ -123,6 +123,7 @@ class Notebook:
 
 				with open(self.settings_file, 'w') as sf:
 					json.dump(empty_settings, sf, indent=4)
+				os.chmod(self.settings_file, 0o600)
 
 				print(
 					f"generated (most empty/default) from template to\n"
@@ -782,7 +783,10 @@ class Notebook:
 	"""
 	def get_headers(self):
 		""" the request headers """
-		return {'accept': 'application/json', 'authorization': f'Bearer {self.API_TOKEN}'}
+		headers = {'accept': 'application/json'}
+		if self.API_TOKEN:
+			headers['authorization'] = f'Bearer {self.API_TOKEN}'
+		return headers
 
 	def _api_request(self, method, path, **kwargs):
 		"""Send one checked API request with a finite connection/read timeout."""
@@ -796,9 +800,16 @@ class Notebook:
 		"""
 		u = input('Username: ')
 		p = getpass.getpass()
-		h = self.get_headers()
-		h.update({'Content-Type': 'application/x-www-form-urlencoded'})
-		r = requests.post(f'{self.API_BASE}/api/token', data={'username': u, 'password': p}, headers=h)
+		h = {
+			'accept': 'application/json',
+			'Content-Type': 'application/x-www-form-urlencoded',
+		}
+		r = requests.post(
+			f'{self.API_BASE}/api/token',
+			data={'username': u, 'password': p},
+			headers=h,
+			timeout=self.REQUEST_TIMEOUT,
+		)
 		print(r)
 
 		try:
@@ -828,12 +839,13 @@ class Notebook:
 
 				with open(self.settings_file, 'w') as sf:
 					json.dump(config, sf, indent=4)
+				os.chmod(self.settings_file, 0o600)
 
 	def get_authed_user(self):
 		""" request method to get the authenticated user's username 
 		"""
 		h = self.get_headers()
-		r = requests.get(f'{self.API_BASE}/api/users/me', headers=h)
+		r = self._api_request(requests.get, '/api/users/me', headers=h)
 		print(r)
 		print(r.json())
 		return r
@@ -842,7 +854,7 @@ class Notebook:
 		""" request method to /api/ (testing auth) 
 		"""
 		h = self.get_headers()
-		r = requests.get(f'{self.API_BASE}/api', headers=h)
+		r = self._api_request(requests.get, '/api', headers=h)
 		print(r.text)
 		print(r.json())
 		return r
@@ -1014,12 +1026,17 @@ class Notebook:
 			if not k in bs_keys:
 				del _config[k]
 
-		r = requests.post(f'{self.API_BASE}/api/layout', json=_config, headers=h)
+		r = self._api_request(
+			requests.post,
+			'/api/layout',
+			json=_config,
+			headers=h,
+		)
 
 		print(r)
 		return r
 
-	def create_api_user(self, username=''):
+	def create_api_user(self, username='', bootstrap_token=None):
 		""" request method to generate an pnbp-web API user 
 		"""
 		if not username:
@@ -1042,7 +1059,17 @@ class Notebook:
 			}
 
 		h = self.get_headers()
-		r = requests.post(f'{self.API_BASE}/api/users', json=u, headers=h)
+		if not self.API_TOKEN:
+			if bootstrap_token is None:
+				bootstrap_token = getpass.getpass("bootstrap token: ")
+			if bootstrap_token:
+				h['X-PNBP-Bootstrap-Token'] = bootstrap_token
+		r = requests.post(
+			f'{self.API_BASE}/api/users',
+			json=u,
+			headers=h,
+			timeout=self.REQUEST_TIMEOUT,
+		)
 		print(r)
 		print(r.json())
 		return r
@@ -1061,7 +1088,12 @@ class Notebook:
 
 		p = {"password_hash": p_1}
 		h = self.get_headers()
-		r = requests.post(f'{self.API_BASE}/api/users/me', json=p, headers=h)
+		r = requests.post(
+			f'{self.API_BASE}/api/users/me',
+			json=p,
+			headers=h,
+			timeout=self.REQUEST_TIMEOUT,
+		)
 		print(r)
 		print(r.json())
 		return r

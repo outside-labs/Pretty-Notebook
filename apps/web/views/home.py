@@ -2,13 +2,14 @@
 
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
+import aiofiles
+from api.layout_api import get_layout_content
+from api.publish_api import publication_body, publication_path
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
-from jinja2.exceptions import TemplateNotFound
 from starlette.templating import Jinja2Templates
-
-from api.layout_api import get_layout_content
 
 router = APIRouter()
 WEB_ROOT = Path(__file__).resolve().parents[1]
@@ -42,10 +43,25 @@ async def set_theme(
     darkmode: Literal["darkmode", "lightmode"] = Form(...),
     return_to: str = Form("/"),
 ):
-    if not return_to.startswith("/") or return_to.startswith("//") or "\\" in return_to:
+    parsed = urlsplit(return_to)
+    invalid = (
+        not parsed.path.startswith("/")
+        or parsed.path.startswith("//")
+        or parsed.scheme
+        or parsed.netloc
+        or "\\" in return_to
+        or any(ord(character) < 32 for character in return_to)
+    )
+    if invalid:
         raise HTTPException(status_code=400, detail="Invalid return path")
     response = RedirectResponse(url=return_to, status_code=status.HTTP_303_SEE_OTHER)
-    response.set_cookie("darkmode", darkmode == "darkmode", samesite="lax")
+    response.set_cookie(
+        "darkmode",
+        darkmode == "darkmode",
+        httponly=True,
+        max_age=31_536_000,
+        samesite="lax",
+    )
     return response
 
 
@@ -58,10 +74,10 @@ def favicon():
 async def content(request: Request, content: str):
     template_content = await get_template_content(request)
     try:
-        return templates.TemplateResponse(
-            request, f"pages/{content}.html", template_content
-        )
-    except TemplateNotFound:
+        target = publication_path(content)
+        async with aiofiles.open(target, encoding="utf-8") as page:
+            page_content = publication_body(await page.read())
+    except (HTTPException, FileNotFoundError, IsADirectoryError):
         template_content["unavailable_content"] = content
         return templates.TemplateResponse(
             request,
@@ -69,3 +85,10 @@ async def content(request: Request, content: str):
             template_content,
             status_code=status.HTTP_404_NOT_FOUND,
         )
+
+    template_content["page_content"] = page_content
+    return templates.TemplateResponse(
+        request,
+        "shared/published.html",
+        template_content,
+    )

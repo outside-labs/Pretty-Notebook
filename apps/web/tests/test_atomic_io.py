@@ -53,6 +53,27 @@ def test_failed_layout_replace_preserves_existing_settings(
     assert_no_temporary_file(target)
 
 
+def test_failed_image_replace_preserves_existing_image(
+    client, auth_headers, web_storage, monkeypatch
+):
+    target = web_storage.images / "existing.png"
+    target.write_bytes(b"\x89PNG\r\n\x1a\nold")
+
+    def fail_replace(*args):
+        raise OSError("simulated replacement failure")
+
+    monkeypatch.setattr(atomic_io, "replace", fail_replace)
+    response = client.post(
+        "/api/image",
+        headers=auth_headers,
+        files={"file": ("existing.png", b"\x89PNG\r\n\x1a\nnew", "image/png")},
+    )
+
+    assert response.status_code == 500
+    assert target.read_bytes() == b"\x89PNG\r\n\x1a\nold"
+    assert_no_temporary_file(target)
+
+
 def test_partial_temporary_write_preserves_existing_file(
     web_storage, monkeypatch
 ):

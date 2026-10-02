@@ -18,15 +18,10 @@ def test_publication_create_list_and_delete_lifecycle(
     assert response.status_code == 201
     publication = response.json()
     assert publication["name"] == "hello-world"
-    assert publication["content"] == (
-        "{% extends 'shared/layout.html' %}\n\n"
-        "{% block content %}\n\n"
-        "<h1>Hello</h1>\n\n"
-        "{% endblock %}"
-    )
-    assert (web_storage.pages / "hello-world.html").read_text(encoding="utf-8") == (
-        publication["content"]
-    )
+    assert publication["content"] == "<h1>Hello</h1>"
+    assert (web_storage.pages / "hello-world.html").read_text(
+        encoding="utf-8"
+    ) == publication["content"]
 
     listing = client.get("/api/publishments", headers=auth_headers)
     assert listing.status_code == 200
@@ -164,6 +159,40 @@ def test_image_create_rejects_invalid_filenames(
     assert list(web_storage.images.iterdir()) == []
 
 
+def test_image_create_rejects_content_that_does_not_match_extension(
+    client,
+    auth_headers,
+    web_storage,
+):
+    response = client.post(
+        "/api/image",
+        headers=auth_headers,
+        files={"file": ("not-really.png", b"plain text", "image/png")},
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"detail": "File content does not match its image type."}
+    assert list(web_storage.images.iterdir()) == []
+
+
+def test_image_create_enforces_size_limit(
+    client,
+    auth_headers,
+    web_storage,
+    monkeypatch,
+):
+    monkeypatch.setattr(publish_api, "MAX_IMAGE_BYTES", 8)
+    response = client.post(
+        "/api/image",
+        headers=auth_headers,
+        files={"file": ("large.png", b"\x89PNG\r\n\x1a\nX", "image/png")},
+    )
+
+    assert response.status_code == 413
+    assert response.json() == {"detail": "Image exceeds the 10 MiB limit."}
+    assert list(web_storage.images.iterdir()) == []
+
+
 def test_lists_ignore_unmanaged_files(client, auth_headers, web_storage):
     (web_storage.pages / "managed.html").write_text("managed", encoding="utf-8")
     (web_storage.pages / "README.txt").write_text("ignored", encoding="utf-8")
@@ -183,10 +212,10 @@ def test_publication_storage_failure_returns_server_error(
     web_storage,
     monkeypatch,
 ):
-    def fail_open(*args, **kwargs):
+    async def fail_write(*args, **kwargs):
         raise OSError("simulated storage failure")
 
-    monkeypatch.setattr(publish_api.aiofiles, "open", fail_open)
+    monkeypatch.setattr(publish_api, "atomic_write_text", fail_write)
     response = client.post(
         "/api/publishment",
         headers=auth_headers,
