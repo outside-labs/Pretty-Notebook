@@ -80,6 +80,7 @@ jobs:
           note_path="${RUNNER_TEMP}/pnbp-smoke-notes"
 
           python -m venv "$test_venv"
+          "$test_venv/bin/python" -m pip install --upgrade pip
           "$test_venv/bin/python" -m pip install dist/*.whl
           "$test_venv/bin/python" -c "import pnbp"
           "$test_venv/bin/pnbp" --help

@@ -1,9 +1,10 @@
 pnbp = **"pretty notebook parser"**
 
-> **0.9.0rc1:** The published package supports the Python library and `pnbp`
-> command-line interface on Python 3.11 or newer. Install this release candidate
-> with `python -m pip install pnbp==0.9.0rc1`. See the
-> [release notes](release-0.9.0rc1.md) for migration and support details.
+> **0.9.0:** The published package supports the Python library and `pnbp`
+> command-line interface on Python 3.11 or newer. Install it with
+> `python -m pip install pnbp==0.9.0`. See the
+> [release notes](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/release-0.9.0.md)
+> for migration and support details.
 
 --- 
 
@@ -28,15 +29,20 @@ https://obsidian.md/ is the best example of this in action.
 
 --- 
 
-##### (0) -> ```python -m pip install pnbp==0.9.0rc1```
+##### (0) -> update pip, then install the exact release
+
+```bash
+python -m pip install --upgrade pip
+python -m pip install pnbp==0.9.0
+```
 
 ##### (1) -> [access via the Notebook model](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)
 
 ##### (2) -> [cli commands](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_commands.md)
 
-##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md) *(supported only in the documented single-worker, single-notebook topology on current `main`; not included in the RC wheel)*
+##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md) *(supported only in the documented single-worker, single-notebook topology; not included in the `pnbp` wheel)*
 
-##### (4) -> [“pnano”](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md) *(experimental/unsupported in 0.9.0rc1)*
+##### (4) -> [“pnano”](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md) *(experimental/unsupported in 0.9.0)*
 
 --- 
 
