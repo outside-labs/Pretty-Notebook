@@ -9,7 +9,7 @@ from pathlib import Path
 import requests as requests
 
 from pnbp.settings import load_settings
-from pnbp import _storage, _rendering, _search, _publishing, _identities
+from pnbp import _storage, _rendering, _search, _publishing, _identities, _links
 
 from .note import Note
 
@@ -75,6 +75,15 @@ class Notebook:
 	def identity_status(self, *, limit=200):
 		"""Inspect missing/corrupt identity state and external moves without writing."""
 		return _identities.identity_status(self.NOTE_PATH, limit=limit)
+
+	def graph_index(self):
+		"""Rebuild a read-only graph over all notes, including current pending text."""
+		pending = {note.source_path: note.current_md for note in self.notes.values() if note.md_out is not None and note.source_path}
+		return _links.GraphIndex.from_root(self.NOTE_PATH, pending=pending)
+
+	def resolve_link(self, target, *, source=None):
+		"""Resolve a target without fuzzy matching; inspect state before using path."""
+		return self.graph_index().resolve(target, source=source)
 
 	def export_identities(self):
 		"""Return a portable, independent identity manifest with unchanged UUIDs."""
