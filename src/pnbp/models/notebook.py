@@ -574,6 +574,8 @@ class Notebook:
 		*,
 		prune=False,
 		refresh_images=False,
+		mode="auto",
+		accept_remote=False,
 	):
 		""" the main POST method
 
@@ -581,16 +583,21 @@ class Notebook:
 		:param prune: remove every remote page absent from this notebook
 		:param refresh_images: resend referenced images even when names exist remotely
 		"""
-		return _publishing.post_commits(self, stage_only, prune=prune, refresh_images=refresh_images)
+		return _publishing.post_commits(self, stage_only, prune=prune, refresh_images=refresh_images, mode=mode, accept_remote=accept_remote)
 
-	def publication_plan(self, *, prune=False, refresh_images=False, limit=200, mode="auto"):
+	def publication_plan(self, *, prune=False, refresh_images=False, limit=200, mode="auto", accept_remote=False):
 		"""Preview negotiated publication actions without writing local or remote state."""
-		return _publishing.publication_plan(self, prune=prune, refresh_images=refresh_images, limit=limit, mode=mode)
+		return _publishing.publication_plan(self, prune=prune, refresh_images=refresh_images, limit=limit, mode=mode, accept_remote=accept_remote)
 
-	def prepare_publication(self, *, prune=False, refresh_images=False, mode="checked"):
+	def prepare_publication(self, *, prune=False, refresh_images=False, mode="checked", accept_remote=False):
 		"""Build an immutable checked plan; auto/legacy may return None for a legacy server."""
 		from pnbp import _publication_plan
-		return _publication_plan.prepare(self, prune=prune, refresh_images=refresh_images, mode=mode)
+		return _publication_plan.prepare(self, prune=prune, refresh_images=refresh_images, mode=mode, accept_remote=accept_remote)
+
+	def execute_publication(self, plan):
+		"""Revalidate and execute one immutable plan with checked writes and receipts."""
+		from pnbp import _publication_execute
+		return _publication_execute.execute(self, plan)
 
 	def web_settings_post(self):
 		""" request method to POST layout update 

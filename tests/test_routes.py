@@ -100,6 +100,6 @@ def test_remote_collision_preview_stops_before_uploads_or_prune(tmp_path, monkey
 	monkeypatch.setattr("pnbp._publishing.requests.get", unexpected)
 	monkeypatch.setattr("pnbp._publishing.requests.delete", unexpected)
 	with pytest.raises(ValueError, match="Remote route preview"):
-		nb.post_commits_to_web_api(prune=True)
+		nb.post_commits_to_web_api(prune=True, mode="legacy")
 	assert len(requests) == 1 and requests[0][0].endswith("/api/routes/preview")
 	assert requests[0][1]["json"] == [{"name": "python/example", "aliases": ("/python-example",)}]

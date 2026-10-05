@@ -119,6 +119,7 @@ def test_image_upload_uses_explicit_multipart_metadata_and_closes_file(
 	)
 	(image_path / "photo.png").write_bytes(b"png")
 	notebook = Notebook()
+	notebook.API_BASE = "https://publish.example"
 	uploaded_files = []
 
 	monkeypatch.setattr(
@@ -138,7 +139,7 @@ def test_image_upload_uses_explicit_multipart_metadata_and_closes_file(
 
 	monkeypatch.setattr("pnbp.models.notebook.requests.post", record_post)
 
-	notebook.post_commits_to_web_api()
+	notebook.post_commits_to_web_api(mode="legacy")
 
 	assert len(uploaded_files) == 1
 	assert uploaded_files[0].closed

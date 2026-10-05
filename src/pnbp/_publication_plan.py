@@ -3,7 +3,7 @@
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.metadata import version
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -113,9 +113,10 @@ class ImageAction:
     path: Path = field(repr=False)
     content_type: str
     content: bytes = field(repr=False)
+    detail: str | None = None
 
     def preview(self):
-        return {key: getattr(self, key) for key in ("name", "action", "source_hash", "expected_etag")}
+        return {key: getattr(self, key) for key in ("name", "action", "source_hash", "expected_etag", "detail")}
 
 
 @dataclass(frozen=True)
@@ -130,6 +131,7 @@ class PublicationPlan:
     pages: tuple[PageAction, ...]
     images: tuple[ImageAction, ...]
     prune: bool
+    checkpoint_hash: str | None = None
 
     def preview(self, limit=200):
         if type(limit) is not int or not 1 <= limit <= 200:
@@ -228,7 +230,10 @@ def _image_bytes(path):
     return data
 
 
-def prepare(notebook, *, mode="auto", prune=False, refresh_images=False):
+def prepare(notebook, *, mode="auto", prune=False, refresh_images=False, accept_remote=False):
+    from pnbp import _publication_state as state
+    if any(type(flag) is not bool for flag in (prune, refresh_images, accept_remote)):
+        raise ValueError("Publication control flags must be booleans.")
     notebook._require_clean_notes("plan remote publishing")
     notebook.open_md()
     notes, images = notebook._publication_preflight(include_images=True)
@@ -237,6 +242,7 @@ def prepare(notebook, *, mode="auto", prune=False, refresh_images=False):
     sources, identity_hash = source_snapshot(notebook)
     source_hashes = dict(sources)
     fingerprint = renderer_fingerprint(notebook)
+    checkpoints, checkpoint_hash = state.read(notebook.NOTE_PATH)
     entries = notebook.publication_routes()["routes"]
     routes = {entry["source_path"]: entry for entry in entries}
     server_id, remote, remote_images = read_inventory(notebook)
@@ -276,5 +282,15 @@ def prepare(notebook, *, mode="auto", prune=False, refresh_images=False):
         image_actions.append(ImageAction(name, action, image_hash, current["etag"] if current else None, path, content_type, data))
     if source_snapshot(notebook) != (sources, identity_hash):
         raise ValueError("Notebook changed during publication planning; reload and retry.")
-    return PublicationPlan(str(Path(notebook.NOTE_PATH).resolve()), notebook.notebook_id, identity_hash,
-                           api_target(notebook), server_id, fingerprint, sources, tuple(pages), tuple(image_actions), bool(prune))
+    plan = PublicationPlan(str(Path(notebook.NOTE_PATH).resolve()), notebook.notebook_id, identity_hash,
+                           api_target(notebook), server_id, fingerprint, sources, tuple(pages), tuple(image_actions), prune, checkpoint_hash)
+    saved = state.binding(checkpoints, plan)
+    if saved and not accept_remote:
+        pages = [replace(page, action="conflict", detail="Remote page changed since its last successful receipt; review before accepting remote changes.")
+                 if page.action not in {"preserve", "unchanged", "conflict"} and page.name in saved["pages"]
+                 and page.expected_etag != saved["pages"][page.name]["etag"] else page for page in pages]
+        image_actions = [replace(image, action="conflict", detail="Remote image changed since its last successful receipt; review before accepting remote changes.")
+                         if image.action != "unchanged" and image.name in saved["images"]
+                         and image.expected_etag != saved["images"][image.name]["etag"] else image for image in image_actions]
+        plan = replace(plan, pages=tuple(pages), images=tuple(image_actions))
+    return plan
