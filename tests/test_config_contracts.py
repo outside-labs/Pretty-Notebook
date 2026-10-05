@@ -30,17 +30,30 @@ def test_settings_off_ignores_existing_settings_file(monkeypatch, tmp_path):
 	assert "TITLE" not in nb.config
 
 
-def test_generated_settings_include_required_title(monkeypatch, tmp_path):
+def test_missing_settings_never_prompt_or_write(monkeypatch, tmp_path, capsys):
 	monkeypatch.setenv("NOTE_PATH", str(tmp_path))
 	monkeypatch.delenv("PNBP_SETTINGS", raising=False)
-	monkeypatch.setattr("builtins.input", lambda prompt="": "y")
+	def unexpected_prompt(*args):
+		raise AssertionError("Construction must not prompt")
+	monkeypatch.setattr("builtins.input", unexpected_prompt)
 
 	nb = Notebook()
-	generated = json.loads((tmp_path / "pnbp_settings.json").read_text(encoding="utf-8"))
 
+	assert nb.settings_file is False
+	assert list(tmp_path.iterdir()) == []
+	assert capsys.readouterr().out == ""
+
+
+def test_init_generates_portable_settings_explicitly(monkeypatch, tmp_path):
+	monkeypatch.delenv("PNBP_SETTINGS", raising=False)
+	result = CliRunner().invoke(cli, ["init", str(tmp_path)])
+	generated = json.loads((tmp_path / ".pnbp" / "settings.json").read_text())
+
+	assert result.exit_code == 0, result.output
 	assert "TITLE" in generated
-	assert "TITLE" in nb.config
-	assert S_IMODE((tmp_path / "pnbp_settings.json").stat().st_mode) == 0o600
+	assert "API_TOKEN" not in generated
+	assert Notebook(tmp_path).config["TITLE"] == ""
+	assert not (tmp_path / ".git").exists()
 
 
 def test_commit_settings_uses_remote_by_default_and_local_only_when_requested(monkeypatch):
@@ -103,9 +116,11 @@ def test_refresh_token_redacts_token_output(monkeypatch, tmp_path, capsys):
 	assert nb.API_TOKEN == "new-secret-token"
 	assert "authorization" not in captured["headers"]
 	assert captured["timeout"] == nb.REQUEST_TIMEOUT
-	persisted = json.loads((tmp_path / "pnbp_settings.json").read_text(encoding="utf-8"))
+	persisted = json.loads((tmp_path / ".pnbp" / "secrets.json").read_text(encoding="utf-8"))
 	assert persisted["API_TOKEN"] == "new-secret-token"
-	assert S_IMODE((tmp_path / "pnbp_settings.json").stat().st_mode) == 0o600
+	assert S_IMODE((tmp_path / ".pnbp" / "secrets.json").stat().st_mode) == 0o600
+	assert json.loads((tmp_path / "pnbp_settings.json").read_text()) == settings
+	assert Notebook().API_TOKEN == "new-secret-token"
 
 
 def test_initial_user_creation_sends_bootstrap_secret_without_bearer_none(

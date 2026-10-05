@@ -2,6 +2,8 @@ import os
 import subprocess
 import sys
 import inspect
+import json
+from pathlib import Path
 
 import click
 import requests
@@ -17,12 +19,27 @@ from .commands import tasks
 
 from .models import Notebook
 from .helpers import arrow_call
+from .settings import initialize_notebook, SettingsError
 
 
 
 @click.group()
 def cli():
 	pass
+
+
+@cli.command("init")
+@click.argument("path", type=click.Path(path_type=Path, file_okay=False), default=".")
+@click.option("--migrate", is_flag=True, help="Migrate legacy settings and retain a private original backup.")
+@click.option("--dry-run", is_flag=True, help="Validate and show the plan without creating or changing files.")
+@click.option("--profile", help="Register a named local notebook profile.")
+def init_notebook(path, migrate, dry_run, profile):
+	"""Explicitly create .pnbp/settings.json; never initialize Git."""
+	try:
+		plan = initialize_notebook(path, migrate=migrate, dry_run=dry_run, profile=profile)
+	except (SettingsError, OSError) as error:
+		raise click.ClickException(str(error)) from error
+	click.echo(json.dumps({**plan.to_dict(), "dry_run": dry_run}, indent=2))
 
 
 
@@ -98,7 +115,7 @@ def commit_stage():
 @cli.command()
 @click.option('--local', is_flag=True, default=False, help="post to localhost instead of the configured API_BASE")
 def commit_settings(local):
-	""" commit nb.NOTE_PATH/pnbp_settings.json -> the Pretty-Notebook/apps/web api .../web_settings.json 
+	"""Send configured layout settings to the web API.
 	"""
 	nb = Notebook()
 	
@@ -247,5 +264,3 @@ create_all_commands()
 if __name__ == '__main__':
 	cli()
 	
-
-

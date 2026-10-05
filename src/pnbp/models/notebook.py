@@ -12,6 +12,8 @@ from pathlib import Path
 import markdown as md
 import requests
 
+from pnbp.settings import load_settings, save_api_token
+
 from .note import Note
 
 from .components import Link, Tag, Url, CodeBlock
@@ -84,103 +86,48 @@ def _restore_literals(text, stashed):
 	return text
 
 
+class _NotebookOpen:
+	"""Keep instance reloads compatible while exposing a class-level opener."""
+
+	def __get__(self, instance, owner):
+		return owner._open_path if instance is None else instance.reload
+
 
 class Notebook:
 	""" 
 	"""
-	SKIP_DIRECTORIES = {".git", ".obsidian", "__pycache__"}
+	SKIP_DIRECTORIES = {".git", ".obsidian", ".pnbp", "__pycache__"}
 	PUBLICATION_SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 	PUBLICATION_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 	REQUEST_TIMEOUT = (5, 30)
 
-	def __init__(self):
-
-		self.NOTE_PATH = os.environ.get('NOTE_PATH')
-		self.IMG_PATH = os.environ.get('IMG_PATH')
-		self.HTML_PATH = os.environ.get('HTML_PATH')
-
-		if not self.NOTE_PATH:
-			raise ImportError("required to set NOTE_PATH environment variable to init a Notebook instance!")
-
-		settings_path = os.path.join(self.NOTE_PATH, 'pnbp_settings.json')
-		self.settings_file = False if os.environ.get('PNBP_SETTINGS') == 'off' else settings_path
-
-		if self.settings_file and not os.path.exists(self.settings_file):
-			print("an NOTE_PATH/pnbp_settings.json file not found.")
-			gen_empt = input("generate it from a template? (y/n): ")
-			if gen_empt.lower() == 'y':
-				empty_settings = {
-					"IMG_PATH": "", "HTML_PATH": "", "VENV_PATH": "",
-					"API_BASE": "http://127.0.0.1:8000",
-					"API_TOKEN": "", "PUB_LNK_ONLY": False,
-					"TITLE": "", "NAV_BRAND": "", "NAV_PAGES": {},
-					"FOOTER": "", "darkmode": False,
-					"hljs_light": "default", "hljs_dark": "xt256",
-					"merm_light": "default", "merm_dark": "dark",
-					"COMMIT_TAG": '#public', "EXCLUDE_TAG": '#private',
-					"HIDE_COMMIT_TAG": False,
-				}
-
-				with open(self.settings_file, 'w') as sf:
-					json.dump(empty_settings, sf, indent=4)
-				os.chmod(self.settings_file, 0o600)
-
-				print(
-					f"generated (most empty/default) from template to\n"
-					f"{self.NOTE_PATH}/pnbp_settings.json: \n"
-					f"{json.dumps(empty_settings, indent=4)}"
-				)
-			else:
-				print(
-					"NOTE_PATH/pnbp_settings.json is only soft required, please see "
-					"https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_settings.json "
-					"for example."
-				)
-				print(
-					"Suppress warning+template offer message in the future by setting "
-					"PNBP_SETTINGS environment variable to 'off'."
-				)
-				self.settings_file = False
-
-		if self.settings_file:
-			with open(self.settings_file) as sf:
-				self.config = json.load(sf)
-		else:
-			self.config = {} # lazy handle existance for conf_file=False
-		
-		if not os.environ.get('NOTE_NESTED') in ('flat', 'single', 'recurs', 'all'):
-			self.config['NOTE_NESTED'] = 'flat'
-		else:
-			self.config['NOTE_NESTED'] = os.environ.get('NOTE_NESTED')
-
-		if not self.IMG_PATH:
-			# prefering set environment variable
-			self.IMG_PATH = self.config.get('IMG_PATH')
-
-		if not self.HTML_PATH:
-			# but available to set in self.config 
-			self.HTML_PATH = self.config.get('HTML_PATH')
-
-		self.API_BASE = self.config.get('API_BASE')
-		self.API_TOKEN = self.config.get('API_TOKEN')
-		self.PUB_LNK_ONLY = self.config.get('PUB_LNK_ONLY')
-
-		self.VENV_PATH = self.config.get('VENV_PATH') # see commands/subl.py
-
-		if (tag := self.config.get("COMMIT_TAG")):
-			# overwrite class default:
-			self.COMMIT_TAG = tag
-		else:
-			self.COMMIT_TAG = '#public'
-
-		if (tag := self.config.get("EXCLUDE_TAG")):
-			# ... 
-			self.EXCLUDE_TAG = tag
-		else:
-			self.EXCLUDE_TAG = '#private'
-
+	def __init__(self, path=None, settings=None, *, profile=None, settings_file=None, api_token=None):
+		"""Read a notebook without prompts or initialization writes."""
+		loaded = load_settings(path, settings, profile=profile, settings_file=settings_file, api_token=api_token)
+		self.NOTE_PATH = str(loaded.root)
+		self.settings = loaded.settings
+		self.settings_file = loaded.settings_file
+		self.credentials_file = loaded.credentials_file
+		self.config = loaded.config
+		for name in ("IMG_PATH", "HTML_PATH", "VENV_PATH"):
+			value = getattr(self.settings, name.lower())
+			if value:
+				value = str((loaded.root / Path(value).expanduser()).resolve())
+			setattr(self, name, value)
+		self.API_BASE = self.settings.api_base
+		self.API_TOKEN = loaded.api_token
+		self.PUB_LNK_ONLY = self.settings.pub_lnk_only
+		self.COMMIT_TAG = self.settings.commit_tag
+		self.EXCLUDE_TAG = self.settings.exclude_tag
 		self.notes = {}
 		self.open_md()
+
+	@classmethod
+	def _open_path(cls, path=None, **kwargs):
+		"""Open an existing notebook by path or a registered local profile."""
+		return cls(path, **kwargs)
+
+	open = _NotebookOpen()
 
 	def __len__(self):
 		""" the number of notes """
@@ -345,8 +292,8 @@ class Notebook:
 
 		return self.notes
 
-	def open(self, *, discard_unsaved=False):
-		""" """
+	def reload(self, *, discard_unsaved=False):
+		"""Reload from disk; pending edits require explicit discard authorization."""
 		self.open_md(discard_unsaved=discard_unsaved)
 
 	def _require_clean_notes(self, operation):
@@ -830,16 +777,12 @@ class Notebook:
 			if not isinstance(payload, dict) or 'access_token' not in payload:
 				raise ValueError("Token refresh response did not include access_token.")
 
-			self.API_TOKEN = payload['access_token']
-
-			if self.settings_file:
-				with open(self.settings_file) as sf:
-					config = json.load(sf)
-					config.update({"API_TOKEN": self.API_TOKEN})
-
-				with open(self.settings_file, 'w') as sf:
-					json.dump(config, sf, indent=4)
-				os.chmod(self.settings_file, 0o600)
+			token = payload['access_token']
+			if not isinstance(token, str) or not token:
+				raise ValueError("Token refresh response did not include a nonempty string access_token.")
+			if self.credentials_file is not None:
+				save_api_token(self.credentials_file, token)
+			self.API_TOKEN = token
 
 	def get_authed_user(self):
 		""" request method to get the authenticated user's username 

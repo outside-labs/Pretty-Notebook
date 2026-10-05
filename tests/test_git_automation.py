@@ -118,6 +118,36 @@ def test_commit_excludes_settings_without_gitignore_setup(monkeypatch, tmp_path)
 	assert "?? pnbp_settings.json" in _git(tmp_path, "status", "--short").stdout
 
 
+@pytest.mark.parametrize("nested", [False, True])
+def test_new_credentials_and_migration_backup_never_staged(monkeypatch, tmp_path, nested):
+	_init_repo(tmp_path)
+	root = tmp_path / "notes" if nested else tmp_path
+	root.mkdir(exist_ok=True)
+	(root / "entry.md").write_text("hello\n")
+	(root / ".pnbp").mkdir()
+	for name in ("secrets.json", "legacy-settings.json"):
+		(root / ".pnbp" / name).write_text('{"API_TOKEN": "private"}\n')
+	(root / ".pnbp" / ".secrets-writing.tmp").write_text('{"API_TOKEN": "private"}\n')
+	(root / ".pnbp" / "settings.json").write_text('{"TITLE": "Portable"}\n')
+	notebook = _load_notebook(monkeypatch, root)
+	commit_commands._git_commit_notebook(repo_root=tmp_path if nested else None, nb=notebook)
+	prefix = "notes/" if nested else ""
+	assert set(_git(tmp_path, "ls-files").stdout.splitlines()) == {
+		prefix + "entry.md", prefix + ".pnbp/settings.json",
+	}
+	assert _staged_paths(tmp_path) == ()
+
+
+def test_commit_records_tracked_deletions(monkeypatch, tmp_path):
+	_init_repo(tmp_path)
+	(tmp_path / "old.md").write_text("Original")
+	notebook = _load_notebook(monkeypatch, tmp_path)
+	commit_commands._git_commit_notebook(nb=notebook)
+	(tmp_path / "old.md").unlink()
+	commit_commands._git_commit_notebook(nb=notebook)
+	assert _git(tmp_path, "ls-files").stdout == ""
+
+
 def test_failed_commit_leaves_notebook_changes_unstaged(monkeypatch, tmp_path):
 	_init_repo(tmp_path)
 	(tmp_path / "entry.md").write_text("hello\n", encoding="utf-8")
