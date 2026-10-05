@@ -73,7 +73,7 @@ def test_actual_checked_client_server_hashes_revisions_images_and_noop_retry(not
     notebook.post_commits_to_web_api(mode="checked")
     page, = inventory(client, auth_headers)["pages"]
     assert page["source_hash"] == plans.digest((root / "note.md").read_bytes())
-    assert page["feature_flags"] == ["mermaid"] and page["revision"] == 1
+    assert page["feature_flags"] == ["code", "mermaid"] and page["revision"] == 1
     assert page["rendered_hash"] == plans.digest(notebook.convert_to_html(notebook.notes["note"]).encode())
     assert (web_storage.images / "photo.png").read_bytes() == (Path(notebook.IMG_PATH) / "photo.png").read_bytes()
     receipts = json.loads((root / ".pnbp" / "sync.json").read_text())

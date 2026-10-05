@@ -42,7 +42,7 @@ def _stash_markdown_literals(text):
 	def stash_fence(match):
 		info = match.group("info").strip().split()
 		if info and info[0].lower() == "mermaid":
-			replacement = f'<div class="mermaid">{match.group("body")}</div>'
+			replacement = f'<pre class="mermaid">{escape(match.group("body"))}</pre>'
 			if match.group(0).endswith("\n"):
 				replacement += "\n"
 		else:
