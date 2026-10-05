@@ -9,7 +9,7 @@ from pathlib import Path
 import requests as requests
 
 from pnbp.settings import load_settings
-from pnbp import _storage, _rendering, _search, _publishing
+from pnbp import _storage, _rendering, _search, _publishing, _identities
 
 from .note import Note
 
@@ -50,6 +50,9 @@ class Notebook:
 		self.PUB_LNK_ONLY = self.settings.pub_lnk_only
 		self.COMMIT_TAG = self.settings.commit_tag
 		self.EXCLUDE_TAG = self.settings.exclude_tag
+		self._identity_index = None
+		self._identity_paths = {}
+		self.identity_error = None
 		self.notes = {}
 		self.open_md()
 
@@ -59,6 +62,44 @@ class Notebook:
 		return cls(path, **kwargs)
 
 	open = _NotebookOpen()
+
+	@property
+	def notebook_id(self):
+		return self._identity_index.notebook_id if self._identity_index else None
+
+	def _set_identity_index(self, index):
+		self._identity_index = index
+		self._identity_paths = index.by_path() if index is not None else {}
+		self.identity_error = None
+
+	def identity_status(self, *, limit=200):
+		"""Inspect missing/corrupt identity state and external moves without writing."""
+		return _identities.identity_status(self.NOTE_PATH, limit=limit)
+
+	def export_identities(self):
+		"""Return a portable, independent identity manifest with unchanged UUIDs."""
+		index = _identities.load_index(self.NOTE_PATH)
+		if index is None:
+			raise _identities.IdentityError("Initialize identities before exporting their manifest.")
+		return index.to_dict()
+
+	def initialize_identities(self, *, dry_run=False):
+		"""Explicitly assign identities; discovery never initializes this state."""
+		plan = _identities.initialize_identities(self.NOTE_PATH, dry_run=dry_run)
+		if not dry_run:
+			self._set_identity_index(_identities.load_index(self.NOTE_PATH))
+			for note in self.notes.values():
+				note._identity_record = self._identity_paths.get(note.source_path)
+		return plan
+
+	def fork_identities(self, *, dry_run=False):
+		"""Create a new notebook/note namespace, retaining the previous index."""
+		plan = _identities.fork_identities(self.NOTE_PATH, dry_run=dry_run)
+		if not dry_run:
+			self._set_identity_index(_identities.load_index(self.NOTE_PATH))
+			for note in self.notes.values():
+				note._identity_record = self._identity_paths.get(note.source_path)
+		return plan
 
 	def __len__(self):
 		""" the number of notes """
@@ -117,6 +158,7 @@ class Notebook:
 		:param dict notes: optional destination mapping used during atomic reloads
 		"""
 		note = _storage.read_note(self, f)
+		note._identity_record = self._identity_paths.get(note.source_path)
 		target = self.notes if notes is None else notes
 		target[note.name] = note
 		return note
@@ -137,10 +179,19 @@ class Notebook:
 
 		root = Path(self.NOTE_PATH).expanduser().resolve()
 		loaded_notes = {}
-
-		for path in self._iter_note_files():
-			relative_path = path.relative_to(root)
-			self.open_note(relative_path.as_posix(), notes=loaded_notes)
+		previous = self._identity_index, self._identity_paths, self.identity_error
+		try:
+			try:
+				self._set_identity_index(_identities.load_index(root))
+			except _identities.IdentityError as error:
+				self._set_identity_index(None)
+				self.identity_error = str(error)
+			for path in self._iter_note_files():
+				relative_path = path.relative_to(root)
+				self.open_note(relative_path.as_posix(), notes=loaded_notes)
+		except BaseException:
+			self._identity_index, self._identity_paths, self.identity_error = previous
+			raise
 
 		self.notes = dict(sorted(loaded_notes.items()))
 

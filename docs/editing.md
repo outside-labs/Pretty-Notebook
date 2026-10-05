@@ -61,6 +61,10 @@ pending field is cleared after success. Assign the returned Note to continue
 editing the current saved version. A failed save preserves pending text on the
 original object. A no-op save can return the same object.
 
+In notebooks with [identity metadata](identities.md), saves preserve note IDs and
+update the exact-byte source hash. Index failures retain recoverable Markdown and
+report the required repair; ordinary reads never create identity state.
+
 Use `current_content` or the `current_links`, `current_tags`, `current_urls`, and
 `current_codeblocks` properties for derived views of pending text. These views
 are cached for the exact current Markdown and invalidated whenever `md_out`

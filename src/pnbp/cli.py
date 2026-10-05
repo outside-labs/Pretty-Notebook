@@ -21,6 +21,7 @@ from .commands import tasks
 from .models import Notebook
 from .helpers import arrow_call
 from ._storage import retain_edit_draft
+from . import _identities
 from .settings import initialize_notebook, resolve_notebook_path, SettingsError
 
 
@@ -97,16 +98,57 @@ def _source_text(content, source, *, default=""):
 @click.option("--migrate", is_flag=True, help="Migrate legacy settings and retain a private original backup.")
 @click.option("--dry-run", is_flag=True, help="Validate and show the plan without creating or changing files.")
 @click.option("--profile", help="Register a named local notebook profile.")
+@_command_errors
 def init_notebook(path, migrate, dry_run, profile):
-	"""Explicitly create .pnbp/settings.json; never initialize Git."""
+	"""Explicitly initialize settings and identities; never initialize Git."""
 	try:
 		if path is None:
 			selection = click.get_current_context().find_root().obj["selection"]
 			path = resolve_notebook_path(**selection) if selection else Path(".")
+		initialize_notebook(path, migrate=migrate, dry_run=True, profile=profile)
+		identity_plan = _identities.initialize_identities(path, dry_run=True)
 		plan = initialize_notebook(path, migrate=migrate, dry_run=dry_run, profile=profile)
+		if not dry_run:
+			identity_plan = _identities.initialize_identities(path)
 	except (SettingsError, ImportError, OSError) as error:
 		raise click.ClickException(str(error)) from error
-	click.echo(json.dumps({**plan.to_dict(), "dry_run": dry_run}, indent=2))
+	click.echo(json.dumps({**plan.to_dict(), "identities": identity_plan, "dry_run": dry_run}, indent=2))
+
+
+@cli.group("identity")
+def identity_commands():
+	"""Inspect, reconcile, or deliberately fork local identities."""
+
+
+@identity_commands.command("status")
+@click.option("--json", "output_json", is_flag=True)
+@click.option("--limit", type=click.IntRange(1, 200), default=200)
+@_command_errors
+def identity_status(output_json, limit):
+	nb = _open_notebook()
+	report = nb.identity_status(limit=limit)
+	if output_json:
+		_json_echo(report, nb)
+	else:
+		click.echo(json.dumps(report, ensure_ascii=False, indent=2))
+
+
+@identity_commands.command("reconcile")
+@click.argument("old_path")
+@click.argument("new_path")
+@click.option("--dry-run", is_flag=True)
+@_command_errors
+def reconcile_identity(old_path, new_path, dry_run):
+	nb = _open_notebook()
+	_json_echo(_identities.reconcile_identity(nb.NOTE_PATH, old_path, new_path, dry_run=dry_run), nb)
+
+
+@identity_commands.command("fork")
+@click.option("--dry-run", is_flag=True)
+@_command_errors
+def fork_identity(dry_run):
+	nb = _open_notebook()
+	_json_echo(nb.fork_identities(dry_run=dry_run), nb)
 
 
 @cli.group("note")
@@ -152,7 +194,7 @@ def note_edit(name, content, source):
 	note.md_out = edited
 	try:
 		saved = note.save(nb)
-	except (OSError, RuntimeError) as error:
+	except (OSError, RuntimeError, _identities.IdentityError) as error:
 		try:
 			draft = retain_edit_draft(nb.NOTE_PATH, edited)
 		except OSError:
