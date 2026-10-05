@@ -93,8 +93,8 @@ async def content(request: Request, content: str):
         resolved = await request.app.state.publications.resolve(content)
         if resolved and resolved["canonical_route"] != "/" + content:
             return RedirectResponse(template_content["root_path"] + resolved["canonical_route"], status_code=308)
-        page_content = await request.app.state.publications.read(content)
-        if page_content is None:
+        page = await request.app.state.publications.read_page(content)
+        if page is None:
             raise FileNotFoundError
     except (HTTPException, FileNotFoundError, IsADirectoryError):
         template_content["unavailable_content"] = content
@@ -105,7 +105,8 @@ async def content(request: Request, content: str):
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
-    template_content["page_content"] = page_content
+    template_content["page_content"] = page["body"]
+    template_content["diagram_mode"] = "detect" if page["legacy"] else "required" if "mermaid" in page["feature_flags"] else None
     return templates.TemplateResponse(
         request,
         "shared/published.html",

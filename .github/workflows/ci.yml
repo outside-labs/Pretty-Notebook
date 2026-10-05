@@ -139,6 +139,14 @@ jobs:
           python -m coverage run --source=api,views,main,assets,install_assets -m pytest tests
           python -m coverage report --show-missing --fail-under=90
 
+      - name: Set up JavaScript test runtime
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
+      - name: Check conditional diagram loading
+        run: node --test tests/diagram-loader.test.cjs
+
       - name: Exercise supported deployment command
         env:
           JWT_ALGO: HS256

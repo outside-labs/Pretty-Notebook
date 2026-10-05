@@ -49,14 +49,12 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="{{ assets['bootstrap-js'].url }}" integrity="{{ assets['bootstrap-js'].integrity }}" crossorigin="anonymous"></script>
 
-    <!-- Mermaid JS -->
-    <script src="{{ assets['mermaid-js'].url }}"
-            integrity="{{ assets['mermaid-js'].integrity }}"
-            crossorigin="anonymous"></script>
-    {% if darkmode %}
-    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 100000, 'theme': '{{ merm_dark }}'});</script>
-    {% else %}
-    <script>mermaid.initialize({startOnLoad:true, maxTextSize: 100000, 'theme': '{{ merm_light }}'});</script>
+    {% if diagram_mode %}
+    <script defer src="{{ root_path }}/static/js/diagram-loader.js"
+            data-mermaid-src="{{ assets['mermaid-js'].url }}"
+            data-mermaid-integrity="{{ assets['mermaid-js'].integrity }}"
+            data-mermaid-theme="{{ merm_dark if darkmode else merm_light }}"
+            data-diagram-mode="{{ diagram_mode }}"></script>
     {% endif %}
     
     <!-- highlight JS (Code syntax) -->

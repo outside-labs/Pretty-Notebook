@@ -89,6 +89,17 @@ def test_mermaid_rendering_and_pending_state_survive(notebook):
 
 	rendered = nb.convert_to_html(note)
 
-	assert '<div class="mermaid">' in rendered
+	assert '<pre class="mermaid">' in rendered
 	assert "graph TD" in rendered
 	assert note.md_out == "```mermaid\ngraph TD\nA --> B\n```\n"
+
+
+def test_mermaid_source_is_literal_html_and_readable_without_javascript(notebook):
+	nb = Notebook()
+	note = nb.notes["other"]
+	note.md_out = '```mermaid\ngraph TD\nA["<script>alert(1)</script>"] --> B\n```\n'
+	rendered = nb.convert_to_html(note)
+	assert '<pre class="mermaid">' in rendered
+	assert "&lt;script&gt;alert(1)&lt;/script&gt;" in rendered
+	assert "<script>" not in rendered
+	assert note.md_out.startswith("```mermaid")

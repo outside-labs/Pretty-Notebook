@@ -42,7 +42,7 @@ def test_local_page_and_all_runtime_assets_work_with_network_blocked(web_storage
         page = client.get("/")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert len(urls) == 6
+        assert len(urls) == 5
         assert all(urlsplit(url).netloc == "testserver" for url in urls)
         for entry in client.app.state.assets.entries.values():
             asset = client.get("/static/" + entry["path"])
@@ -61,7 +61,7 @@ def test_explicit_cdn_mode_uses_only_pinned_integrity_checked_entries(web_storag
         page = client.get("/")
         assert page.status_code == 200
         assert all(urlsplit(url).hostname in {"cdn.jsdelivr.net", "cdnjs.cloudflare.com"} for url in RuntimeURLs(page.text).urls)
-        assert page.text.count('integrity="sha384-') == 6
+        assert page.text.count('integrity="sha384-') == 5
         assert "https://cdn.jsdelivr.net" in page.headers["content-security-policy"]
 
 

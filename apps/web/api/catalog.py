@@ -94,7 +94,8 @@ class _Features(HTMLParser):
             self.flags.add("code")
         if tag == "table":
             self.flags.add("table")
-        if "mermaid" in (dict(attrs).get("class") or "").split():
+        classes = (dict(attrs).get("class") or "").split()
+        if "mermaid" in classes or tag == "code" and "language-mermaid" in classes:
             self.flags.add("mermaid")
 
 
@@ -341,16 +342,24 @@ class PublicationStore:
         return rows[0] if rows and rows[0]["visibility"] == "public" else None
 
     async def read(self, name):
+        page = await self.read_page(name)
+        return page["body"] if page else None
+
+    async def read_page(self, name):
+        """Read body and feature metadata from the same immutable revision."""
         note = await self._note(name)
         if note is None:
             legacy = self._legacy(name)
-            return legacy[0] if legacy else None
+            return {"body": legacy[0], "feature_flags": [], "legacy": True} if legacy else None
         if note["visibility"] != "public":
             return None
-        rows = await connections.get("default").execute_query_dict("SELECT body_hash FROM pnbp_revisions WHERE note_id=? AND revision=?", [note["id"], note["current_revision"]])
+        rows = await connections.get("default").execute_query_dict("SELECT body_hash, feature_flags, source_hash, renderer_fingerprint FROM pnbp_revisions WHERE note_id=? AND revision=?", [note["id"], note["current_revision"]])
         if not rows:
             raise RuntimeError("Publication head has no revision; restore a verified backup.")
-        return await asyncio.to_thread(_read_blob, self.blobs, rows[0]["body_hash"])
+        row = rows[0]
+        return {"body": await asyncio.to_thread(_read_blob, self.blobs, row["body_hash"]),
+                "feature_flags": json.loads(row["feature_flags"]),
+                "legacy": row["source_hash"] is None or row["renderer_fingerprint"] is None}
 
     async def inventory(self, *, detailed=False):
         rows = await connections.get("default").execute_query_dict("SELECT n.*, r.source_hash, r.rendered_hash, r.renderer_fingerprint, r.feature_flags, r.published_at FROM pnbp_notes n JOIN pnbp_revisions r ON n.id=r.note_id AND n.current_revision=r.revision ORDER BY n.canonical_route")
