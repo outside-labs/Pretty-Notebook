@@ -5,7 +5,7 @@ from os import chmod
 import fastapi
 import assets
 import web_config
-from api import auth_api, layout_api, publish_api, schema, catalog
+from api import auth_api, layout_api, publish_api, publishing_api, schema, catalog
 from api import forms as forms_api
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.staticfiles import StaticFiles
@@ -120,6 +120,7 @@ def create_app(
         return {"status": "ok"}
 
     app.include_router(publish_api.router)
+    app.include_router(publishing_api.router)
     app.include_router(auth_api.router)
     app.include_router(layout_api.router)
     app.include_router(forms_api.router)
