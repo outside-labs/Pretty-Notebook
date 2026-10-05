@@ -313,13 +313,16 @@ def commit_html():
 	is_flag=True,
 	help='Resend referenced images even when their names already exist remotely.',
 )
-def commit_remote(prune, refresh_images):
+@click.option("--mode", type=click.Choice(["auto", "checked", "legacy"]), default="auto", show_default=True)
+@click.option("--accept-remote", is_flag=True, help="Use reviewed current remote versions after a sync conflict.")
+@_command_errors
+def commit_remote(prune, refresh_images, mode, accept_remote):
 	""" if note contains #public, -> 
 		selective update POST to .../apps/web api
 		@ {API_BASE}/api/publishment
 	"""
 	nb = _open_notebook()
-	_publish_notebook(nb, prune=prune, refresh_images=refresh_images)
+	_publish_notebook(nb, prune=prune, refresh_images=refresh_images, mode=mode, accept_remote=accept_remote)
 
 
 @cli.command()
@@ -333,30 +336,37 @@ def commit_remote(prune, refresh_images):
 	is_flag=True,
 	help='Resend referenced images even when their names already exist remotely.',
 )
-def commit_local(prune, refresh_images):
+@click.option("--mode", type=click.Choice(["auto", "checked", "legacy"]), default="auto", show_default=True)
+@click.option("--accept-remote", is_flag=True, help="Use reviewed current remote versions after a sync conflict.")
+@_command_errors
+def commit_local(prune, refresh_images, mode, accept_remote):
 	""" commit -> localhost .../apps/web instance
 	""" # a convenience command
 	nb = _open_notebook()
 	nb.API_BASE = 'http://127.0.0.1:8000'
-	_publish_notebook(nb, prune=prune, refresh_images=refresh_images)
+	_publish_notebook(nb, prune=prune, refresh_images=refresh_images, mode=mode, accept_remote=accept_remote)
 
 
 @cli.command()
 @click.option("--json", "output_json", is_flag=True)
 @click.option("--limit", type=click.IntRange(1, 200), default=200, show_default=True)
+@click.option("--mode", type=click.Choice(["auto", "checked", "legacy"]), default="auto", show_default=True)
+@click.option("--prune", is_flag=True, help="Preview deletion of unlisted remote pages.")
+@click.option("--refresh-images", is_flag=True)
+@click.option("--accept-remote", is_flag=True, help="Preview using reviewed current remote versions after a sync conflict.")
 @_command_errors
-def commit_stage(output_json, limit):
+def commit_stage(output_json, limit, mode, prune, refresh_images, accept_remote):
 	""" *only* print commit- changes against nb.API_BASE
 		to the terminal (staging view)
 	"""
 	nb = _open_notebook()
 	if output_json:
 		try:
-			_json_echo(nb.publication_plan(limit=limit), nb)
+			_json_echo(nb.publication_plan(limit=limit, mode=mode, prune=prune, refresh_images=refresh_images, accept_remote=accept_remote), nb)
 		except requests.RequestException as error:
 			raise click.ClickException("Could not read the remote publication inventory.") from error
 	else:
-		_publish_notebook(nb, stage_only=True)
+		_publish_notebook(nb, stage_only=True, mode=mode, prune=prune, refresh_images=refresh_images, accept_remote=accept_remote)
 
 
 @cli.command()

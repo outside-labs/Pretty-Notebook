@@ -23,11 +23,11 @@ def _remote_route_preview(notebook):
 	return preview
 
 
-def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200, mode="auto"):
+def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200, mode="auto", accept_remote=False):
 	from pnbp import _publication_plan
 	if type(limit) is not int or not 1 <= limit <= 200:
 		raise ValueError("Publication plan limit must be 1-200.")
-	plan = _publication_plan.prepare(notebook, mode=mode, prune=prune, refresh_images=refresh_images)
+	plan = _publication_plan.prepare(notebook, mode=mode, prune=prune, refresh_images=refresh_images, accept_remote=accept_remote)
 	if plan is not None:
 		return plan.preview(limit)
 	return _legacy_publication_plan(notebook, prune=prune, refresh_images=refresh_images, limit=limit)
@@ -97,7 +97,7 @@ def headers(notebook):
 def request(notebook, method, path, **kwargs):
 	"""Send one checked API request with a finite connection/read timeout."""
 	kwargs.setdefault('timeout', notebook.REQUEST_TIMEOUT)
-	response = method(f'{notebook.API_BASE}{path}', **kwargs)
+	response = method(f'{notebook.API_BASE.rstrip("/")}{path}', **kwargs)
 	response.raise_for_status()
 	return response
 
@@ -216,7 +216,23 @@ def delete_unlisted_post(notebook, rname):
 	return r
 
 
-def post_commits(
+def post_commits(notebook, stage_only=False, *, prune=False, refresh_images=False, mode="auto", accept_remote=False):
+	from pnbp import _publication_plan, _publication_execute
+	plan = _publication_plan.prepare(notebook, mode=mode, prune=prune, refresh_images=refresh_images, accept_remote=accept_remote)
+	if plan is None:
+		return _legacy_post_commits(notebook, stage_only, prune=prune, refresh_images=refresh_images)
+	if stage_only:
+		preview = plan.preview()
+		for action in (*preview["pages"], *preview["images"]):
+			print(f'{action["action"]}: {action["name"]}')
+		return preview
+	result = _publication_execute.execute(notebook, plan)
+	for action in (*result["pages"], *result["images"]):
+		print(f'{action["action"]}: {action["name"]}')
+	return result
+
+
+def _legacy_post_commits(
 	notebook,
 	stage_only=False,
 	*,

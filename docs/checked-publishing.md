@@ -65,3 +65,41 @@ images. Image signatures and size limits are validated before mutation.
 Planning reads capabilities, inventory, and the non-mutating route preview. It
 does not create identities, sync receipts, output directories, or remote content.
 The legacy preview retains its timestamp limits and cannot promise checked writes.
+
+## Execution and recovery
+
+`nb.execute_publication(plan)` revalidates the plan's root, target, notebook,
+settings, identities, every Markdown source, images, rendered output, saved
+checkpoint, and remote heads before writing. Images upload before pages. Every
+mutation uses its planned strong ETag or a create-only precondition. The client
+stops after any error and performs explicit pruning only after all uploads succeed
+and the local snapshot is checked again.
+
+`nb.post_commits_to_web_api()` negotiates and executes a fresh plan. Its
+`stage_only=True` option returns a read-only preview. Remote pages remain preserved
+by default. Receipts live in private `.pnbp/sync.json`, grouped by target and server
+notebook identity. Each successful action is recorded by atomic replacement under
+a short exclusive local write lock; failed actions never get successful receipts.
+Successful no-op execution can adopt matching remote representations. Dry-run
+does not write this state.
+
+After partial success, retry with a fresh plan. Matching acknowledged content is
+skipped. A committed write whose response or local checkpoint was lost can also be
+recovered from matching source/rendered/fingerprint hashes in the authoritative
+inventory. Review interrupted `.pnbp/sync.lock` files before retrying; do not remove
+a lock belonging to a live write. Corrupt state, changed notebook identity, or a
+different server notebook requires review of the target's checkpoint entry.
+
+Remote edits or deletes since the last receipt become plan conflicts. Review
+`nb.publication_plan()` before explicitly choosing `accept_remote=True` to publish
+against the current remote versions. This choice still requires fresh checked
+ETags and never bypasses concurrent-write protection. A newly appearing remote
+page after a plan was prepared also requires replanning. Shared ownership and
+shared pruning remain outside this protocol until PUB-04.
+
+The CLI supports `--mode auto|checked|legacy` on `commit-stage`, `commit-remote`,
+and `commit-local`. Preview with `pnbp commit-stage --json --mode checked --prune`;
+publish with `pnbp commit-remote --mode checked`. After reviewing a remote conflict,
+`--accept-remote` selects its current checked versions. `--prune` is always explicit
+and requires sole ownership of the target's page namespace. Legacy mode retains
+its 0.9 timestamp and concurrency limits.

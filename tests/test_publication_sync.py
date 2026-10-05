@@ -49,6 +49,8 @@ def remote_inventory(publications=None, images=None, calls=None):
 	def fake_get(url, **kwargs):
 		if calls is not None:
 			calls.append(("get", url, kwargs))
+		if url.endswith("/api/publishing/capabilities"):
+			return FakeResponse(status_code=404)
 		if url.endswith("/api/publishments"):
 			return FakeResponse(publications)
 		if url.endswith("/api/images"):
