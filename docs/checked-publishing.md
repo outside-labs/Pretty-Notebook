@@ -39,3 +39,29 @@ format and the same create/update preconditions. Inventory hashes and image ETag
 describe exact bytes. Legacy and checked uploads share a process lock around
 comparison and atomic replacement. Existing image validation and size bounds
 apply. Inventory responses and every publishing API response use `no-store`.
+
+## Local plans
+
+`nb.publication_plan()` returns a bounded JSON-compatible dry-run. Its default
+`mode="auto"` negotiates checked publishing and falls back only for a capabilities
+404. Use `mode="checked"` to require the revision protocol or `mode="legacy"` to
+explicitly use the 0.9 timestamp preview. Authentication, malformed capabilities,
+and transport/server errors never trigger a downgrade.
+
+`nb.prepare_publication()` returns an immutable checked plan. It binds the local
+root, optional notebook UUID, identity metadata, exact source snapshots, server
+notebook UUID, target URL, renderer fingerprint, and expected ETags. Passing
+`mode="auto"` or `"legacy"` may return `None`, indicating a legacy server.
+`plan.preview(limit=200)` omits source/HTML/image bodies and credentials.
+
+Checked plans compare SHA-256 hashes of exact Markdown and image bytes, the actual
+UTF-8 rendered HTML, and a fingerprint of renderer versions, code, and settings.
+Changed timestamps alone do not publish. Changed bytes, renderer settings, link
+resolution, titles, and new aliases can require an update. Remote pages are
+preserved unless `prune=True`; missing checked revisions and route collisions
+produce explicit conflicts. `refresh_images=True` explicitly resends matching
+images. Image signatures and size limits are validated before mutation.
+
+Planning reads capabilities, inventory, and the non-mutating route preview. It
+does not create identities, sync receipts, output directories, or remote content.
+The legacy preview retains its timestamp limits and cannot promise checked writes.

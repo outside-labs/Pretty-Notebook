@@ -23,7 +23,17 @@ def _remote_route_preview(notebook):
 	return preview
 
 
-def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
+def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200, mode="auto"):
+	from pnbp import _publication_plan
+	if type(limit) is not int or not 1 <= limit <= 200:
+		raise ValueError("Publication plan limit must be 1-200.")
+	plan = _publication_plan.prepare(notebook, mode=mode, prune=prune, refresh_images=refresh_images)
+	if plan is not None:
+		return plan.preview(limit)
+	return _legacy_publication_plan(notebook, prune=prune, refresh_images=refresh_images, limit=limit)
+
+
+def _legacy_publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
 	if type(limit) is not int or not 1 <= limit <= 200:
 		raise ValueError("Publication plan limit must be 1-200.")
 	notebook._require_clean_notes("preview remote commits")

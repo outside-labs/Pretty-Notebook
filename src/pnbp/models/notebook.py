@@ -583,9 +583,14 @@ class Notebook:
 		"""
 		return _publishing.post_commits(self, stage_only, prune=prune, refresh_images=refresh_images)
 
-	def publication_plan(self, *, prune=False, refresh_images=False, limit=200):
-		"""Preview bounded legacy publication actions without writing local or remote state."""
-		return _publishing.publication_plan(self, prune=prune, refresh_images=refresh_images, limit=limit)
+	def publication_plan(self, *, prune=False, refresh_images=False, limit=200, mode="auto"):
+		"""Preview negotiated publication actions without writing local or remote state."""
+		return _publishing.publication_plan(self, prune=prune, refresh_images=refresh_images, limit=limit, mode=mode)
+
+	def prepare_publication(self, *, prune=False, refresh_images=False, mode="checked"):
+		"""Build an immutable checked plan; auto/legacy may return None for a legacy server."""
+		from pnbp import _publication_plan
+		return _publication_plan.prepare(self, prune=prune, refresh_images=refresh_images, mode=mode)
 
 	def web_settings_post(self):
 		""" request method to POST layout update 

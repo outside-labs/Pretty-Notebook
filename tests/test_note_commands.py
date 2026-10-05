@@ -135,6 +135,14 @@ def test_search_and_status_json_are_quiet_bounded_and_redacted(notes, monkeypatc
 
 
 def test_legacy_publication_json_reads_only_and_reports_truncation(notes, monkeypatch):
+	import requests
+	monkeypatch.setenv("API_BASE", "https://publish.example")
+	def legacy_capabilities(self, method, path, **kwargs):
+		assert method is requests.get and path == "/api/publishing/capabilities"
+		response = requests.Response()
+		response.status_code = 404
+		response.raise_for_status()
+	monkeypatch.setattr(Notebook, "_api_request", legacy_capabilities)
 	(notes / "example.md").write_text("#public\nBody")
 	reads = []
 	def pages(self):
