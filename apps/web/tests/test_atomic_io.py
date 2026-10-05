@@ -4,14 +4,14 @@ from stat import S_IMODE
 from threading import Event
 
 import pytest
-from api import atomic_io
+from api import atomic_io, catalog
 
 
 def assert_no_temporary_file(target):
     assert list(target.parent.glob(f".{target.name}.*.tmp")) == []
 
 
-def test_failed_publication_replace_preserves_existing_page(
+def test_failed_publication_blob_write_preserves_existing_page(
     client, auth_headers, web_storage, monkeypatch
 ):
     target = web_storage.pages / "existing.html"
@@ -20,7 +20,7 @@ def test_failed_publication_replace_preserves_existing_page(
     def fail_replace(*args):
         raise OSError("simulated replacement failure")
 
-    monkeypatch.setattr(atomic_io, "replace", fail_replace)
+    monkeypatch.setattr(catalog.os, "link", fail_replace)
     response = client.post(
         "/api/publishment",
         headers=auth_headers,
@@ -30,6 +30,8 @@ def test_failed_publication_replace_preserves_existing_page(
     assert response.status_code == 500
     assert target.read_text(encoding="utf-8") == "old page"
     assert_no_temporary_file(target)
+    assert "old page" in client.get("/existing").text
+    assert list((web_storage.pages / ".blobs").glob(".body-*.tmp")) == []
 
 
 def test_failed_layout_replace_preserves_existing_settings(

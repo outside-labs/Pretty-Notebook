@@ -1,20 +1,21 @@
 import datetime
-import re
 from pathlib import Path
 from typing import Annotated
 
 import fastapi
-from fastapi import Depends, File, HTTPException, UploadFile
+from fastapi import Depends, File, HTTPException, UploadFile, Request
 from pydantic import BaseModel, Field
 from web_config import IMAGES_PATH, PAGES_PATH
 
-from .atomic_io import atomic_write_bytes, atomic_write_text
+from .atomic_io import atomic_write_bytes
 from .auth_api import get_current_user
+from .catalog import SLUG_PATTERN
+from .catalog import publication_body as publication_body
+from .catalog import LEGACY_PAGE_PREFIX as LEGACY_PAGE_PREFIX, LEGACY_PAGE_SUFFIX as LEGACY_PAGE_SUFFIX
 
 router = fastapi.APIRouter()
 
 PUB_PATH = PAGES_PATH
-SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 MAX_PUBLICATION_CHARS = 2_000_000
 
 IMG_PATH = IMAGES_PATH
@@ -29,10 +30,6 @@ IMAGE_SIGNATURES = {
         len(content) >= 12 and content.startswith(b"RIFF") and content[8:12] == b"WEBP"
     ),
 }
-
-LEGACY_PAGE_PREFIX = "{% extends 'shared/layout.html' %}\n\n{% block content %}\n\n"
-LEGACY_PAGE_SUFFIX = "\n\n{% endblock %}"
-
 
 class Publishment(BaseModel):
     name: str = Field(max_length=200)
@@ -52,11 +49,10 @@ def publication_path(name: str) -> Path:
     return target
 
 
-async def add_publishment(name: str, content: str) -> Publishment:
+async def add_publishment(name: str, content: str, *, store) -> Publishment:
     """Store owner-authored HTML as data, never as executable Jinja source."""
-    target = publication_path(name)
-
-    await atomic_write_text(target, content)
+    publication_path(name)
+    await store.publish(name, content)
 
     pub = Publishment(
         name=name,
@@ -66,13 +62,6 @@ async def add_publishment(name: str, content: str) -> Publishment:
     return pub
 
 
-def publication_body(content: str) -> str:
-    """Read legacy wrapped pages without compiling their contents as Jinja."""
-    if content.startswith(LEGACY_PAGE_PREFIX) and content.endswith(LEGACY_PAGE_SUFFIX):
-        return content[len(LEGACY_PAGE_PREFIX) : -len(LEGACY_PAGE_SUFFIX)]
-    return content
-
-
 @router.post(
     "/api/publishment",
     name="add_pub",
@@ -80,12 +69,12 @@ def publication_body(content: str) -> str:
     response_model=Publishment,
     dependencies=[Depends(get_current_user)],
 )  # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
-async def publishment_post(pub_submittal: Publishment):
+async def publishment_post(pub_submittal: Publishment, request: Request):
     """Store a publication."""
     n = pub_submittal.name
     c = pub_submittal.content
 
-    return await add_publishment(n, c)
+    return await add_publishment(n, c, store=request.app.state.publications)
 
 
 def image_path(filename: str | None) -> Path:
@@ -134,19 +123,9 @@ async def image_post(file: Annotated[UploadFile, File(...)]):
 
 
 @router.get("/api/publishments", dependencies=[Depends(get_current_user)])
-async def publishments_get() -> list:
+async def publishments_get(request: Request) -> list:
     """Publishments Get"""
-    pub_names = sorted(Path.iterdir(PUB_PATH), key=lambda path: path.name)
-    pub_data = []
-    for p in pub_names:
-        if p.is_file() and p.suffix.lower() == ".html":
-            mod_date = datetime.datetime.fromtimestamp(
-                p.stat().st_mtime,
-                tz=datetime.UTC,
-            )
-            pub_data.append({"pub_name": p.name, "mod_date": mod_date})
-
-    return pub_data
+    return await request.app.state.publications.inventory()
 
 
 @router.get("/api/images", dependencies=[Depends(get_current_user)])
@@ -166,7 +145,7 @@ async def images_get() -> list:
 
 
 @router.delete("/api/publishment/{pub_name}", dependencies=[Depends(get_current_user)])
-async def publishment_delete(pub_name: str):
+async def publishment_delete(pub_name: str, request: Request):
     """Publishment Delete"""
     supplied = Path(pub_name)
 
@@ -175,9 +154,7 @@ async def publishment_delete(pub_name: str):
 
     target = publication_path(supplied.stem)
 
-    if not target.is_file():
+    if not await request.app.state.publications.delete(supplied.stem):
         raise HTTPException(404, "Publication not found.")
-
-    target.unlink()
 
     return {"pub_name": target.name}

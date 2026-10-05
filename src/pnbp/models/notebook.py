@@ -1,186 +1,128 @@
-import os
 import re
-import json
-import getpass
 import difflib
 import mimetypes
 import random
 
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterator
 from pathlib import Path
 
-import markdown as md
-import requests
+import requests as requests
+
+from pnbp.settings import load_settings
+from pnbp import _storage, _rendering, _search, _publishing, _identities, _links, _moves, _journal
 
 from .note import Note
 
-from .components import Link, Tag, Url, CodeBlock
-
-from pnbp.helpers import _convert_datetime
+from .components import Link
 
 
-_FENCED_LITERAL = re.compile(
-	r"^(?P<indent>[ ]{0,3})(?P<fence>`{3,}|~{3,})(?P<info>[^\n]*)\n"
-	r"(?P<body>.*?)"
-	r"^(?P=indent)(?P=fence)[ \t]*(?:\n|$)",
-	re.MULTILINE | re.DOTALL,
-)
-_INLINE_LITERAL = re.compile(
-	r"(?<!`)(?P<fence>`+)(?!`)(?P<body>.+?)(?P=fence)(?!`)",
-	re.DOTALL,
-)
-_HTML_LITERAL = re.compile(
-	r"<div class=(?:\"|')mermaid(?:\"|')[^>]*>.*?</div>"
-	r"|<pre\b[^>]*>.*?</pre>"
-	r"|<code\b[^>]*>.*?</code>",
-	re.IGNORECASE | re.DOTALL,
-)
 
+class _NotebookOpen:
+	"""Keep instance reloads compatible while exposing a class-level opener."""
 
-def _stash_literal(text, stashed, value):
-	index = len(stashed)
-	token = f"PNBPLITERAL{index}TOKEN"
-	while token in text or token in stashed:
-		index += 1
-		token = f"PNBPLITERAL{index}TOKEN"
-	stashed[token] = value
-	return token
-
-
-def _stash_markdown_literals(text):
-	stashed = {}
-
-	def stash_fence(match):
-		info = match.group("info").strip().split()
-		if info and info[0].lower() == "mermaid":
-			replacement = f'<div class="mermaid">{match.group("body")}</div>'
-			if match.group(0).endswith("\n"):
-				replacement += "\n"
-		else:
-			replacement = match.group(0)
-		return _stash_literal(text, stashed, replacement)
-
-	protected = _FENCED_LITERAL.sub(stash_fence, text)
-
-	def stash_inline(match):
-		return _stash_literal(text, stashed, match.group(0))
-
-	protected = _INLINE_LITERAL.sub(stash_inline, protected)
-	return protected, stashed
-
-
-def _stash_html_literals(text):
-	stashed = {}
-
-	def stash(match):
-		return _stash_literal(text, stashed, match.group(0))
-
-	return _HTML_LITERAL.sub(stash, text), stashed
-
-
-def _restore_literals(text, stashed):
-	for token, literal in stashed.items():
-		text = text.replace(token, literal)
-	return text
-
+	def __get__(self, instance, owner):
+		return owner._open_path if instance is None else instance.reload
 
 
 class Notebook:
 	""" 
 	"""
-	SKIP_DIRECTORIES = {".git", ".obsidian", "__pycache__"}
+	SKIP_DIRECTORIES = {".git", ".obsidian", ".pnbp", "__pycache__"}
 	PUBLICATION_SLUG_PATTERN = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
 	PUBLICATION_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
 	REQUEST_TIMEOUT = (5, 30)
 
-	def __init__(self):
-
-		self.NOTE_PATH = os.environ.get('NOTE_PATH')
-		self.IMG_PATH = os.environ.get('IMG_PATH')
-		self.HTML_PATH = os.environ.get('HTML_PATH')
-
-		if not self.NOTE_PATH:
-			raise ImportError("required to set NOTE_PATH environment variable to init a Notebook instance!")
-
-		settings_path = os.path.join(self.NOTE_PATH, 'pnbp_settings.json')
-		self.settings_file = False if os.environ.get('PNBP_SETTINGS') == 'off' else settings_path
-
-		if self.settings_file and not os.path.exists(self.settings_file):
-			print("an NOTE_PATH/pnbp_settings.json file not found.")
-			gen_empt = input("generate it from a template? (y/n): ")
-			if gen_empt.lower() == 'y':
-				empty_settings = {
-					"IMG_PATH": "", "HTML_PATH": "", "VENV_PATH": "",
-					"API_BASE": "http://127.0.0.1:8000",
-					"API_TOKEN": "", "PUB_LNK_ONLY": False,
-					"TITLE": "", "NAV_BRAND": "", "NAV_PAGES": {},
-					"FOOTER": "", "darkmode": False,
-					"hljs_light": "default", "hljs_dark": "xt256",
-					"merm_light": "default", "merm_dark": "dark",
-					"COMMIT_TAG": '#public', "EXCLUDE_TAG": '#private',
-					"HIDE_COMMIT_TAG": False,
-				}
-
-				with open(self.settings_file, 'w') as sf:
-					json.dump(empty_settings, sf, indent=4)
-				os.chmod(self.settings_file, 0o600)
-
-				print(
-					f"generated (most empty/default) from template to\n"
-					f"{self.NOTE_PATH}/pnbp_settings.json: \n"
-					f"{json.dumps(empty_settings, indent=4)}"
-				)
-			else:
-				print(
-					"NOTE_PATH/pnbp_settings.json is only soft required, please see "
-					"https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_settings.json "
-					"for example."
-				)
-				print(
-					"Suppress warning+template offer message in the future by setting "
-					"PNBP_SETTINGS environment variable to 'off'."
-				)
-				self.settings_file = False
-
-		if self.settings_file:
-			with open(self.settings_file) as sf:
-				self.config = json.load(sf)
-		else:
-			self.config = {} # lazy handle existance for conf_file=False
-		
-		if not os.environ.get('NOTE_NESTED') in ('flat', 'single', 'recurs', 'all'):
-			self.config['NOTE_NESTED'] = 'flat'
-		else:
-			self.config['NOTE_NESTED'] = os.environ.get('NOTE_NESTED')
-
-		if not self.IMG_PATH:
-			# prefering set environment variable
-			self.IMG_PATH = self.config.get('IMG_PATH')
-
-		if not self.HTML_PATH:
-			# but available to set in self.config 
-			self.HTML_PATH = self.config.get('HTML_PATH')
-
-		self.API_BASE = self.config.get('API_BASE')
-		self.API_TOKEN = self.config.get('API_TOKEN')
-		self.PUB_LNK_ONLY = self.config.get('PUB_LNK_ONLY')
-
-		self.VENV_PATH = self.config.get('VENV_PATH') # see commands/subl.py
-
-		if (tag := self.config.get("COMMIT_TAG")):
-			# overwrite class default:
-			self.COMMIT_TAG = tag
-		else:
-			self.COMMIT_TAG = '#public'
-
-		if (tag := self.config.get("EXCLUDE_TAG")):
-			# ... 
-			self.EXCLUDE_TAG = tag
-		else:
-			self.EXCLUDE_TAG = '#private'
-
+	def __init__(self, path=None, settings=None, *, profile=None, settings_file=None, api_token=None):
+		"""Read a notebook without prompts or initialization writes."""
+		loaded = load_settings(path, settings, profile=profile, settings_file=settings_file, api_token=api_token)
+		self.NOTE_PATH = str(loaded.root)
+		self.settings = loaded.settings
+		self.settings_file = loaded.settings_file
+		self.credentials_file = loaded.credentials_file
+		self.config = loaded.config
+		for name in ("IMG_PATH", "HTML_PATH", "VENV_PATH"):
+			value = getattr(self.settings, name.lower())
+			if value:
+				value = str((loaded.root / Path(value).expanduser()).resolve())
+			setattr(self, name, value)
+		self.API_BASE = self.settings.api_base
+		self.API_TOKEN = loaded.api_token
+		self.PUB_LNK_ONLY = self.settings.pub_lnk_only
+		self.COMMIT_TAG = self.settings.commit_tag
+		self.EXCLUDE_TAG = self.settings.exclude_tag
+		self._identity_index = None
+		self._identity_paths = {}
+		self.identity_error = None
 		self.notes = {}
 		self.open_md()
+
+	@classmethod
+	def _open_path(cls, path=None, **kwargs):
+		"""Open an existing notebook by path or a registered local profile."""
+		return cls(path, **kwargs)
+
+	open = _NotebookOpen()
+
+	@property
+	def notebook_id(self):
+		return self._identity_index.notebook_id if self._identity_index else None
+
+	def _set_identity_index(self, index):
+		self._identity_index = index
+		self._identity_paths = index.by_path() if index is not None else {}
+		self.identity_error = None
+
+	def identity_status(self, *, limit=200):
+		"""Inspect missing/corrupt identity state and external moves without writing."""
+		return _identities.identity_status(self.NOTE_PATH, limit=limit)
+
+	def graph_index(self):
+		"""Rebuild a read-only graph over all notes, including current pending text."""
+		pending = {note.source_path: note.current_md for note in self.notes.values() if note.md_out is not None and note.source_path}
+		return _links.GraphIndex.from_root(self.NOTE_PATH, pending=pending)
+
+	def resolve_link(self, target, *, source=None):
+		"""Resolve a target without fuzzy matching; inspect state before using path."""
+		return self.graph_index().resolve(target, source=source)
+
+	def rename_note(self, source, new_name, *, dry_run=False):
+		"""Rename within the source directory, preserving identity and backlinks."""
+		return _moves.move_note(self, source, new_name, rename=True, dry_run=dry_run)
+
+	def move_note(self, source, destination, *, dry_run=False):
+		"""Move to a notebook-relative path using a checked, recoverable journal."""
+		return _moves.move_note(self, source, destination, dry_run=dry_run)
+
+	def move_operations(self, *, limit=200):
+		return _journal.operations(self.NOTE_PATH, limit=limit)
+
+	def recover_move(self, operation_id, *, action="resume", dry_run=False):
+		return _moves.recover_move(self, operation_id, action=action, dry_run=dry_run)
+
+	def export_identities(self):
+		"""Return a portable, independent identity manifest with unchanged UUIDs."""
+		index = _identities.load_index(self.NOTE_PATH)
+		if index is None:
+			raise _identities.IdentityError("Initialize identities before exporting their manifest.")
+		return index.to_dict()
+
+	def initialize_identities(self, *, dry_run=False):
+		"""Explicitly assign identities; discovery never initializes this state."""
+		plan = _identities.initialize_identities(self.NOTE_PATH, dry_run=dry_run)
+		if not dry_run:
+			self._set_identity_index(_identities.load_index(self.NOTE_PATH))
+			for note in self.notes.values():
+				note._identity_record = self._identity_paths.get(note.source_path)
+		return plan
+
+	def fork_identities(self, *, dry_run=False):
+		"""Create a new notebook/note namespace, retaining the previous index."""
+		plan = _identities.fork_identities(self.NOTE_PATH, dry_run=dry_run)
+		if not dry_run:
+			self._set_identity_index(_identities.load_index(self.NOTE_PATH))
+			for note in self.notes.values():
+				note._identity_record = self._identity_paths.get(note.source_path)
+		return plan
 
 	def __len__(self):
 		""" the number of notes """
@@ -231,94 +173,18 @@ class Notebook:
 			directory, a "single", or full "recur"(sive) path, 
 			including (if advised, not by default) "all" (i.e. incl. hidden)
 		"""
-		root = Path(self.NOTE_PATH).expanduser().resolve()
-		mode = self.config.get("NOTE_NESTED", "flat")
-		include_hidden = mode == "all"
-
-		if mode not in {"flat", "single", "recurs", "all"}:
-			raise ValueError(f"Unknown NOTE_NESTED mode: {mode!r}")
-
-		def markdown_files(directory: Path) -> list[Path]:
-			return sorted(
-				path
-				for path in directory.iterdir()
-				if path.is_file() and path.suffix.lower() == ".md"
-			)
-
-		def child_directories(directory: Path) -> list[Path]:
-			return sorted(
-				path
-				for path in directory.iterdir()
-				if (
-					path.is_dir()
-					and not path.is_symlink()
-					and path.name not in self.SKIP_DIRECTORIES
-					and (include_hidden or not path.name.startswith("."))
-				)
-			)
-
-		yield from markdown_files(root)
-
-		if mode == "flat":
-			return
-
-		first_level = child_directories(root)
-
-		if mode == "single":
-			for directory in first_level:
-				yield from markdown_files(directory)
-			return
-
-		pending = list(reversed(first_level))
-
-		while pending:
-			directory = pending.pop()
-			yield from markdown_files(directory)
-			pending.extend(reversed(child_directories(directory)))
+		return _storage.iter_note_files(self)
 
 	def open_note(self, f, *, notes=None):
 		""" 
 		:param str f: the .md note to open
 		:param dict notes: optional destination mapping used during atomic reloads
 		"""
-		root = Path(self.NOTE_PATH).expanduser().resolve()
-		raw_path = f"{f.name}.md" if isinstance(f, Note) else f
-		path = Path(raw_path).expanduser()
-
-		if not path.is_absolute():
-			path = root / path
-
-		path = path.resolve()
-
-		try:
-			relative_path = path.relative_to(root)
-		except ValueError as e:
-			raise ValueError("Note path escapes NOTE_PATH") from e
-
-		if path.suffix.lower() != ".md":
-			raise ValueError(f"Not a Markdown note: {path}")
-
-		text = path.read_text(encoding="utf-8")
-		file_stat = path.stat()
-		note_name = relative_path.with_suffix("").as_posix()
-
-		n = Note(
-			name=note_name,
-			md=text,
-			links=[m.strip() for m in re.findall(Link.MDS_INT_LNK, text)],
-			tags=Tag.collect_tags(text),
-			urls=Url.collect_urls(text),
-			codeblocks=re.findall(CodeBlock.MD_CODE, text),
-			mtime=_convert_datetime(file_stat.st_mtime, as_mtime=True),
-			)
-		n.source_path = relative_path.as_posix()
-		n._source_exists = True
-		n._source_signature = Note._stat_signature(file_stat)
-
+		note = _storage.read_note(self, f)
+		note._identity_record = self._identity_paths.get(note.source_path)
 		target = self.notes if notes is None else notes
-		target[note_name] = n
-
-		return n
+		target[note.name] = note
+		return note
 
 	def open_md(self, *, discard_unsaved=False)->dict:
 		""" open all .md files from the self.NOTE_PATH path
@@ -336,17 +202,26 @@ class Notebook:
 
 		root = Path(self.NOTE_PATH).expanduser().resolve()
 		loaded_notes = {}
-
-		for path in self._iter_note_files():
-			relative_path = path.relative_to(root)
-			self.open_note(relative_path.as_posix(), notes=loaded_notes)
+		previous = self._identity_index, self._identity_paths, self.identity_error
+		try:
+			try:
+				self._set_identity_index(_identities.load_index(root))
+			except _identities.IdentityError as error:
+				self._set_identity_index(None)
+				self.identity_error = str(error)
+			for path in self._iter_note_files():
+				relative_path = path.relative_to(root)
+				self.open_note(relative_path.as_posix(), notes=loaded_notes)
+		except BaseException:
+			self._identity_index, self._identity_paths, self.identity_error = previous
+			raise
 
 		self.notes = dict(sorted(loaded_notes.items()))
 
 		return self.notes
 
-	def open(self, *, discard_unsaved=False):
-		""" """
+	def reload(self, *, discard_unsaved=False):
+		"""Reload from disk; pending edits require explicit discard authorization."""
 		self.open_md(discard_unsaved=discard_unsaved)
 
 	def _require_clean_notes(self, operation):
@@ -365,68 +240,7 @@ class Notebook:
 		:param overwrite: if overwrite=True, allow existing file to be re-written
 		:param pnbp: if pnbp=True, tagging #pnbp to track and ignore
 		"""
-		if not isinstance(md_out, str):
-			raise TypeError(f"md_out must be a str, not {type(md_out)}")
-
-		name = str(name).strip()
-		if name.lower().endswith(".md"):
-			name = name[:-3]
-		if not name:
-			raise ValueError("A note name is required.")
-
-		root = Path(self.NOTE_PATH).expanduser().resolve()
-		destination = (root / f"{name}.md").resolve()
-
-		try:
-			relative_path = destination.relative_to(root)
-		except ValueError as e:
-			raise ValueError("Note path escapes NOTE_PATH") from e
-
-		existing_paths = []
-		if destination.parent.exists():
-			existing_paths = [
-				path
-				for path in destination.parent.iterdir()
-				if path.name.casefold() == destination.name.casefold()
-			]
-
-		if existing_paths and not overwrite:
-			raise FileExistsError(f"Cannot generate a new note at {relative_path}.")
-
-		if len(existing_paths) > 1:
-			raise FileExistsError(
-				f"Cannot choose between case-variant note paths for {relative_path}."
-			)
-
-		if existing_paths:
-			existing_path = existing_paths[0]
-			if existing_path.is_symlink():
-				raise ValueError(f"Refusing to overwrite a note symlink: {existing_path}")
-			existing_path = existing_path.resolve()
-			try:
-				existing_relative = existing_path.relative_to(root)
-			except ValueError as e:
-				raise ValueError("Note path escapes NOTE_PATH") from e
-			n = self.open_note(existing_relative.as_posix())
-		else:
-			note_name = relative_path.with_suffix("").as_posix()
-			n = Note(
-				name=note_name,
-				md='',
-				links=[],
-				tags=[],
-				urls=[],
-				codeblocks=[],
-				mtime='',
-			)
-			n.source_path = relative_path.as_posix()
-
-		n.md_out = md_out
-
-		if pnbp is True:
-			n.md_out += '\n\n--- \n\n#pnbp'
-
-		return n.save(self)
+		return _storage.generate_note(self, name, md_out, overwrite, pnbp)
 
 	def get(self, name, *, fuzzy=True)->Note:
 		"""Resolve a note exact-first, with optional fuzzy fallback.
@@ -536,6 +350,7 @@ class Notebook:
 
 	def _publication_preflight(self, *, include_images=False):
 		"""Validate all publication inputs before writes or HTTP requests."""
+		_journal.ensure_clear(self.NOTE_PATH)
 		notes = tuple(note for note in self.notes.values() if self.is_publishable(note))
 		slugs = {}
 
@@ -611,20 +426,11 @@ class Notebook:
 	def find(self, regex):
 		""" a user convenience method to effectively grep notebook
 		"""
-		print(f'regex: {regex}')
+		return _search.find(self, regex)
 
-		notes = []
-		for fn, n in self.notes.items():
-			p = re.compile(regex)
-			if (m := p.search(n.md)):
-				print(f'\t -> {fn}')
-				print(m)
-				print(f'found: {m}')
-				notes.append(n)
-
-		print(f'{[n.name for n in notes]}')
-
-		return notes
+	def search(self, query, *, regex=False, limit=50, offset=0):
+		"""Return quiet typed hits from current content, in note-name order."""
+		return _search.search(self, query, regex=regex, limit=limit, offset=offset)
 
 	def find_and_replace(self, regex, replace, notes=[]):
 		""" 
@@ -691,7 +497,7 @@ class Notebook:
 		:param note: an Note instance
 		""" 
 		remv = []
-		for link in note.links:
+		for link in note.current_links:
 			target = self.notes.get(link.note)
 			if target is None or not self.is_publishable(target):
 				remv.append(str(link))
@@ -720,144 +526,39 @@ class Notebook:
 
 		:param note: a Note instance
 		"""
-		previous_md_out = note.md_out
-		
-		try:
-			note.md_out, markdown_literals = _stash_markdown_literals(note.current_md)
-	
-			if self.PUB_LNK_ONLY:
-				note = self.remove_nonpub_links(note)
-
-			if self.config.get('HIDE_COMMIT_TAG') == True:
-				note = self.hide_commit_tag(note)
-
-			nout = Link.replace_imglinks(note)
-			nout = Link.replace_intlinks(nout)
-			nout = Tag.replace_smdtags(nout)
-			nout = Url.replace_nakedhref(nout)
-
-			nout.md_out = _restore_literals(nout.md_out, markdown_literals)
-			nout.md_out = md.markdown(
-				nout.md_out,
-				extensions=[
-					'fenced_code',
-					'nl2br',
-					'markdown.extensions.tables',
-					'attr_list',
-					'footnotes',
-					'toc',
-				],
-				use_pygments=True,
-			)
-
-			nout.md_out, html_literals = _stash_html_literals(nout.md_out)
-			nout = Notebook.replace_strikethrough(nout)
-			nout = Notebook.replace_eqhighlight(nout)
-			nout = Url.adjust_externallinks(nout)
-			nout.md_out = _restore_literals(nout.md_out, html_literals)
-
-			return nout.md_out
-	
-		finally:
-			note.md_out = previous_md_out	
+		return _rendering.render_note(self, note)
 		
 
 	def write_commits_to_local_html(self):
 		""" a local debugging mtd 
 			-> self.HTML_PATH/.html ... 
 		"""
-		self._require_clean_notes("publish local HTML")
-		self.open_md()
-		notes, _ = self._publication_preflight()
-
-		print(f'\nlocal commit: {self.HTML_PATH}')
-		for n in notes:
-			html = self.convert_to_html(note=n)
-			target = Path(self.HTML_PATH) / f"{n.slugname}.html"
-			with target.open('w', encoding='utf-8') as output_file:
-				output_file.write(html)
-
-			print(f'\t{n.name} ---> {self.HTML_PATH}')
+		return _publishing.write_local_html(self)
 
 	""" pnbp-web api connection methods:
 	"""
 	def get_headers(self):
 		""" the request headers """
-		headers = {'accept': 'application/json'}
-		if self.API_TOKEN:
-			headers['authorization'] = f'Bearer {self.API_TOKEN}'
-		return headers
+		return _publishing.headers(self)
 
 	def _api_request(self, method, path, **kwargs):
 		"""Send one checked API request with a finite connection/read timeout."""
-		kwargs.setdefault('timeout', self.REQUEST_TIMEOUT)
-		response = method(f'{self.API_BASE}{path}', **kwargs)
-		response.raise_for_status()
-		return response
+		return _publishing.request(self, method, path, **kwargs)
 
 	def refresh_token(self):
 		""" request method to replace the authenticated user's bearer token 
 		"""
-		u = input('Username: ')
-		p = getpass.getpass()
-		h = {
-			'accept': 'application/json',
-			'Content-Type': 'application/x-www-form-urlencoded',
-		}
-		r = requests.post(
-			f'{self.API_BASE}/api/token',
-			data={'username': u, 'password': p},
-			headers=h,
-			timeout=self.REQUEST_TIMEOUT,
-		)
-		print(r)
-
-		try:
-			payload = r.json()
-		except ValueError:
-			payload = None
-
-		if isinstance(payload, dict):
-			redacted = {
-				key: ('<redacted>' if 'token' in key.lower() else value)
-				for key, value in payload.items()
-			}
-			print(redacted)
-		elif payload is not None:
-			print('<response payload omitted>')
-
-		if r.status_code == 200:
-			if not isinstance(payload, dict) or 'access_token' not in payload:
-				raise ValueError("Token refresh response did not include access_token.")
-
-			self.API_TOKEN = payload['access_token']
-
-			if self.settings_file:
-				with open(self.settings_file) as sf:
-					config = json.load(sf)
-					config.update({"API_TOKEN": self.API_TOKEN})
-
-				with open(self.settings_file, 'w') as sf:
-					json.dump(config, sf, indent=4)
-				os.chmod(self.settings_file, 0o600)
+		return _publishing.refresh_token(self)
 
 	def get_authed_user(self):
 		""" request method to get the authenticated user's username 
 		"""
-		h = self.get_headers()
-		r = self._api_request(requests.get, '/api/users/me', headers=h)
-		print(r)
-		print(r.json())
-		return r
+		return _publishing.get_authed_user(self)
 
 	def get_api_home(self):
 		""" request method to /api/ (testing auth) 
 		"""
-		h = self.get_headers()
-		r = self._api_request(requests.get, '/api', headers=h)
-		print(r.text)
-		print(r.json())
-		return r
+		return _publishing.get_api_home(self)
 
 	def get_pub_commits(self)->dict:
 		""" (internal use)
@@ -865,16 +566,7 @@ class Notebook:
 			for the purpose of making smarter POST updates
 			against current publishments.
 		"""
-		h = self.get_headers()
-		r = self._api_request(requests.get, '/api/publishments', headers=h)
-		pub_data = r.json()
-
-		nameMtime = {}
-		for pub in pub_data:
-			pub['mod_date'] = _convert_datetime(pub['mod_date'])
-			nameMtime.update({pub['pub_name']: pub['mod_date']})
-
-		return nameMtime
+		return _publishing.get_pub_commits(self)
 
 	def get_img_commits(self)->dict:
 		""" (internal use)
@@ -882,30 +574,14 @@ class Notebook:
 			for the purpose of making smarter POST updates
 			against current imgs.
 		"""
-		h = self.get_headers()
-		r = self._api_request(requests.get, '/api/images', headers=h)
-		img_data = r.json()
-
-		nameMtime = {}
-		for img in img_data:
-			img['mod_date'] = _convert_datetime(img['mod_date'])
-			nameMtime.update({img['img_name']: img['mod_date']})
-
-		return nameMtime
+		return _publishing.get_img_commits(self)
 
 	def delete_unlisted_post(self, rname):
 		""" (internal use)
 			request method to remove the HTML at filepath
 			of Note(s) made non- #public
 		"""
-		h = self.get_headers()
-		r = self._api_request(
-			requests.delete,
-			f'/api/publishment/{rname}',
-			headers=h,
-		)
-		print(f'(removed) {r.json()["pub_name"]} -> {r}')
-		return r
+		return _publishing.delete_unlisted_post(self, rname)
 
 	def post_commits_to_web_api(
 		self,
@@ -920,89 +596,11 @@ class Notebook:
 		:param prune: remove every remote page absent from this notebook
 		:param refresh_images: resend referenced images even when names exist remotely
 		"""
-		self._require_clean_notes("preview or publish remote commits")
-		self.open_md()
-		notes, publication_images = self._publication_preflight(include_images=True)
-		h = self.get_headers()
+		return _publishing.post_commits(self, stage_only, prune=prune, refresh_images=refresh_images)
 
-		pub_pub_data = self.get_pub_commits()
-		pub_pub_names = tuple(pub_pub_data)
-
-		pub_img_data = self.get_img_commits()
-		pub_img_names = set(pub_img_data)
-
-		print(f'\ncommits: (to {self.API_BASE})')
-		post_names = []
-		uploaded_images = set()
-		for n in notes:
-			to_post = False
-			fname = n.slugname + '.html'
-
-			post_names.append(fname)
-			if fname in pub_pub_names:
-				if pub_pub_data[fname] < n.mtime: # change has occurred
-					to_post = True
-			else: # it's newly #public
-				to_post = True
-
-			if stage_only:
-				continue
-
-			if to_post:
-				html = self.convert_to_html(note=n)
-				r = self._api_request(
-					requests.post,
-					'/api/publishment',
-					json={"name": n.slugname, "content": html},
-					headers=h,
-				)
-				print(f'\t{n.name} -> {r}')
-
-			for img in re.findall(Link.MDS_IMG_LNK, n.md):
-				img = img.strip()
-				if img in uploaded_images:
-					continue
-
-				if refresh_images or img not in pub_img_names:
-					path, content_type = publication_images[img]
-					with path.open('rb') as image_file:
-						r = self._api_request(
-							requests.post,
-							'/api/image',
-							files={"file": (path.name, image_file, content_type)},
-							headers=h,
-						)
-
-					print(f'\t\t{img} -> {r}')
-					uploaded_images.add(img)
-				else:
-					print(f'\t\t{img} -> EXISTS!')
-
-		removals = [name for name in pub_pub_names if name not in post_names]
-
-		if stage_only:
-			print("\nnew pub: ")
-			for p in [n for n in post_names if not n in pub_pub_names]:
-				print(f'-> {p}')
-
-			print("\nto remove:")
-			for p in removals:
-				print(f'-> {p}')
-
-			print("\nall current pubs: ")
-			for p in post_names:
-				print(f'-> {p}')
-
-			print("\n\n** stage_only=True, no changes made... ***")
-		elif prune:
-			if removals:
-				print(f'\npruning {len(removals)} remote page(s):')
-			for p in removals:
-				self.delete_unlisted_post(p)
-		elif removals:
-			print("\nremote pages not pruned; use prune=True after reviewing stage output:")
-			for p in removals:
-				print(f'-> {p}')
+	def publication_plan(self, *, prune=False, refresh_images=False, limit=200):
+		"""Preview bounded legacy publication actions without writing local or remote state."""
+		return _publishing.publication_plan(self, prune=prune, refresh_images=refresh_images, limit=limit)
 
 	def web_settings_post(self):
 		""" request method to POST layout update 
@@ -1010,90 +608,14 @@ class Notebook:
 			(see https://github.com/outside-labs/Pretty-Notebook/blob/main/apps/web-settings.json
 			for examples)
 		"""
-		h = self.get_headers()
-
-		_config = self.config.copy()
-
-		bs_keys = tuple([
-						"NAV_BRAND", "NAV_PAGES", 
-						"FOOTER", "TITLE",
-						"darkmode", 
-						"hljs_light", "hljs_dark", 
-						"merm_light", "merm_dark"
-						])
-
-		for k in self.config.keys():
-			if not k in bs_keys:
-				del _config[k]
-
-		r = self._api_request(
-			requests.post,
-			'/api/layout',
-			json=_config,
-			headers=h,
-		)
-
-		print(r)
-		return r
+		return _publishing.web_settings_post(self)
 
 	def create_api_user(self, username='', bootstrap_token=None):
 		""" request method to generate an pnbp-web API user 
 		"""
-		if not username:
-			username = input('username: ')
-		
-		print(f'username: {username}')	
-			
-		while True:
-			p_1 = getpass.getpass("create password: ")
-			p_2 = getpass.getpass("password (again): ")
-			
-			if p_1 == p_2:
-				break
-			
-			print("The passwords do not match. Please try again.")
-
-		u = {
-			"username": username,
-			"password_hash": p_1
-			}
-
-		h = self.get_headers()
-		if not self.API_TOKEN:
-			if bootstrap_token is None:
-				bootstrap_token = getpass.getpass("bootstrap token: ")
-			if bootstrap_token:
-				h['X-PNBP-Bootstrap-Token'] = bootstrap_token
-		r = requests.post(
-			f'{self.API_BASE}/api/users',
-			json=u,
-			headers=h,
-			timeout=self.REQUEST_TIMEOUT,
-		)
-		print(r)
-		print(r.json())
-		return r
+		return _publishing.create_api_user(self, username, bootstrap_token)
 	
 	def reset_api_password(self):
 		""" request method to update the authed user's API password 
 		"""
-		while True:
-			p_1 = getpass.getpass("new password: ")
-			p_2 = getpass.getpass("password (again): ")		
-
-			if p_1 == p_2:
-				break
-			
-			print('passwords do not match...')
-
-		p = {"password_hash": p_1}
-		h = self.get_headers()
-		r = requests.post(
-			f'{self.API_BASE}/api/users/me',
-			json=p,
-			headers=h,
-			timeout=self.REQUEST_TIMEOUT,
-		)
-		print(r)
-		print(r.json())
-		return r
+		return _publishing.reset_api_password(self)

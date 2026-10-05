@@ -56,7 +56,13 @@ python -m pip install --editable . # development checkout, including the pnbp CL
 
 --- 
 
-##### (2) -> set **environment variables**.
+##### (2) -> choose a notebook path.
+
+In the 0.10 development checkout, `Notebook(path="~/notes")` and
+`Notebook.open("~/notes")` open an existing notebook without prompting or writing
+configuration. Use `pnbp init ~/notes` to create settings explicitly. See
+[settings, profiles, and legacy migration](settings.md) for the full contract.
+The environment-based setup remains supported:
 
 | var | desc | e.g. |
 | :--: | :--: | :--: |
@@ -64,17 +70,17 @@ python -m pip install --editable . # development checkout, including the pnbp CL
 | **IMG_PATH** | (optional entirely; set here or in pnbp_settings.json) | ```echo 'export IMG_PATH="$NOTE_PATH/imgs"' >> ~/.zshrc``` | 
 | **HTML_PATH** | (optional entirely; useful debug w/ Pretty-Notebook/apps/web api; set here, in pnbp_settings.json, or not at all.) | ```echo 'export HTML_PATH="$NOTE_PATH/html"' >> ~/.zshrc``` | 
 | **NOTE_NESTED** | (optional; default=*"flat"*) => *"single"*, *"recurs"*, *"all"*,  | ... |
-| **PNBP_SETTINGS** | (optional) => **"off"** to ignore using a NOTE_PATH/pnbp_settings.json  | ```echo 'export PNBP_SETTINGS="off"' >> ~/.zshrc``` |
+| **PNBP_SETTINGS** | (optional) a selected settings file, or **"off"** to ignore settings and secret files | ```echo 'export PNBP_SETTINGS="off"' >> ~/.zshrc``` |
 
 **NOTE_NESTED**  
 - *"flat"* - by default, **pnbp** assumes that every .md note exist within the base directory level of **NOTE\_PATH**/.
 - *"single"* - if you want **pnbp** to search for .md notes within additional (non-hidden) directory level up.
 - *"recurs"* - if you want .md notes to be found through all (non-hidden) directory levels up.
-- *"all"* - if you want even hidden (non- .git, .obsidian) directories traversed recursively up.
+- *"all"* - includes hidden directories, except `.pnbp`, `.git`, `.obsidian`, and `__pycache__`.
 
 **PNBP_SETTINGS**  
-- without ```PNBP_SETTINGS="off"```, "**NOTE\_PATH/pnbp_settings.json**" will be nagged for.
-- **Notebook** can generate one at the python prompt that you can edit later -> 
+- Missing settings use defaults quietly in the development checkout.
+- `pnbp init` creates `.pnbp/settings.json`; `pnbp init --migrate --dry-run` previews migration of a legacy `pnbp_settings.json`.
 
 ( ... on **Windows**? Environment Variable(s) can be set [here](https://docs.oracle.com/en/database/oracle/machine-learning/oml4r/1.5.1/oread/creating-and-modifying-environment-variables-on-windows.html#GUID-DD6F9982-60D5-48F6-8270-A27EC53807D0). Also, recall that in most places you'll also need to escape the "```\```" within any **path** strings (e.g. ```"IMG_PATH": "\\Users\\alice\\notebook\\imgs"```) used; the drive letter (e.g. ```"D:\\Media\imgs"```) is optional if it's your **\%HOMEDRIVE\%**. )
 

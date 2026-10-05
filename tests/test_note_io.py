@@ -34,7 +34,7 @@ def test_generate_note_detects_uppercase_extension_collision(note_root) -> None:
 		notebook.generate_note("sub/old", "Replacement.\n")
 
 	assert nested.read_text(encoding="utf-8") == "Original.\n"
-	assert not (note_root / "sub" / "old.md").exists()
+	assert "old.md" not in {path.name for path in nested.parent.iterdir()}
 
 
 def test_generate_note_creates_and_returns_empty_note(note_root) -> None:
@@ -152,4 +152,4 @@ def test_save_preserves_loaded_uppercase_extension(note_root) -> None:
 	note.save(notebook)
 
 	assert uppercase_path.read_text(encoding="utf-8") == "Updated.\n"
-	assert not (note_root / "alpha.md").exists()
+	assert "alpha.md" not in {path.name for path in note_root.iterdir()}

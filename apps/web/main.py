@@ -1,14 +1,15 @@
 import asyncio
+from contextlib import asynccontextmanager
 from os import chmod
 
 import fastapi
 import web_config
-from api import auth_api, layout_api, publish_api
+from api import auth_api, layout_api, publish_api, schema, catalog
 from api import forms as forms_api
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.staticfiles import StaticFiles
 from tortoise import connections
-from tortoise.contrib.fastapi import register_tortoise
+from tortoise.contrib.fastapi import RegisterTortoise, tortoise_exception_handlers
 from views import forms, home
 
 DEFAULT_DATABASE_URL = web_config.DATABASE_URL
@@ -41,8 +42,24 @@ def create_app(
     allowed_hosts: list[str] | None = None,
 ) -> fastapi.FastAPI:
     """Create the web application for one process and one persistent data root."""
+    if not db_url.startswith("sqlite://"):
+        raise RuntimeError("The supported web profile requires a SQLite database URL.")
     prepare_storage()
-    app = fastapi.FastAPI()
+
+    @asynccontextmanager
+    async def lifespan(app):
+        async with RegisterTortoise(
+            app,
+            db_url=db_url,
+            modules={"models": ["api.auth_api", "api.forms"]},
+            generate_schemas=False,
+        ):
+            app.state.schema_migration = await schema.migrate()
+            app.state.publications = catalog.PublicationStore(app.state.pages_path)
+            await app.state.publications.start()
+            yield
+
+    app = fastapi.FastAPI(lifespan=lifespan, exception_handlers=tortoise_exception_handlers())
     app.state.bootstrap_lock = asyncio.Lock()
     app.state.pages_path = publish_api.PUB_PATH
     app.state.images_path = publish_api.IMG_PATH
@@ -100,13 +117,6 @@ def create_app(
     # The public single-slug catch-all must remain after every fixed and API route.
     app.include_router(home.router)
 
-    register_tortoise(
-        app,
-        db_url=db_url,
-        modules={"models": ["api.auth_api", "api.forms"]},
-        generate_schemas=True,
-        add_exception_handlers=True,
-    )
     return app
 
 

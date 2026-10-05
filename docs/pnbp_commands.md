@@ -247,7 +247,7 @@ being encoded as JSON strings.
 
 `git-commit-notebook` expects `NOTE_PATH` to be the repository root by default. If the notebook intentionally lives inside a larger repository, pass that repository's exact root with `--repo-root`. Without this explicit authorization, the command refuses to operate on a parent repository.
 
-The command refuses to run when the Git index already contains staged changes. It stages only the notebook subtree, never commits the root `pnbp_settings.json`, checks each Git command, and restores notebook changes to an unstaged state if the commit fails. `collect-git-diff` applies the same root and notebook-scope checks.
+The command refuses to run when the Git index already contains staged changes. It stages only the notebook subtree, excludes root legacy settings and `.pnbp/` credentials, backups, and recovery drafts, checks each Git command, and restores notebook changes to an unstaged state if the commit fails. `collect-git-diff` applies the same root and notebook-scope checks. See [settings and explicit initialization](settings.md) and [note commands, editing, and JSON reports](editing.md).
 
 ```shell
 pnbp git-commit-notebook
