@@ -4,6 +4,9 @@
 > Baseline: `main` at `681c41082e83e2df50a327024547ec64cd6f4f83`, released as `v0.9.0`.
 > Product direction: portable Markdown notebooks with reliable links, useful publishing, and explicit control over sharing and synchronization.
 
+> Tracking: all 42 cards have been transferred to the [GitHub Project](https://github.com/orgs/outside-labs/projects/1) and [linked issue/PR register](https://github.com/outside-labs/Pretty-Notebook/issues/81).
+> The details below preserve the original planning snapshot. Read the linked issues and Project for current scope, dependencies, planned PRs, and completion status; [docs/roadmap.md](docs/roadmap.md) provides the task index and implementation history.
+
 ## 1. Current baseline
 
 This plan reconciles the current repository with **Pretty-Notebook 0.10 Planning**, read in full at version 157. Proposed APIs and commands below describe intended behavior; they are not existing interfaces.
