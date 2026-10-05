@@ -2,17 +2,17 @@
 
 {% block content %}
 <h1>Contact</h1>
-{% if form_sent %}<p role="status">Your message was saved locally.</p>{% endif %}
-{% if form_error %}<p role="alert">{{ form_error }}</p>{% endif %}
-<form action="{{ root_path }}/forms/contact" method="POST">
-  <div class="form-group">
+{% if form_sent %}<p class="notice" role="status">Your message was saved locally.</p>{% endif %}
+{% if form_error %}<p class="notice notice-error" id="form-error" role="alert">{{ form_error }}</p>{% endif %}
+<form class="stack contact-form" action="{{ root_path }}/forms/contact" method="POST">
+  <div class="field">
     <label for="email_address">Email address</label>
-    <input type="email" class="form-control" id="email_address" name="email_address" maxlength="254" required>
+    <input type="email" id="email_address" name="email_address" autocomplete="email" maxlength="254" required{% if form_error %} aria-describedby="form-error"{% endif %}>
   </div>
-  <div class="form-group">
+  <div class="field">
     <label for="email_message">Message</label>
-    <textarea class="form-control" id="email_message" name="email_message" maxlength="5000" rows="3" required></textarea>
+    <textarea id="email_message" name="email_message" maxlength="5000" rows="6" required{% if form_error %} aria-describedby="form-error"{% endif %}></textarea>
   </div>
-  <button type="submit" class="btn btn-primary">Save message</button>
+  <button type="submit" class="button">Save message</button>
 </form>
 {% endblock %}

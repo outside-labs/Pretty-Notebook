@@ -42,8 +42,8 @@ def test_local_page_and_all_runtime_assets_work_with_network_blocked(web_storage
         page = client.get("/")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert len(urls) == 5
-        assert all(urlsplit(url).netloc == "testserver" for url in urls)
+        assert len(urls) == 4
+        assert all(urlsplit(url).netloc in {"", "testserver"} for url in urls)
         for entry in client.app.state.assets.entries.values():
             asset = client.get("/static/" + entry["path"])
             assert asset.status_code == 200
@@ -60,8 +60,10 @@ def test_explicit_cdn_mode_uses_only_pinned_integrity_checked_entries(web_storag
     with TestClient(create_app(db_url="sqlite://:memory:")) as client:
         page = client.get("/")
         assert page.status_code == 200
-        assert all(urlsplit(url).hostname in {"cdn.jsdelivr.net", "cdnjs.cloudflare.com"} for url in RuntimeURLs(page.text).urls)
-        assert page.text.count('integrity="sha384-') == 5
+        urls = RuntimeURLs(page.text).urls
+        assert "/static/css/site.css" in urls
+        assert all(urlsplit(url).hostname in {"cdn.jsdelivr.net", "cdnjs.cloudflare.com"} for url in urls if url != "/static/css/site.css")
+        assert page.text.count('integrity="sha384-') == 3
         assert "https://cdn.jsdelivr.net" in page.headers["content-security-policy"]
 
 
@@ -71,10 +73,10 @@ def test_mixed_auto_mode_falls_back_as_a_dependency_group(tmp_path):
     original.path(original.entries["icons-woff2"]["path"]).unlink()
     resolver = AssetResolver(root, mode="auto")
     assert resolver.local("icons-css") is False
-    assert resolver.local("bootstrap-js") is True
+    assert resolver.local("highlight-js") is True
     request = type("Request", (), {"url_for": lambda self, *args, **kwargs: "/static/" + kwargs["path"]})()
     assert resolver.resolve("icons-css", request)["url"].startswith("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/")
-    assert resolver.resolve("bootstrap-js", request)["local"] is True
+    assert resolver.resolve("highlight-js", request)["local"] is True
     with pytest.raises(RuntimeError, match="Required local.*icons-woff2"):
         AssetResolver(root, mode="local")
 
@@ -100,7 +102,7 @@ def test_invalid_asset_manifest_is_rejected(tmp_path, change):
     root = copied_assets(tmp_path)
     path = root / "asset-manifest.json"
     manifest = json.loads(path.read_text())
-    entry = manifest["assets"]["bootstrap-css"]
+    entry = manifest["assets"]["highlight-style-default"]
     if change == "path":
         entry["path"] = "../outside.css"
     elif change == "cdn":
@@ -136,7 +138,7 @@ def test_invalid_mode_is_rejected():
 def test_deployment_installer_checks_without_network_and_verifies_download(tmp_path, monkeypatch):
     import install_assets
     root = copied_assets(tmp_path)
-    entry = AssetResolver(root).entries["bootstrap-css"]
+    entry = AssetResolver(root).entries["highlight-style-default"]
     path = root / entry["path"]
     original = path.read_bytes()
     path.unlink()

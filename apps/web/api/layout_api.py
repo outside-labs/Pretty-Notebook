@@ -79,43 +79,26 @@ class PNBPWebLayout(BaseModel):
 
 
 async def render_nav(pages: dict, prefix=""):
-    """pre-converting NAV_PAGES dict to html"""
-    _nav_pages = ""
+    """Render escaped links and native, keyboard-operable dropdowns."""
+    def link(label, url):
+        target = escape(prefix + url if url.startswith("/") else url, quote=True)
+        return f'<a class="nav-link" href="{target}">{escape(label)}</a>'
 
-    for k, v in pages.items():
-        s = ""
-        if isinstance(v, str):
-            label = escape(k)
-            url = escape(prefix + v if v.startswith("/") else v, quote=True)
-            if not _nav_pages:
-                s = f"""<li class="nav-item">
-			<a class="nav-link active" aria-current="page" href="{url}">{label}</a>
-		</li>"""
-            else:
-                s = f"""<li class="nav-item">
-          <a class="nav-link" href="{url}">{label}</a>
-        </li>"""
-
-        if isinstance(v, list):
-            s = '<li class="nav-item dropdown">'
-            s += f"""<a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            {escape(k)}
-          </a>"""
-            s += '<ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">'
-            for p in v:
-                if isinstance(p, dict):
-                    for k, v in p.items():
-                        x = (
-                            f'<li><a class="dropdown-item" href="{escape(prefix + v if v.startswith("/") else v, quote=True)}">'
-                            f"{escape(k)}</a></li>"
-                        )
-                        s += x
-            s += "</ul></li>"
-
-        if s:
-            _nav_pages += s
-
-    return _nav_pages
+    items = []
+    for label, value in pages.items():
+        if isinstance(value, str):
+            items.append(f'<li>{link(label, value)}</li>')
+        else:
+            children = "".join(
+                f'<li>{link(child_label, url)}</li>'
+                for entry in value for child_label, url in entry.items()
+            )
+            items.append(
+                '<li><details class="nav-group">'
+                f'<summary>{escape(label)}</summary>'
+                f'<ul class="nav-children">{children}</ul></details></li>'
+            )
+    return "".join(items)
 
 
 async def get_layout_content(prefix=""):

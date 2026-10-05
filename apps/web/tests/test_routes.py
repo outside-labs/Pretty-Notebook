@@ -110,7 +110,7 @@ def test_prefix_deployment_routes_assets_navigation_forms_and_redirects(web_stor
             assert expected in page.text
         assert client.get("/notes/healthz").headers["cache-control"] == "no-store"
         assert client.get("/notes/api/unknown").headers["cache-control"] == "no-store"
-        asset = client.get("/notes/static/vendor/bootstrap/5.0.0-beta2/bootstrap.min.css")
+        asset = client.get("/notes/static/vendor/highlight.js/10.7.2/default.min.css")
         assert asset.status_code == 200 and "immutable" in asset.headers["cache-control"]
         alias = client.get("/notes/python-functions", follow_redirects=False)
         assert alias.headers["location"] == "/notes/python/functions"

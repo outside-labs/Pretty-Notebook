@@ -2,9 +2,9 @@
 
 `apps/web/static/asset-manifest.json` records reviewed versions, versioned local
 paths, SHA-256 checksums, SHA-384 browser integrity values, pinned CDN URLs,
-dependencies, and license notices. Bootstrap 5.0.0-beta2, Bootstrap Icons 1.5.0,
-Highlight.js 10.7.2, and Mermaid 12.0.0 retain their existing versions. Bootstrap
-and icons remain until the separate layout/icon replacement tasks are complete.
+dependencies, and license notices. Bootstrap Icons 1.5.0, Highlight.js 10.7.2,
+and Mermaid 12.0.0 retain their reviewed versions. Bootstrap layout CSS/JavaScript
+and Popper have been removed. Icons remain until their separate replacement.
 
 Set `PNBP_ASSET_MODE` before starting the web process:
 
@@ -34,5 +34,25 @@ objects and framing are disabled. This is not an untrusted-content sanitizer.
 Highlight themes are reviewed manifest entries: this installation includes
 `default` and `xt256`. Unreviewed themes are rejected before saving layout
 settings. Add a new style with its version, hashes, local file, and notice in a
-reviewed change. Mermaid continues to load under the current layout; conditional
-diagram loading and its execution contract are tracked separately in STC-01.
+reviewed change. Mermaid loads only for diagram publications; see
+[diagram rendering](diagrams.md).
+
+## Layout and owner markup
+
+The local `static/css/site.css` supplies light/dark typography, layout, forms,
+tables, code, buttons, and responsive navigation. It is loaded in every asset
+mode; CDN mode selects only the remaining reviewed third-party libraries.
+Navigation uses native `details`/`summary` dropdowns and a POST theme form, so
+links and controls work without JavaScript. The footer follows content with a
+flex layout instead of reserving a fixed-height spacer. A skip link and visible
+focus outlines support keyboard use; reduced-motion preferences disable motion.
+
+`NAV_BRAND`, `NAV_PAGES`, `FOOTER`, and `TITLE` retain their existing owner
+controls. Brand/footer HTML keeps the trusted-editor contract. Plain generated
+HTML and `.img-fluid` images remain supported. Small compatibility rules cover
+`.container`, `.btn`, `.btn-link`, `.form-control`, `.form-group`, `.text-muted`,
+and `.text-center`; semantic tables work without a framework class. For custom
+owner markup, use `.shell`, `.stack`, `.button`, `.button-secondary`, `.field`,
+`.notice`, and `.notice-error`. Arbitrary Bootstrap grid, collapse, dropdown,
+and component APIs are no longer shipped. Convert those custom snippets to
+semantic HTML or supply owner styles; published Markdown needs no migration.
