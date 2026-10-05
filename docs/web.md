@@ -317,3 +317,10 @@ production process command.
 The gate does not approve horizontal scaling, multiple workers, shared
 multi-notebook pruning, untrusted editors, automated email delivery, or the
 macOS URL handlers.
+
+## Browser asset deployment
+
+See [browser assets](assets.md) for the reviewed manifest, local/CDN policy,
+integrity checks, supported Highlight themes, and deployment verification.
+The default selects local assets first; strict local mode requires no runtime
+script, style, or font requests to external services.

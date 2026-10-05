@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "assets": {
+    "bootstrap-css": {
+      "version": "5.0.0-beta2",
+      "path": "vendor/bootstrap/5.0.0-beta2/bootstrap.min.css",
+      "sha256": "9eaec9d24b1ee74ba959d3625d10ecb8677f0247da1f3d215fc1e0094b020126",
+      "integrity": "sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl",
+      "cdn": "https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css",
+      "notice": "vendor/bootstrap/5.0.0-beta2/LICENSE"
+    },
+    "bootstrap-js": {
+      "version": "5.0.0-beta2",
+      "path": "vendor/bootstrap/5.0.0-beta2/bootstrap.bundle.min.js",
+      "sha256": "b5f6d1cd9dfac2e3e8794297cae7b0acb3b371f81d3b6a2f738a33b9845632ce",
+      "integrity": "sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0",
+      "cdn": "https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js",
+      "notice": "vendor/bootstrap/5.0.0-beta2/LICENSE"
+    },
+    "icons-css": {
+      "version": "1.5.0",
+      "path": "vendor/bootstrap-icons/1.5.0/bootstrap-icons.css",
+      "sha256": "3c325075337b768950583012228055ae392e384688d77ec5235e6ca88dcec6ef",
+      "integrity": "sha384-tKLJeE1ALTUwtXlaGjJYM3sejfssWdAaWR2s97axw4xkiAdMzQjtOjgcyw0Y50KU",
+      "cdn": "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css",
+      "notice": "vendor/bootstrap-icons/1.5.0/LICENSE",
+      "dependencies": [
+        "icons-woff",
+        "icons-woff2"
+      ]
+    },
+    "icons-woff": {
+      "version": "1.5.0",
+      "path": "vendor/bootstrap-icons/1.5.0/fonts/bootstrap-icons.woff",
+      "sha256": "c3ae486bde8dd103f205800f2a87c178cb8838833d216a3ce70741c07cdf6233",
+      "integrity": "sha384-9c8skOWv6L/XdCp6+jQn9QncT6/sYuEr9I5YB7mb+vwPxTZFCFdH59uSZR+RL6q+",
+      "cdn": "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/fonts/bootstrap-icons.woff",
+      "notice": "vendor/bootstrap-icons/1.5.0/LICENSE"
+    },
+    "icons-woff2": {
+      "version": "1.5.0",
+      "path": "vendor/bootstrap-icons/1.5.0/fonts/bootstrap-icons.woff2",
+      "sha256": "76506e128f2b47b7179f5037bd885a1674455ffeb6b5093cdb4c7eefbf436ce8",
+      "integrity": "sha384-qAY7dXcq/yrtET+hUlf76Zsc3oiVpwkz5kSq5wJcufKIjoY/7l2wqQl6eJnLkup4",
+      "cdn": "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/fonts/bootstrap-icons.woff2",
+      "notice": "vendor/bootstrap-icons/1.5.0/LICENSE"
+    },
+    "highlight-js": {
+      "version": "10.7.2",
+      "path": "vendor/highlight.js/10.7.2/highlight.min.js",
+      "sha256": "7c3bb686cf87c692323c53cdc32528edc686417d44700afd32888b39349f18c5",
+      "integrity": "sha384-3s6jGaYCRJMSo8TSyvHYG4ejjGQaqxMeQYtHIY2dahoVW25bu+lzC0UhJ3RXN5nK",
+      "cdn": "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js",
+      "notice": "vendor/highlight.js/10.7.2/LICENSE"
+    },
+    "highlight-style-default": {
+      "version": "10.7.2",
+      "path": "vendor/highlight.js/10.7.2/default.min.css",
+      "sha256": "e3cc36c64ef86bed21592653daac82fd7e4c364c32c8344336aa13f7dbf52c90",
+      "integrity": "sha384-s4RLYRjGGbVqKOyMGGwfxUTMOO6D7r2eom7hWZQ6BjK2Df4ZyfzLXEkonSm0KLIQ",
+      "cdn": "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css",
+      "notice": "vendor/highlight.js/10.7.2/LICENSE"
+    },
+    "highlight-style-xt256": {
+      "version": "10.7.2",
+      "path": "vendor/highlight.js/10.7.2/xt256.min.css",
+      "sha256": "b3b2d0c536cab015980161f91985f753e110be965fd4d5daee70225dff349e51",
+      "integrity": "sha384-r7YG8OAKj2fKddBJwmyIS6C0XoZW9YQYN32xMIiilpgJ+z6KKVbpFjPMmTRygoc3",
+      "cdn": "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/xt256.min.css",
+      "notice": "vendor/highlight.js/10.7.2/LICENSE"
+    },
+    "mermaid-js": {
+      "version": "12.0.0",
+      "path": "vendor/mermaid/12.0.0/mermaid.min.js",
+      "sha256": "28fca7ae6ebc7ed7bb63bde63136a74bfef14f296a57e403657eeb8b32836073",
+      "integrity": "sha384-xzghz1GQ5u9HCpVskeDPqMsdogD1yvuMQbEK53+wi+G70+6J1AG0L2cfi9PHjDWI",
+      "cdn": "https://cdn.jsdelivr.net/npm/mermaid@12.0.0/dist/mermaid.min.js",
+      "notice": "vendor/mermaid/12.0.0/LICENSE"
+    }
+  }
+}

@@ -1,5 +1,17 @@
 # Third-party notices for vendored web assets
 
+The versioned runtime files and integrity values are listed in
+`asset-manifest.json`. The upstream license texts are preserved alongside them:
+
+- Bootstrap 5.0.0-beta2: `vendor/bootstrap/5.0.0-beta2/LICENSE` (MIT).
+  Its bundle includes Popper, with `POPPER-LICENSE` in the same directory.
+- Bootstrap Icons 1.5.0: `vendor/bootstrap-icons/1.5.0/LICENSE` (MIT), including
+  CSS and both font formats. The older `css/` copies retain their notice below.
+- Highlight.js 10.7.2: `vendor/highlight.js/10.7.2/LICENSE` (BSD 3-Clause),
+  including the default and xt256 styles.
+- Mermaid 12.0.0: `vendor/mermaid/12.0.0/LICENSE` (MIT); upstream bundled
+  notices are retained in the unmodified distribution.
+
 ## Bootstrap Icons 1.5.0
 
 The vendored `css/bootstrap-icons.css`, `css/fonts/bootstrap-icons.woff`, and

@@ -36,3 +36,7 @@ def allowed_hosts() -> list[str]:
     if any("://" in host or "/" in host or "\\" in host for host in hosts):
         raise RuntimeError("PNBP_ALLOWED_HOSTS contains an invalid host name")
     return hosts
+
+
+def asset_mode():
+    return config("PNBP_ASSET_MODE", default="auto")
