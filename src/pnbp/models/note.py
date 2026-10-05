@@ -2,12 +2,13 @@ import os
 import re
 
 from collections import namedtuple
+from contextlib import nullcontext
 from pathlib import Path
 
 from .components import Link, Tag, Url, CodeBlock
 
 from pnbp.helpers import _convert_datetime
-from pnbp import _storage
+from pnbp import _storage, _identities
 
 
 class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblocks', 'mtime'])):
@@ -49,10 +50,20 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		self.source_path: str | None = None
 		self._source_exists = False
 		self._source_signature = None
+		self._identity_record = None
 
 	def __str__(self):
 		""" """
 		return self.name
+
+	@property
+	def identity(self):
+		"""The loaded optional identity record; it never grants access."""
+		return self._identity_record
+
+	@property
+	def note_id(self):
+		return self.identity.id if self.identity is not None else None
 
 	@property
 	def md_out(self) -> str | None:
@@ -202,17 +213,24 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 		if path.suffix.lower() != ".md":
 			raise ValueError(f"Not a Markdown note: {path}")
 
-		path.parent.mkdir(parents=True, exist_ok=True)
-
-		if self._source_exists:
-			source_stat = self._require_unchanged_source(path)
-			self._atomic_replace(path, self.md_out, source_stat)
-		else:
-			self._exclusive_create(path, self.md_out)
-
-		saved = nb.open_note(path)
+		has_identity_state = nb.notebook_id is not None or (root / ".pnbp" / "metadata.json").exists()
+		operation = _identities.identity_operation(root) if has_identity_state else nullcontext()
+		with operation as expected_bytes:
+			index = _identities.check_note_write(root, self, nb.notebook_id)
+			path.parent.mkdir(parents=True, exist_ok=True)
+			if self._source_exists:
+				source_stat = self._require_unchanged_source(path)
+				self._atomic_replace(path, self.md_out, source_stat)
+			else:
+				self._exclusive_create(path, self.md_out)
+			saved = nb.open_note(path, notes={})
+			if index is not None:
+				nb._set_identity_index(_identities.record_saved_note(root, saved, index, expected_bytes))
+				saved._identity_record = nb._identity_paths.get(saved.source_path)
+			nb.notes[saved.name] = saved
 		self.source_path = saved.source_path
 		self._source_exists = True
+		self._identity_record = saved.identity
 		self.md_out = None
 		return saved
 
@@ -481,8 +499,6 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			cont = f'\n\n--- \n{d_today}\n\n'
 			self.prepend_section(cont)
 			self.save(nb)
-
-
 
 
 

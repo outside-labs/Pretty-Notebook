@@ -63,8 +63,9 @@ pnbp init ~/notes
 pnbp init ~/notes --profile work
 ```
 
-Initialization creates the notebook directory if needed and writes portable
-`.pnbp/settings.json` with useful defaults. It does not move or create a Git
+Initialization creates the notebook directory if needed, writes portable
+`.pnbp/settings.json` with useful defaults, and explicitly initializes
+[stable notebook/note identities](identities.md). It does not move or create a Git
 repository. Repeating initialization preserves existing settings. Dry runs
 validate and return a JSON plan without creating directories or writing state.
 
