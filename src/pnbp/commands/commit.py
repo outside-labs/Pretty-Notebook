@@ -20,6 +20,7 @@ _GITIGNORE_PATTERNS = (
 	"/.pnbp/secrets.json",
 	"/.pnbp/legacy-settings.json",
 	"/.pnbp/.secrets-*.tmp",
+	"/.pnbp/drafts/",
 	".env",
 )
 
@@ -96,7 +97,7 @@ def _resolve_repository(note_path, repo_root=None, initialize=False):
 def _notebook_pathspecs(relative_note_path):
 	root = relative_note_path.as_posix()
 	private_paths = tuple((relative_note_path / path).as_posix() for path in (
-		"pnbp_settings.json", ".pnbp/secrets.json", ".pnbp/legacy-settings.json",
+		"pnbp_settings.json", ".pnbp/secrets.json", ".pnbp/legacy-settings.json", ".pnbp/drafts",
 	))
 	include = "." if root == "." else f":(top,literal){root}"
 	excludes = tuple(f":(top,literal,exclude){path}" for path in private_paths) + (

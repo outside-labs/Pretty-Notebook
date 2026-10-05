@@ -77,6 +77,9 @@ credentials. Reusing a name for another path fails rather than rebinding it.
 nb = Notebook.open(profile="work")
 ```
 
+Use `pnbp --profile work ...` or `pnbp --notebook ~/notes ...` to select a notebook
+for CLI commands. See [note editing and reports](editing.md).
+
 `PNBP_PROFILE=work` selects a profile when no explicit path or `NOTE_PATH` is
 provided. Profile names accept 1–64 letters, digits, underscores, or hyphens,
 starting with a letter or digit.
@@ -114,6 +117,6 @@ refresh updates only the current instance.
 Initialization and migration output paths and actions, never setting or token
 values. Do not share the secret file or the legacy backup. Notebook Git commands
 exclude root legacy settings, the new secret file, credential temporary files,
-and the legacy backup even without `.gitignore` setup. `pnbp init-git-ignore`
+the legacy backup, and recovery drafts even without `.gitignore` setup. `pnbp init-git-ignore`
 adds matching rules. Portable `.pnbp/settings.json` can be committed deliberately;
 review its local paths and site settings before sharing it.
