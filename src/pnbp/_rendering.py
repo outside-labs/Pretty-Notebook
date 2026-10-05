@@ -1,7 +1,11 @@
 """The existing Markdown renderer and literal protection pipeline."""
 
 import re
+from html import escape
+from urllib.parse import quote
 import markdown as md
+from markdown.extensions.toc import slugify
+from pnbp import _routes
 from pnbp.models.components import Link, Tag, Url
 
 _FENCED_LITERAL = re.compile(
@@ -85,8 +89,34 @@ def render_note(notebook, note):
 		if notebook.config.get('HIDE_COMMIT_TAG') == True:
 			note = notebook.hide_commit_tag(note)
 
-		nout = Link.replace_imglinks(note)
-		nout = Link.replace_intlinks(nout)
+		prefix = notebook.config.get("URL_PREFIX", "")
+		graph = notebook.graph_index()
+		notes_by_path = {n.source_path: n for n in notebook.notes.values()}
+
+		def image(match):
+			name = match.group(1).strip()
+			url = _routes.public_url(prefix, "/static/imgs/" + quote(name, safe=""))
+			return f"<img class=\"img-fluid\" src='{escape(url, quote=True)}'>"
+
+		def link(match):
+			address, _, label = match.group(1).partition("|")
+			target, separator, heading = address.partition("#")
+			label = label.strip() or address.strip().replace("#", " > ")
+			if not target.strip() and separator:
+				url = ""
+			else:
+				resolved = graph.resolve(address, source=note.source_path)
+				linked = notes_by_path.get(resolved.path)
+				if resolved.state != "resolved" or linked is None:
+					return escape(label)
+				url = _routes.public_url(prefix, _routes.route_for(linked, notebook.config).route)
+			if separator:
+				url += "#" + quote(slugify(heading.strip(), "-"))
+			return f"<a href='{escape(url, quote=True)}'>{escape(label)}</a>"
+
+		note.md_out = re.sub(Link.MDS_IMG_LNK, image, note.md_out)
+		note.md_out = re.sub(Link.MDS_INT_LNK, link, note.md_out)
+		nout = note
 		nout = Tag.replace_smdtags(nout)
 		nout = Url.replace_nakedhref(nout)
 
