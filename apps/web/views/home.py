@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-import aiofiles
 from api.layout_api import get_layout_content
-from api.publish_api import publication_body, publication_path
+from api.publish_api import publication_path
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
@@ -74,9 +73,10 @@ def favicon():
 async def content(request: Request, content: str):
     template_content = await get_template_content(request)
     try:
-        target = publication_path(content)
-        async with aiofiles.open(target, encoding="utf-8") as page:
-            page_content = publication_body(await page.read())
+        publication_path(content)
+        page_content = await request.app.state.publications.read(content)
+        if page_content is None:
+            raise FileNotFoundError
     except (HTTPException, FileNotFoundError, IsADirectoryError):
         template_content["unavailable_content"] = content
         return templates.TemplateResponse(

@@ -12,8 +12,9 @@ from pathlib import Path
 from tortoise import connections
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.transactions import in_transaction
+from .catalog import CATALOG_SCHEMA
 
-CURRENT_VERSION = 1
+CURRENT_VERSION = 2
 BASE_SCHEMA = (
     '''CREATE TABLE IF NOT EXISTS "user" (
         "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -28,7 +29,7 @@ BASE_SCHEMA = (
         "created_at" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )''',
 )
-MIGRATIONS = {1: ("base-schema", BASE_SCHEMA)}
+MIGRATIONS = {1: ("base-schema", BASE_SCHEMA), 2: ("publication-catalog", CATALOG_SCHEMA)}
 HISTORY_SCHEMA = '''CREATE TABLE IF NOT EXISTS pnbp_schema_migrations (
     version INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
@@ -81,6 +82,21 @@ async def _apply_migration(connection, version):
     for statement in MIGRATIONS[version][1]:
         await connection.execute_query(statement)
     await _validate_base(connection)
+    if version >= 2:
+        await _validate_catalog(connection)
+
+
+async def _validate_catalog(connection):
+    for table, required in {
+        "pnbp_notebooks": {"slot", "id"},
+        "pnbp_notes": {"id", "notebook_id", "canonical_route", "aliases", "title", "visibility", "current_revision"},
+        "pnbp_revisions": {"note_id", "revision", "body_hash", "source_hash", "rendered_hash", "renderer_fingerprint", "feature_flags", "published_at"},
+    }.items():
+        rows = await connection.execute_query_dict(f'PRAGMA table_info("{table}")')
+        if not required <= {row["name"] for row in rows}:
+            raise RuntimeError("Invalid publication catalog schema; restore a verified backup.")
+    if await connection.execute_query_dict("PRAGMA foreign_key_check"):
+        raise RuntimeError("Invalid publication catalog references; restore a verified backup.")
 
 
 async def migrate():
@@ -104,6 +120,7 @@ async def migrate():
         version = 0
     if version == CURRENT_VERSION:
         await _validate_base(connection)
+        await _validate_catalog(connection)
         return {"version": version, "backup_path": None, "backup_sha256": None}
 
     backup_path = backup_hash = None

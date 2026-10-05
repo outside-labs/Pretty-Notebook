@@ -225,8 +225,10 @@ The data directory contains:
 
 | Path | Contents |
 | --- | --- |
-| `db.sqlite3` | Accounts, token revocation state, and contact submissions |
-| `pages/*.html` | Owner-authored published page bodies |
+| `db.sqlite3` | Accounts, token state, contact submissions, migrations, and publication revisions |
+| `pages/*.html` | Retained legacy page originals |
+| `pages/.blobs/*.html` | Immutable catalog-selected bodies and referenced history |
+| `migration-backups/*.sqlite3` | Private pre-migration database snapshots |
 | `images/*` | Validated published images |
 | `web-settings.json` | Navigation, title, theme, and owner-authored layout HTML |
 
@@ -241,6 +243,8 @@ and copy those contents into the corresponding paths under `PNBP_DATA_DIR`.
 Keep the originals until the new site, authentication, inbox, and published
 assets have been verified. Legacy wrapped page files are read as plain page
 bodies without evaluating their embedded Jinja syntax.
+The 0.10 catalog imports these originals and selects immutable revisions for
+new uploads; do not edit a retained flat file to change an existing catalog head.
 
 ## Backup, restore, and recovery
 

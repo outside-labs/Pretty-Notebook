@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pytest
-from api import publish_api
+from api import publish_api, catalog
 
 
 def test_publication_create_list_and_delete_lifecycle(
@@ -19,9 +19,9 @@ def test_publication_create_list_and_delete_lifecycle(
     publication = response.json()
     assert publication["name"] == "hello-world"
     assert publication["content"] == "<h1>Hello</h1>"
-    assert (web_storage.pages / "hello-world.html").read_text(
-        encoding="utf-8"
-    ) == publication["content"]
+    assert publication["content"] in client.get("/hello-world").text
+    assert not (web_storage.pages / "hello-world.html").exists()
+    assert len(list((web_storage.pages / ".blobs").glob("*.html"))) == 1
 
     listing = client.get("/api/publishments", headers=auth_headers)
     assert listing.status_code == 200
@@ -36,6 +36,8 @@ def test_publication_create_list_and_delete_lifecycle(
     assert deleted.status_code == 200
     assert deleted.json() == {"pub_name": "hello-world.html"}
     assert not (web_storage.pages / "hello-world.html").exists()
+    assert client.get("/hello-world").status_code == 404
+    assert len(list((web_storage.pages / ".blobs").glob("*.html"))) == 1
 
     missing = client.delete(
         "/api/publishment/hello-world.html",
@@ -61,7 +63,7 @@ def test_publication_post_replaces_existing_content(
         json={"name": "updated-note", "content": "second version"},
     )
 
-    saved = (web_storage.pages / "updated-note.html").read_text(encoding="utf-8")
+    saved = client.get("/updated-note").text
     assert first.status_code == 201
     assert second.status_code == 201
     assert "second version" in saved
@@ -212,10 +214,10 @@ def test_publication_storage_failure_returns_server_error(
     web_storage,
     monkeypatch,
 ):
-    async def fail_write(*args, **kwargs):
+    def fail_write(*args, **kwargs):
         raise OSError("simulated storage failure")
 
-    monkeypatch.setattr(publish_api, "atomic_write_text", fail_write)
+    monkeypatch.setattr(catalog, "_write_blob", fail_write)
     response = client.post(
         "/api/publishment",
         headers=auth_headers,
