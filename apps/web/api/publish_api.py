@@ -113,6 +113,8 @@ def image_path(filename: str | None) -> Path:
     if supplied.suffix.lower() not in ALLOWED_IMAGE_EXTENSIONS:
         raise HTTPException(400, "Unsupported image type.")
 
+    if (IMG_PATH / supplied.name).is_symlink():
+        raise HTTPException(400, "Images must be regular files.")
     target = (IMG_PATH / supplied.name).resolve()
 
     if target.parent != IMG_PATH:
@@ -127,8 +129,15 @@ def image_path(filename: str | None) -> Path:
     status_code=201,
     dependencies=[Depends(get_current_user)],
 )
-async def image_post(file: Annotated[UploadFile, File(...)]):
+async def image_post(request: Request, file: Annotated[UploadFile, File(...)]):
     """Validate and atomically store a bounded image upload."""
+    target, content = await read_image_upload(file)
+    async with request.app.state.publications.lock:
+        await atomic_write_bytes(target, content)
+    return {"filename": file.filename}
+
+
+async def read_image_upload(file):
     target = image_path(file.filename)
     content = await file.read(MAX_IMAGE_BYTES + 1)
     await file.close()
@@ -140,9 +149,7 @@ async def image_post(file: Annotated[UploadFile, File(...)]):
     if not IMAGE_SIGNATURES[suffix](content):
         raise HTTPException(400, "File content does not match its image type.")
 
-    await atomic_write_bytes(target, content)
-
-    return {"filename": file.filename}
+    return target, content
 
 
 @router.get("/api/publishments", dependencies=[Depends(get_current_user)])

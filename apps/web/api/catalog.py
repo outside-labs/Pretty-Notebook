@@ -53,6 +53,27 @@ class RouteConflict(ValueError):
     """A route or alias already belongs to a different publication."""
 
 
+class RevisionConflict(ValueError):
+    """A checked write no longer matches the current representation."""
+
+
+def publication_etag(note):
+    if note is None or note["visibility"] != "public":
+        return None
+    values = [note[key] for key in ("id", "current_revision", "canonical_route", "title", "aliases")]
+    digest = hashlib.sha256(json.dumps(values, ensure_ascii=False).encode()).hexdigest()
+    return f'"{digest}"'
+
+
+def check_revision(note, expected_etag, *, legacy_exists=False):
+    current = publication_etag(note)
+    if expected_etag == "*":
+        if current is not None or legacy_exists:
+            raise RevisionConflict("Publication already exists; refresh the inventory.")
+    elif current is None or current != expected_etag:
+        raise RevisionConflict("Publication changed; refresh the inventory before retrying.")
+
+
 def publication_body(content):
     """Unwrap known legacy envelopes without evaluating any template syntax."""
     for newline in ("\n", "\r\n", "\r"):
@@ -256,10 +277,13 @@ class PublicationStore:
                     conflicts.append({"name": claim["name"], "detail": str(error)})
             return {"valid": not conflicts, "conflicts": conflicts, "dry_run": True}
 
-    async def publish(self, name, body, *, title=None, aliases=(), previous_name=None):
+    async def publish(self, name, body, *, title=None, aliases=(), previous_name=None,
+                      checked=False, expected_etag=None, source_hash=None, renderer_fingerprint=None):
         async with self.lock:
             note, claimed = await self._claim(name, aliases, previous_name)
             original = self._legacy(name) if note is None else None
+            if checked:
+                check_revision(note, expected_etag, legacy_exists=original is not None)
             bodies = []
             if original:
                 old_body, old_stamp = original
@@ -267,13 +291,25 @@ class PublicationStore:
                 bodies.append((old_hash, old_body, old_stamp))
             digest = await asyncio.to_thread(_write_blob, self.blobs, body)
             bodies.append((digest, body, datetime.now(UTC).isoformat()))
+            if checked:
+                return await self._commit_publication(
+                    name, note, bodies, title=title, aliases=claimed,
+                    checked=True, expected_etag=expected_etag,
+                    source_hash=source_hash, renderer_fingerprint=renderer_fingerprint,
+                )
             if title is None and not claimed and previous_name is None:
                 await self._commit_publication(name, note, bodies)
             else:
                 await self._commit_publication(name, note, bodies, title=title, aliases=claimed)
 
-    async def _commit_publication(self, name, note, bodies, *, title=None, aliases=None):
+    async def _commit_publication(self, name, note, bodies, *, title=None, aliases=None,
+                                  checked=False, expected_etag=None, source_hash=None, renderer_fingerprint=None):
         async with in_transaction() as transaction:
+            if checked:
+                current_name = note["canonical_route"][1:] if note else name
+                current = await self._note(current_name, connection=transaction)
+                check_revision(current, expected_etag, legacy_exists=current is None and self._legacy(name) is not None)
+                note = current
             if note is None:
                 note_id = await self._create(transaction, name, bodies)
             else:
@@ -287,6 +323,12 @@ class PublicationStore:
                     "UPDATE pnbp_notes SET canonical_route=?, title=?, aliases=? WHERE id=?",
                     ["/" + name, title if title is not None else note["title"] if note else name, json.dumps(aliases or []), note_id],
                 )
+            if checked:
+                await transaction.execute_query(
+                    "UPDATE pnbp_revisions SET source_hash=?, renderer_fingerprint=? WHERE note_id=? AND revision=(SELECT current_revision FROM pnbp_notes WHERE id=?)",
+                    [source_hash, renderer_fingerprint, note_id, note_id],
+                )
+            return await self._note(name, connection=transaction)
 
     async def resolve(self, name):
         validate_route("/" + name, allow_namespace=True)
@@ -310,20 +352,35 @@ class PublicationStore:
             raise RuntimeError("Publication head has no revision; restore a verified backup.")
         return await asyncio.to_thread(_read_blob, self.blobs, rows[0]["body_hash"])
 
-    async def inventory(self):
+    async def inventory(self, *, detailed=False):
         rows = await connections.get("default").execute_query_dict("SELECT n.*, r.source_hash, r.rendered_hash, r.renderer_fingerprint, r.feature_flags, r.published_at FROM pnbp_notes n JOIN pnbp_revisions r ON n.id=r.note_id AND n.current_revision=r.revision ORDER BY n.canonical_route")
         result, known = [], {route for row in rows for route in (row["canonical_route"], *json.loads(row["aliases"]))}
         for row in rows:
             if row["visibility"] == "public":
-                result.append({"pub_name": row["canonical_route"][1:] + ".html", "mod_date": row["published_at"]})
+                entry = {"pub_name": row["canonical_route"][1:] + ".html", "mod_date": row["published_at"]}
+                if detailed:
+                    entry.update({key: row[key] for key in ("id", "notebook_id", "title", "source_hash", "rendered_hash", "renderer_fingerprint")})
+                    entry.update(revision=row["current_revision"], etag=publication_etag(row),
+                                 aliases=json.loads(row["aliases"]), feature_flags=json.loads(row["feature_flags"]))
+                result.append(entry)
         for path in sorted(self.pages.iterdir()):
             if path.is_file() and path.suffix == ".html" and SLUG_PATTERN.fullmatch(path.stem) and "/" + path.stem not in known:
                 _, stamp = self._legacy(path.stem)
-                result.append({"pub_name": path.name, "mod_date": stamp})
+                entry = {"pub_name": path.name, "mod_date": stamp}
+                if detailed:
+                    entry.update(etag=None, revision=None, source_hash=None, renderer_fingerprint=None,
+                                 detail="Restart from stable storage to import this legacy page before checked publishing.")
+                result.append(entry)
         return sorted(result, key=lambda item: item["pub_name"])
 
-    async def delete(self, name):
+    async def delete(self, name, *, checked=False, expected_etag=None):
         async with self.lock:
+            if checked:
+                async with in_transaction() as transaction:
+                    note = await self._note(name, connection=transaction)
+                    check_revision(note, expected_etag)
+                    await transaction.execute_query("UPDATE pnbp_notes SET visibility='deleted' WHERE id=?", [note["id"]])
+                return True
             note = await self._note(name)
             if note and note["visibility"] == "deleted":
                 return False
