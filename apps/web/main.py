@@ -88,9 +88,9 @@ def create_app(
             "camera=(), geolocation=(), microphone=()",
         )
         response.headers.setdefault("Content-Security-Policy", asset_resolver.security_policy())
-        if asset_resolver.cacheable(path):
+        if response.status_code in {200, 206, 304} and asset_resolver.cacheable(path):
             response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
-        if request.url.path.startswith("/api") or request.url.path == "/healthz":
+        if path.startswith("/api") or path == "/healthz":
             response.headers.setdefault("Cache-Control", "no-store")
         return response
 
