@@ -1,7 +1,5 @@
 import os
 import re
-import stat
-import tempfile
 
 from collections import namedtuple
 from pathlib import Path
@@ -9,6 +7,7 @@ from pathlib import Path
 from .components import Link, Tag, Url, CodeBlock
 
 from pnbp.helpers import _convert_datetime
+from pnbp import _storage
 
 
 class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblocks', 'mtime'])):
@@ -54,6 +53,42 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 	def __str__(self):
 		""" """
 		return self.name
+
+	@property
+	def md_out(self) -> str | None:
+		"""Pending source text; None means no staged content, while '' stages an empty note."""
+		return getattr(self, "_md_out", None)
+
+	@md_out.setter
+	def md_out(self, value):
+		if value is not None and not isinstance(value, str):
+			raise TypeError("Note.md_out must be a string or None.")
+		self._md_out = value
+		self._current_content_cache = None
+
+	@property
+	def current_content(self) -> _storage.ContentView:
+		"""A cached projection of current_md, separate from the loaded tuple fields."""
+		cached = getattr(self, "_current_content_cache", None)
+		if cached is None or cached.md != self.current_md:
+			cached = self._current_content_cache = _storage.parse_content(self.current_md)
+		return cached
+
+	@property
+	def current_links(self):
+		return self.current_content.links
+
+	@property
+	def current_tags(self):
+		return self.current_content.tags
+
+	@property
+	def current_urls(self):
+		return self.current_content.urls
+
+	@property
+	def current_codeblocks(self):
+		return self.current_content.codeblocks
 	
 	@property
 	def current_md(self) -> str:
@@ -212,51 +247,10 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 
 	@staticmethod
 	def _exclusive_create(path, text):
-		flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-		fd = os.open(path, flags, 0o666)
-
-		try:
-			with os.fdopen(fd, "w", encoding="utf-8") as output:
-				fd = None
-				output.write(text)
-				output.flush()
-				os.fsync(output.fileno())
-		except Exception:
-			if fd is not None:
-				os.close(fd)
-			path.unlink(missing_ok=True)
-			raise
+		return _storage.exclusive_create(path, text)
 
 	def _atomic_replace(self, path, text, source_stat):
-		fd, temporary_name = tempfile.mkstemp(
-			dir=path.parent,
-			prefix=f".{path.name}.",
-			suffix=".tmp",
-		)
-		temporary_path = Path(temporary_name)
-
-		try:
-			with os.fdopen(fd, "w", encoding="utf-8") as output:
-				fd = None
-				output.write(text)
-				output.flush()
-				os.fsync(output.fileno())
-
-			os.chmod(temporary_path, stat.S_IMODE(source_stat.st_mode))
-
-			current_stat = path.stat()
-			current_text = path.read_text(encoding="utf-8")
-			if (
-				self._stat_signature(current_stat) != self._stat_signature(source_stat)
-				or current_text != self.md
-			):
-				raise RuntimeError(f"Cannot save {self.name}: source changed on disk.")
-
-			os.replace(temporary_path, path)
-		finally:
-			if fd is not None:
-				os.close(fd)
-			temporary_path.unlink(missing_ok=True)
+		return _storage.atomic_replace(self, path, text, source_stat)
 
 	def is_tagged(self, tag: str="", tags: list | None=None, to_all=False, at_all=False)->bool:
 		""" check if note.md contains a #tag
@@ -487,7 +481,6 @@ class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblock
 			cont = f'\n\n--- \n{d_today}\n\n'
 			self.prepend_section(cont)
 			self.save(nb)
-
 
 
 

@@ -128,6 +128,8 @@ def test_new_credentials_and_migration_backup_never_staged(monkeypatch, tmp_path
 	for name in ("secrets.json", "legacy-settings.json"):
 		(root / ".pnbp" / name).write_text('{"API_TOKEN": "private"}\n')
 	(root / ".pnbp" / ".secrets-writing.tmp").write_text('{"API_TOKEN": "private"}\n')
+	(root / ".pnbp" / "drafts").mkdir()
+	(root / ".pnbp" / "drafts" / "edit.md").write_text("Private unsaved draft")
 	(root / ".pnbp" / "settings.json").write_text('{"TITLE": "Portable"}\n')
 	notebook = _load_notebook(monkeypatch, root)
 	commit_commands._git_commit_notebook(repo_root=tmp_path if nested else None, nb=notebook)
