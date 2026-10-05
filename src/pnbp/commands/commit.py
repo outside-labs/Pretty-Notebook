@@ -17,11 +17,14 @@ _GITIGNORE_PATTERNS = (
 	"**/migrations/0*.py",
 	"*egg-info/",
 	"/pnbp_settings.json",
+	"/.pnbp/secrets.json",
+	"/.pnbp/legacy-settings.json",
+	"/.pnbp/.secrets-*.tmp",
 	".env",
 )
 
 
-def _run_git(repository, *args, allowed_returncodes=(0,)):
+def _run_git(repository, *args, allowed_returncodes=(0,), input=None):
 	result = subprocess.run(
 		["git", "-C", str(repository), *args],
 		check=False,
@@ -29,6 +32,7 @@ def _run_git(repository, *args, allowed_returncodes=(0,)):
 		text=True,
 		encoding="utf-8",
 		errors="replace",
+		input=input,
 	)
 	if result.returncode not in allowed_returncodes:
 		detail = (result.stderr or result.stdout).strip()
@@ -91,10 +95,14 @@ def _resolve_repository(note_path, repo_root=None, initialize=False):
 
 def _notebook_pathspecs(relative_note_path):
 	root = relative_note_path.as_posix()
-	settings = (relative_note_path / "pnbp_settings.json").as_posix()
+	private_paths = tuple((relative_note_path / path).as_posix() for path in (
+		"pnbp_settings.json", ".pnbp/secrets.json", ".pnbp/legacy-settings.json",
+	))
 	include = "." if root == "." else f":(top,literal){root}"
-	exclude_settings = f":(top,literal,exclude){settings}"
-	return include, exclude_settings, settings
+	excludes = tuple(f":(top,literal,exclude){path}" for path in private_paths) + (
+		":(top,glob,exclude)**/.pnbp/.secrets-*.tmp",
+	)
+	return include, excludes, private_paths
 
 
 def _staged_paths(repository):
@@ -126,30 +134,6 @@ def _unstage_notebook(repository, include):
 		)
 
 
-def _exclude_settings_from_index(repository, settings_path):
-	if settings_path not in _staged_paths(repository):
-		return
-
-	head = subprocess.run(
-		["git", "-C", str(repository), "rev-parse", "--verify", "HEAD"],
-		check=False,
-		capture_output=True,
-	)
-	if head.returncode == 0:
-		_run_git(repository, "reset", "--quiet", "HEAD", "--", settings_path)
-	else:
-		_run_git(
-			repository,
-			"rm",
-			"--cached",
-			"--force",
-			"--quiet",
-			"--ignore-unmatch",
-			"--",
-			settings_path,
-		)
-
-
 @click.option(
 	"--repo-root",
 	type=click.Path(path_type=Path, file_okay=False),
@@ -163,7 +147,7 @@ def _git_commit_notebook(repo_root=None, nb=None):
 		repo_root=repo_root,
 		initialize=True,
 	)
-	include, _exclude_settings, settings_path = _notebook_pathspecs(relative_note_path)
+	include, excludes, private_paths = _notebook_pathspecs(relative_note_path)
 
 	preexisting = _staged_paths(repository)
 	if preexisting:
@@ -171,8 +155,12 @@ def _git_commit_notebook(repo_root=None, nb=None):
 			"Git already has staged changes; commit or unstage them before running notebook automation."
 		)
 
-	_run_git(repository, "add", "-A", "--", include)
-	_exclude_settings_from_index(repository, settings_path)
+	candidates = _run_git(
+		repository, "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", include, *excludes,
+	).stdout.split("\0")
+	pathspecs = "".join(f":(top,literal){path}\0" for path in dict.fromkeys(candidates) if path)
+	if pathspecs:
+		_run_git(repository, "add", "-A", "--pathspec-from-file=-", "--pathspec-file-nul", input=pathspecs)
 	staged = _staged_paths(repository)
 	if not staged:
 		click.echo("No notebook changes to commit.")
@@ -183,7 +171,7 @@ def _git_commit_notebook(repo_root=None, nb=None):
 		for path in staged
 		if (
 			not _path_is_within_notebook(path, relative_note_path)
-			or path == settings_path
+			or path in private_paths
 		)
 	)
 	if unexpected:
@@ -221,8 +209,8 @@ def _collect_git_diff(repo_root=None, nb=None):
 		nb.NOTE_PATH,
 		repo_root=repo_root,
 	)
-	include, exclude_settings, _ = _notebook_pathspecs(relative_note_path)
-	result = _run_git(repository, "diff", "--", include, exclude_settings)
+	include, excludes, _ = _notebook_pathspecs(relative_note_path)
+	result = _run_git(repository, "diff", "--", include, *excludes)
 	if not (diff := result.stdout.strip()):
 		return ""
 
