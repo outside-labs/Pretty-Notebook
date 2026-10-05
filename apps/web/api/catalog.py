@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from uuid import uuid4
+from pnbp._routes import validate_route
 
 from tortoise import connections
 from tortoise.transactions import in_transaction
@@ -46,6 +47,10 @@ CATALOG_SCHEMA = (
         PRIMARY KEY (note_id, revision)
     )""",
 )
+
+
+class RouteConflict(ValueError):
+    """A route or alias already belongs to a different publication."""
 
 
 def publication_body(content):
@@ -153,7 +158,7 @@ class PublicationStore:
 
     def _legacy(self, name):
         if not SLUG_PATTERN.fullmatch(name):
-            raise ValueError("Invalid publication name.")
+            return None
         path = self.pages / f"{name}.html"
         if path.is_symlink():
             raise RuntimeError("Legacy publications must be regular files.")
@@ -184,8 +189,8 @@ class PublicationStore:
         return note_id
 
     async def _import_legacy(self):
-        rows = await connections.get("default").execute_query_dict("SELECT canonical_route FROM pnbp_notes")
-        known = {row["canonical_route"] for row in rows}
+        rows = await connections.get("default").execute_query_dict("SELECT canonical_route, aliases FROM pnbp_notes")
+        known = {route for row in rows for route in (row["canonical_route"], *json.loads(row["aliases"]))}
         imports = []
         for path in sorted(self.pages.iterdir()):
             if path.is_file() and path.suffix == ".html" and SLUG_PATTERN.fullmatch(path.stem) and "/" + path.stem not in known:
@@ -200,11 +205,60 @@ class PublicationStore:
                 for name, digest, body, stamp in imports:
                     await self._create(transaction, name, [(digest, body, stamp)])
 
-    async def publish(self, name, body):
-        if not SLUG_PATTERN.fullmatch(name):
-            raise ValueError("Invalid publication name.")
+    async def _claim(self, name, aliases=(), previous_name=None):
+        route = validate_route("/" + name, allow_namespace=True)
+        note = await self._note(name)
+        if previous_name is not None:
+            validate_route("/" + previous_name, allow_namespace=True)
+            previous = await self._note(previous_name)
+            if previous is None or previous["visibility"] != "public":
+                raise RouteConflict("The previous canonical publication does not exist.")
+            if note and note["id"] != previous["id"]:
+                raise RouteConflict("The destination route already belongs to another publication.")
+            note = previous
+        claimed = set(aliases)
+        for alias in claimed:
+            validate_route(alias, allow_namespace=True)
+        if note:
+            claimed.update(json.loads(note["aliases"]))
+            if note["canonical_route"] != route:
+                claimed.add(note["canonical_route"])
+        claimed.discard(route)
+        rows = await connections.get("default").execute_query_dict("SELECT id, canonical_route, aliases FROM pnbp_notes")
+        known = set()
+        for row in rows:
+            owned = {row["canonical_route"], *json.loads(row["aliases"])}
+            known.update(owned)
+            if (not note or row["id"] != note["id"]) and owned & {route, *claimed}:
+                raise RouteConflict("A canonical route or alias already belongs to another publication.")
+        for candidate in {route, *claimed} - known:
+            if self._legacy(candidate[1:]) is not None:
+                # Ordinary legacy updates may import their existing original.
+                if candidate != route or previous_name is not None:
+                    raise RouteConflict("A route or alias collides with an uncataloged legacy page.")
+        return note, sorted(claimed)
+
+    async def preview_routes(self, claims):
         async with self.lock:
-            note = await self._note(name)
+            conflicts, seen, sources = [], {}, set()
+            for claim in claims:
+                try:
+                    note, aliases = await self._claim(claim["name"], claim.get("aliases", ()), claim.get("previous_name"))
+                    identity = note["id"] if note else "/" + claim["name"]
+                    if identity in sources:
+                        raise RouteConflict("The same publication appears more than once in the route plan.")
+                    sources.add(identity)
+                    for route in ("/" + claim["name"], *aliases):
+                        if route in seen:
+                            raise RouteConflict("Two planned publications claim the same route or alias.")
+                        seen[route] = identity
+                except (ValueError, RouteConflict) as error:
+                    conflicts.append({"name": claim["name"], "detail": str(error)})
+            return {"valid": not conflicts, "conflicts": conflicts, "dry_run": True}
+
+    async def publish(self, name, body, *, title=None, aliases=(), previous_name=None):
+        async with self.lock:
+            note, claimed = await self._claim(name, aliases, previous_name)
             original = self._legacy(name) if note is None else None
             bodies = []
             if original:
@@ -213,17 +267,36 @@ class PublicationStore:
                 bodies.append((old_hash, old_body, old_stamp))
             digest = await asyncio.to_thread(_write_blob, self.blobs, body)
             bodies.append((digest, body, datetime.now(UTC).isoformat()))
-            await self._commit_publication(name, note, bodies)
+            if title is None and not claimed and previous_name is None:
+                await self._commit_publication(name, note, bodies)
+            else:
+                await self._commit_publication(name, note, bodies, title=title, aliases=claimed)
 
-    async def _commit_publication(self, name, note, bodies):
+    async def _commit_publication(self, name, note, bodies, *, title=None, aliases=None):
         async with in_transaction() as transaction:
             if note is None:
-                await self._create(transaction, name, bodies)
+                note_id = await self._create(transaction, name, bodies)
             else:
+                note_id = note["id"]
                 revision = note["current_revision"] + 1
                 digest, body, stamp = bodies[-1]
                 await self._revision(transaction, note["id"], revision, digest, body, stamp)
                 await transaction.execute_query("UPDATE pnbp_notes SET current_revision=?, visibility='public' WHERE id=?", [revision, note["id"]])
+            if title is not None or aliases is not None:
+                await transaction.execute_query(
+                    "UPDATE pnbp_notes SET canonical_route=?, title=?, aliases=? WHERE id=?",
+                    ["/" + name, title if title is not None else note["title"] if note else name, json.dumps(aliases or []), note_id],
+                )
+
+    async def resolve(self, name):
+        validate_route("/" + name, allow_namespace=True)
+        rows = await connections.get("default").execute_query_dict(
+            "SELECT * FROM pnbp_notes WHERE canonical_route=? OR EXISTS (SELECT 1 FROM json_each(aliases) WHERE value=?)",
+            ["/" + name, "/" + name],
+        )
+        if len(rows) > 1:
+            raise RuntimeError("Ambiguous catalog route; preserve state and repair the catalog.")
+        return rows[0] if rows and rows[0]["visibility"] == "public" else None
 
     async def read(self, name):
         note = await self._note(name)
@@ -239,7 +312,7 @@ class PublicationStore:
 
     async def inventory(self):
         rows = await connections.get("default").execute_query_dict("SELECT n.*, r.source_hash, r.rendered_hash, r.renderer_fingerprint, r.feature_flags, r.published_at FROM pnbp_notes n JOIN pnbp_revisions r ON n.id=r.note_id AND n.current_revision=r.revision ORDER BY n.canonical_route")
-        result, known = [], {row["canonical_route"] for row in rows}
+        result, known = [], {route for row in rows for route in (row["canonical_route"], *json.loads(row["aliases"]))}
         for row in rows:
             if row["visibility"] == "public":
                 result.append({"pub_name": row["canonical_route"][1:] + ".html", "mod_date": row["published_at"]})

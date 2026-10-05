@@ -85,3 +85,21 @@ def test_nested_local_export_is_contained(tmp_path):
 def test_invalid_route_settings_fail_when_loading(settings):
 	with pytest.raises(SettingsError):
 		NotebookSettings.from_dict(settings)
+
+
+def test_remote_collision_preview_stops_before_uploads_or_prune(tmp_path, monkeypatch):
+	from types import SimpleNamespace
+	nb = notebook_at(tmp_path, {"python/example.md": "#public"}, ROUTE_MODE="hierarchical", API_BASE="https://notebook.example")
+	requests = []
+	def preview(url, **kwargs):
+		requests.append((url, kwargs))
+		return SimpleNamespace(json=lambda: {"valid": False, "conflicts": [{"name": "python/example"}]}, raise_for_status=lambda: None)
+	def unexpected(*args, **kwargs):
+		raise AssertionError("No uploads or inventory/prune requests after a route conflict")
+	monkeypatch.setattr("pnbp._publishing.requests.post", preview)
+	monkeypatch.setattr("pnbp._publishing.requests.get", unexpected)
+	monkeypatch.setattr("pnbp._publishing.requests.delete", unexpected)
+	with pytest.raises(ValueError, match="Remote route preview"):
+		nb.post_commits_to_web_api(prune=True)
+	assert len(requests) == 1 and requests[0][0].endswith("/api/routes/preview")
+	assert requests[0][1]["json"] == [{"name": "python/example", "aliases": ("/python-example",)}]

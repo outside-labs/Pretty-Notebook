@@ -10,12 +10,26 @@ from pnbp.settings import save_api_token
 from pnbp import _routes
 
 
+def _remote_route_preview(notebook):
+	if notebook.config.get("ROUTE_MODE", "flat") == "flat" and not notebook.config.get("PUBLICATION_ROUTES"):
+		return None
+	claims = [{"name": entry["route"][1:], "aliases": entry["aliases"]} for entry in notebook.publication_routes()["routes"]]
+	if len(claims) > 200:
+		raise ValueError("Route migration preview is limited to 200 publications; split the migration before publishing.")
+	response = notebook._api_request(requests.post, "/api/routes/preview", json=claims, headers=notebook.get_headers())
+	preview = response.json()
+	if not isinstance(preview, dict) or preview.get("valid") is not True:
+		raise ValueError("Remote route preview found collisions; inspect /api/routes/preview before publishing.")
+	return preview
+
+
 def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
 	if type(limit) is not int or not 1 <= limit <= 200:
 		raise ValueError("Publication plan limit must be 1-200.")
 	notebook._require_clean_notes("preview remote commits")
 	notebook.open_md()
 	notes, images = notebook._publication_preflight(include_images=True)
+	route_preview = _remote_route_preview(notebook)
 	pages_remote = notebook.get_pub_commits()
 	images_remote = notebook.get_img_commits()
 	pages = []
@@ -36,6 +50,7 @@ def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
 		"pages": pages[:limit], "images": image_actions[:limit],
 		"page_count": len(pages), "image_count": len(image_actions),
 		"truncated": len(pages) > limit or len(image_actions) > limit,
+		"routes": notebook.publication_routes(), "remote_routes": route_preview,
 	}
 
 
@@ -208,6 +223,7 @@ def post_commits(
 	notebook.open_md()
 	notes, publication_images = notebook._publication_preflight(include_images=True)
 	route_entries = {entry["source_path"]: entry for entry in notebook.publication_routes()["routes"]}
+	_remote_route_preview(notebook)
 	h = notebook.get_headers()
 
 	pub_pub_data = notebook.get_pub_commits()

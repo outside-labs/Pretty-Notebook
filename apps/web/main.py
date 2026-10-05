@@ -40,6 +40,7 @@ def create_app(
     *,
     db_url: str = DEFAULT_DATABASE_URL,
     allowed_hosts: list[str] | None = None,
+    root_path: str | None = None,
 ) -> fastapi.FastAPI:
     """Create the web application for one process and one persistent data root."""
     if not db_url.startswith("sqlite://"):
@@ -59,7 +60,8 @@ def create_app(
             await app.state.publications.start()
             yield
 
-    app = fastapi.FastAPI(lifespan=lifespan, exception_handlers=tortoise_exception_handlers())
+    from pnbp._routes import validate_prefix
+    app = fastapi.FastAPI(lifespan=lifespan, exception_handlers=tortoise_exception_handlers(), root_path=validate_prefix(root_path if root_path is not None else web_config.url_prefix()))
     app.state.bootstrap_lock = asyncio.Lock()
     app.state.pages_path = publish_api.PUB_PATH
     app.state.images_path = publish_api.IMG_PATH
@@ -113,8 +115,13 @@ def create_app(
     app.include_router(auth_api.router)
     app.include_router(layout_api.router)
     app.include_router(forms_api.router)
+
+    @app.api_route("/api/{unknown:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], include_in_schema=False)
+    async def unknown_api(unknown: str):
+        raise fastapi.HTTPException(404, "Not Found")
+
     app.include_router(forms.router)
-    # The public single-slug catch-all must remain after every fixed and API route.
+    # The public path catch-all must remain after every fixed and API route.
     app.include_router(home.router)
 
     return app
