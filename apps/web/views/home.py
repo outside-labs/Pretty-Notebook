@@ -7,6 +7,7 @@ from urllib.parse import urlsplit
 from api.layout_api import get_layout_content
 from api.publish_api import publication_path
 from pnbp._routes import RESERVED
+from pnbp._icons import render_icon, replace_legacy_icons
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
@@ -23,6 +24,9 @@ async def get_template_content(request: Request) -> dict:
     if cookie_value in {"True", "False"}:
         content["darkmode"] = cookie_value == "True"
     content["request"] = request
+    content["icon"] = render_icon
+    for field in ("NAV_BRAND", "FOOTER"):
+        content[field] = replace_legacy_icons(content[field])
     content["assets"] = request.app.state.assets.layout_assets(content, request)
     content["root_path"] = prefix
     return content
@@ -105,7 +109,7 @@ async def content(request: Request, content: str):
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
-    template_content["page_content"] = page["body"]
+    template_content["page_content"] = replace_legacy_icons(page["body"])
     template_content["diagram_mode"] = "detect" if page["legacy"] else "required" if "mermaid" in page["feature_flags"] else None
     return templates.TemplateResponse(
         request,

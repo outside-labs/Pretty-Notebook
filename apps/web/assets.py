@@ -74,7 +74,7 @@ class AssetResolver:
 
     def layout_assets(self, layout, request):
         style = layout["hljs_dark"] if layout["darkmode"] else layout["hljs_light"]
-        result = {name: self.resolve(name, request) for name in ("icons-css", "highlight-js", "mermaid-js")}
+        result = {name: self.resolve(name, request) for name in ("highlight-js", "mermaid-js")}
         result["highlight-css"] = self.resolve("highlight-style-" + style, request)
         return result
 

@@ -5,7 +5,7 @@
     <form class="theme-form" action="{{ root_path }}/theme" method="POST">
       <input type="hidden" name="return_to" value="{{ request.url.path }}">
       <button type="submit" class="button button-secondary" name="darkmode" value="{{ 'lightmode' if darkmode else 'darkmode' }}">
-        <i class="bi {{ 'bi-eye-fill' if darkmode else 'bi-eye' }}" aria-hidden="true"></i>
+        {{ icon('sun' if darkmode else 'moon') | safe }}
         {{ 'Light theme' if darkmode else 'Dark theme' }}
       </button>
     </form>
