@@ -217,6 +217,10 @@ backup access, and rate-limit the public form at the reverse proxy.
 
 ## Persistent data and migration
 
+The 0.10 development application applies [versioned SQLite migrations](server-state.md)
+before serving requests. Existing databases receive a private pre-migration
+snapshot; upgrades preserve account and token state rather than regenerating it.
+
 The data directory contains:
 
 | Path | Contents |
