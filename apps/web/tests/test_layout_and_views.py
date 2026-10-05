@@ -288,7 +288,7 @@ def test_invalid_theme_cookie_cannot_replace_layout_data(client, value):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "background-color: black" not in response.text
+    assert 'data-theme="dark"' not in response.text
     if value.startswith("<"):
         assert value not in response.text
 
@@ -317,7 +317,7 @@ def test_theme_form_sets_cookie_and_redirects_to_same_page(
     assert response.cookies["darkmode"] == expected_cookie
 
     page = client.get("/contact")
-    assert ("background-color: black" in page.text) is dark_style_present
+    assert ('data-theme="dark"' in page.text) is dark_style_present
 
 
 @pytest.mark.parametrize("return_to", ["https://evil.example", "//evil.example", "/\\evil.example"])

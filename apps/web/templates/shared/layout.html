@@ -1,54 +1,22 @@
 <!DOCTYPE html>
-
-<html lang="en">
-
+<html lang="en" data-theme="{{ 'dark' if darkmode else 'light' }}">
   <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <!-- Bootstrap CSS -->
-    <link href="{{ assets['bootstrap-css'].url }}" rel="stylesheet" integrity="{{ assets['bootstrap-css'].integrity }}" crossorigin="anonymous">
-    <!--  -->
-    <link href="{{ assets['icons-css'].url }}" rel="stylesheet" integrity="{{ assets['icons-css'].integrity }}" crossorigin="anonymous">
-
-    <!-- highlight JS CSS (Code syntax) -->
-    <link rel="stylesheet" href="{{ assets['highlight-css'].url }}" integrity="{{ assets['highlight-css'].integrity }}" crossorigin="anonymous">
-    
     <title>{{ TITLE }}</title>
-    
+    <link href="{{ root_path }}/static/css/site.css" rel="stylesheet">
+    <link href="{{ assets['icons-css'].url }}" rel="stylesheet" integrity="{{ assets['icons-css'].integrity }}" crossorigin="anonymous">
+    <link href="{{ assets['highlight-css'].url }}" rel="stylesheet" integrity="{{ assets['highlight-css'].integrity }}" crossorigin="anonymous">
   </head>
-
   <body>
-
-    <!-- Navigation -->
+    <a class="skip-link" href="#main-content">Skip to content</a>
     {% include 'shared/navbar.html' %}
-
-
-    <!-- Page Content -->   
-    <div class="flex-wrapper" style="padding-top: 10px;">
-      <div class="container">
-
-       {% block content %}
-
-
-       {% endblock %}
-     </div>
-     </div>
-
-     <!-- Footer Content -->
-    <footer style="padding-top: 650px;">
-      <nav class="navbar navbar-expand-sm sticky-bottom {% if darkmode %} navbar-dark bg-dark {% else %} navbar-light bg-light {% endif %}">
-        <div class="container-fluid">
-            {{ FOOTER | safe }}
-         </div>
-         </nav>
+    <main id="main-content" class="shell page-content" tabindex="-1">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="site-footer">
+      <div class="shell">{{ FOOTER | safe }}</div>
     </footer>
-
-    <!-- JavaScript -->
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="{{ assets['bootstrap-js'].url }}" integrity="{{ assets['bootstrap-js'].integrity }}" crossorigin="anonymous"></script>
-
     {% if diagram_mode %}
     <script defer src="{{ root_path }}/static/js/diagram-loader.js"
             data-mermaid-src="{{ assets['mermaid-js'].url }}"
@@ -56,21 +24,7 @@
             data-mermaid-theme="{{ merm_dark if darkmode else merm_light }}"
             data-diagram-mode="{{ diagram_mode }}"></script>
     {% endif %}
-    
-    <!-- highlight JS (Code syntax) -->
-    <script src="{{ assets['highlight-js'].url }}"
-            integrity="{{ assets['highlight-js'].integrity }}"
-            crossorigin="anonymous"></script>
+    <script src="{{ assets['highlight-js'].url }}" integrity="{{ assets['highlight-js'].integrity }}" crossorigin="anonymous"></script>
     <script>hljs.highlightAll();</script>
-    {% if darkmode %}
-     <style>
-       body {
-      color: white;
-      background-color: black;
-       }
-     </style>
-    {% endif %}
-
   </body>
-
 </html>
