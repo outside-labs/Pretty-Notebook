@@ -45,6 +45,10 @@ def _validate_config(config):
 	if _contains_credentials(config):
 		raise SettingsError("Use api_token, the API_TOKEN environment variable, or .pnbp/secrets.json for credentials.")
 	for key, value in config.items():
+		if key == "PUBLICATION_ROUTES":
+			if not isinstance(value, dict) or any(not isinstance(k, str) or not k.endswith(".md") or k.startswith("/") or any(part in {"", ".", ".."} for part in k.split("/")) or "\\" in k or not isinstance(v, str) for k, v in value.items()):
+				raise SettingsError("PUBLICATION_ROUTES must map relative Markdown source paths to routes.")
+			continue
 		if key in _BOOL_KEYS and type(value) is not bool:
 			raise SettingsError(f"{key} must be a boolean.")
 		if key in _OPTIONAL_KEYS and value is not None and not isinstance(value, str):
@@ -68,6 +72,18 @@ def _validate_config(config):
 				raise SettingsError(f"{key} must be a string.")
 	if config.get("NOTE_NESTED", "flat") not in {"flat", "single", "recurs", "all"}:
 		raise SettingsError("NOTE_NESTED must be flat, single, recurs, or all.")
+	from pnbp._routes import SEGMENT, validate_prefix, validate_route
+	mode = config.get("ROUTE_MODE", "flat")
+	if mode not in {"flat", "hierarchical", "namespaced"}:
+		raise SettingsError("ROUTE_MODE must be flat, hierarchical, or namespaced.")
+	if mode == "namespaced" and not SEGMENT.fullmatch(config.get("NOTEBOOK_SLUG", "")):
+		raise SettingsError("Namespaced routes require a lowercase NOTEBOOK_SLUG.")
+	try:
+		validate_prefix(config.get("URL_PREFIX", ""))
+		for route in config.get("PUBLICATION_ROUTES", {}).values():
+			validate_route(route, allow_namespace=mode == "namespaced")
+	except ValueError as error:
+		raise SettingsError(str(error)) from error
 	for key in ("COMMIT_TAG", "EXCLUDE_TAG"):
 		if key in config and not re.fullmatch(r"#[^\s#]+", config[key]):
 			raise SettingsError(f"{key} must be a nonempty #tag without whitespace.")
@@ -93,6 +109,10 @@ class NotebookSettings:
 	venv_path: str | None = None
 	api_base: str | None = None
 	note_nested: Literal["flat", "single", "recurs", "all"] = "flat"
+	route_mode: Literal["flat", "hierarchical", "namespaced"] = "flat"
+	notebook_slug: str = ""
+	url_prefix: str = ""
+	publication_routes: dict[str, str] = field(default_factory=dict)
 	pub_lnk_only: bool = False
 	commit_tag: str = "#public"
 	exclude_tag: str = "#private"

@@ -72,7 +72,7 @@ def test_publication_post_replaces_existing_content(
 
 @pytest.mark.parametrize(
     "name",
-    ["", "../escape", "nested/name", "Uppercase", "has space", "note.html"],
+    ["", "../escape", "nested//name", "Uppercase", "has space", "note.html"],
 )
 def test_publication_create_rejects_invalid_slugs(
     client,

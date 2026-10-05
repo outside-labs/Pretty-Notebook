@@ -9,7 +9,7 @@ from pathlib import Path
 import requests as requests
 
 from pnbp.settings import load_settings
-from pnbp import _storage, _rendering, _search, _publishing, _identities, _links, _moves, _journal
+from pnbp import _storage, _rendering, _search, _publishing, _identities, _links, _moves, _journal, _routes
 
 from .note import Note
 
@@ -352,26 +352,7 @@ class Notebook:
 		"""Validate all publication inputs before writes or HTTP requests."""
 		_journal.ensure_clear(self.NOTE_PATH)
 		notes = tuple(note for note in self.notes.values() if self.is_publishable(note))
-		slugs = {}
-
-		for note in notes:
-			slug = note.slugname
-
-			if not slug:
-				raise ValueError(f"Note {note.name!r} has an empty publication slug.")
-
-			if not self.PUBLICATION_SLUG_PATTERN.fullmatch(slug):
-				raise ValueError(
-					f"Note {note.name!r} has an invalid publication slug: {slug!r}."
-				)
-
-			if previous := slugs.get(slug):
-				raise ValueError(
-					f"Notes {previous.name!r} and {note.name!r} share "
-					f"duplicate publication slug {slug!r}."
-				)
-
-			slugs[slug] = note
+		_routes.plan_routes(self, notes)
 
 		images = {}
 		if include_images:
@@ -382,6 +363,10 @@ class Notebook:
 						images[reference] = self._publication_image(reference)
 
 		return notes, images
+
+	def publication_routes(self):
+		"""Inspect routes, identities, and ambiguous legacy aliases without I/O writes."""
+		return _routes.plan_routes(self, tuple(note for note in self.notes.values() if self.is_publishable(note)))
 
 	def get_linked(self, link)->list:
 		"""

@@ -9,7 +9,8 @@ from web_config import IMAGES_PATH, PAGES_PATH
 
 from .atomic_io import atomic_write_bytes
 from .auth_api import get_current_user
-from .catalog import SLUG_PATTERN
+from pnbp._routes import validate_route
+from .catalog import RouteConflict
 from .catalog import publication_body as publication_body
 from .catalog import LEGACY_PAGE_PREFIX as LEGACY_PAGE_PREFIX, LEGACY_PAGE_SUFFIX as LEGACY_PAGE_SUFFIX
 
@@ -32,27 +33,44 @@ IMAGE_SIGNATURES = {
 }
 
 class Publishment(BaseModel):
-    name: str = Field(max_length=200)
+    name: str = Field(max_length=499)
     content: str = Field(max_length=MAX_PUBLICATION_CHARS)
+
+
+class RouteClaim(BaseModel):
+    name: str = Field(max_length=499)
+    aliases: list[str] = Field(default_factory=list, max_length=100)
+    previous_name: str | None = Field(default=None, max_length=499)
+
+
+class PublicationInput(Publishment, RouteClaim):
+    title: str | None = Field(default=None, max_length=500)
 
 
 def publication_path(name: str) -> Path:
     """build path to publishment, ensuring validity of slug-name"""
-    if not SLUG_PATTERN.fullmatch(name):
-        raise HTTPException(400, "Invalid publication name.")
+    try:
+        validate_route("/" + name, allow_namespace=True)
+    except ValueError as error:
+        raise HTTPException(400, "Invalid publication name.") from error
 
     target = (PUB_PATH / f"{name}.html").resolve()
 
-    if target.parent != PUB_PATH:
+    if not target.is_relative_to(PUB_PATH):
         raise HTTPException(400, "Invalid publication path.")
 
     return target
 
 
-async def add_publishment(name: str, content: str, *, store) -> Publishment:
+async def add_publishment(name: str, content: str, *, store, **metadata) -> Publishment:
     """Store owner-authored HTML as data, never as executable Jinja source."""
     publication_path(name)
-    await store.publish(name, content)
+    try:
+        await store.publish(name, content, **metadata)
+    except RouteConflict as error:
+        raise HTTPException(409, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
 
     pub = Publishment(
         name=name,
@@ -69,12 +87,17 @@ async def add_publishment(name: str, content: str, *, store) -> Publishment:
     response_model=Publishment,
     dependencies=[Depends(get_current_user)],
 )  # if ok status_code 200 -> 201, if not, it's handled in the ValidationError
-async def publishment_post(pub_submittal: Publishment, request: Request):
+async def publishment_post(pub_submittal: PublicationInput, request: Request):
     """Store a publication."""
     n = pub_submittal.name
     c = pub_submittal.content
 
-    return await add_publishment(n, c, store=request.app.state.publications)
+    return await add_publishment(n, c, store=request.app.state.publications, title=pub_submittal.title, aliases=pub_submittal.aliases, previous_name=pub_submittal.previous_name)
+
+
+@router.post("/api/routes/preview", dependencies=[Depends(get_current_user)])
+async def routes_preview(request: Request, claims: Annotated[list[RouteClaim], fastapi.Body(max_length=200)]):
+    return await request.app.state.publications.preview_routes([claim.model_dump() for claim in claims])
 
 
 def image_path(filename: str | None) -> Path:
@@ -144,17 +167,18 @@ async def images_get() -> list:
     return img_data
 
 
-@router.delete("/api/publishment/{pub_name}", dependencies=[Depends(get_current_user)])
+@router.delete("/api/publishment/{pub_name:path}", dependencies=[Depends(get_current_user)])
 async def publishment_delete(pub_name: str, request: Request):
     """Publishment Delete"""
     supplied = Path(pub_name)
 
-    if supplied.name != pub_name or supplied.suffix.lower() != ".html":
+    if supplied.suffix != ".html":
         raise HTTPException(400, "Invalid publication filename.")
 
-    target = publication_path(supplied.stem)
+    name = pub_name[:-5]
+    publication_path(name)
 
-    if not await request.app.state.publications.delete(supplied.stem):
+    if not await request.app.state.publications.delete(name):
         raise HTTPException(404, "Publication not found.")
 
-    return {"pub_name": target.name}
+    return {"pub_name": pub_name}

@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from decouple import config
+from pnbp._routes import validate_prefix
 
 WEB_ROOT = Path(__file__).resolve().parent
 DEFAULT_SETTINGS_PATH = WEB_ROOT / "web-settings.json"
@@ -22,6 +23,10 @@ DATABASE_URL = config(
     "PNBP_DATABASE_URL",
     default=f"sqlite://{(DATA_ROOT / 'db.sqlite3').resolve()}",
 )
+
+
+def url_prefix():
+    return validate_prefix(config("PNBP_URL_PREFIX", default=""))
 
 
 def allowed_hosts() -> list[str]:

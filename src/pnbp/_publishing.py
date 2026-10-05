@@ -7,6 +7,20 @@ import requests
 from pnbp.helpers import _convert_datetime
 from pnbp.models.components import Link
 from pnbp.settings import save_api_token
+from pnbp import _routes
+
+
+def _remote_route_preview(notebook):
+	if notebook.config.get("ROUTE_MODE", "flat") == "flat" and not notebook.config.get("PUBLICATION_ROUTES"):
+		return None
+	claims = [{"name": entry["route"][1:], "aliases": entry["aliases"]} for entry in notebook.publication_routes()["routes"]]
+	if len(claims) > 200:
+		raise ValueError("Route migration preview is limited to 200 publications; split the migration before publishing.")
+	response = notebook._api_request(requests.post, "/api/routes/preview", json=claims, headers=notebook.get_headers())
+	preview = response.json()
+	if not isinstance(preview, dict) or preview.get("valid") is not True:
+		raise ValueError("Remote route preview found collisions; inspect /api/routes/preview before publishing.")
+	return preview
 
 
 def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
@@ -15,12 +29,13 @@ def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
 	notebook._require_clean_notes("preview remote commits")
 	notebook.open_md()
 	notes, images = notebook._publication_preflight(include_images=True)
+	route_preview = _remote_route_preview(notebook)
 	pages_remote = notebook.get_pub_commits()
 	images_remote = notebook.get_img_commits()
 	pages = []
 	local_names = set()
 	for note in notes:
-		name = note.slugname + ".html"
+		name = _routes.route_for(note, notebook.config).route[1:] + ".html"
 		local_names.add(name)
 		action = "create" if name not in pages_remote else "update" if pages_remote[name] < note.mtime else "unchanged"
 		pages.append({"name": name, "note": note.name, "action": action})
@@ -35,6 +50,7 @@ def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
 		"pages": pages[:limit], "images": image_actions[:limit],
 		"page_count": len(pages), "image_count": len(image_actions),
 		"truncated": len(pages) > limit or len(image_actions) > limit,
+		"routes": notebook.publication_routes(), "remote_routes": route_preview,
 	}
 
 
@@ -49,7 +65,11 @@ def write_local_html(notebook):
 	print(f'\nlocal commit: {notebook.HTML_PATH}')
 	for n in notes:
 		html = notebook.convert_to_html(note=n)
-		target = Path(notebook.HTML_PATH) / f"{n.slugname}.html"
+		root = Path(notebook.HTML_PATH).resolve()
+		target = root / (_routes.route_for(n, notebook.config).route[1:] + ".html")
+		if not target.resolve().is_relative_to(root):
+			raise ValueError("Publication path escapes HTML_PATH.")
+		target.parent.mkdir(parents=True, exist_ok=True)
 		with target.open('w', encoding='utf-8') as output_file:
 			output_file.write(html)
 
@@ -202,6 +222,8 @@ def post_commits(
 	notebook._require_clean_notes("preview or publish remote commits")
 	notebook.open_md()
 	notes, publication_images = notebook._publication_preflight(include_images=True)
+	route_entries = {entry["source_path"]: entry for entry in notebook.publication_routes()["routes"]}
+	_remote_route_preview(notebook)
 	h = notebook.get_headers()
 
 	pub_pub_data = notebook.get_pub_commits()
@@ -215,7 +237,8 @@ def post_commits(
 	uploaded_images = set()
 	for n in notes:
 		to_post = False
-		fname = n.slugname + '.html'
+		route = _routes.route_for(n, notebook.config)
+		fname = route.route[1:] + '.html'
 
 		post_names.append(fname)
 		if fname in pub_pub_names:
@@ -232,7 +255,11 @@ def post_commits(
 			r = notebook._api_request(
 				requests.post,
 				'/api/publishment',
-				json={"name": n.slugname, "content": html},
+				json={
+					"name": route.route[1:], "content": html,
+					**({"title": route.title, "aliases": route_entries[route.source_path]["aliases"]}
+						if notebook.config.get("ROUTE_MODE", "flat") != "flat" or notebook.config.get("PUBLICATION_ROUTES") else {}),
+				},
 				headers=h,
 			)
 			print(f'\t{n.name} -> {r}')
