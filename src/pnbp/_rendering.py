@@ -75,7 +75,7 @@ def render_note(notebook, note):
 	:param note: a Note instance
 	"""
 	previous_md_out = note.md_out
-	
+
 	try:
 		note.md_out, markdown_literals = _stash_markdown_literals(note.current_md)
 
@@ -113,4 +113,4 @@ def render_note(notebook, note):
 		return nout.md_out
 
 	finally:
-		note.md_out = previous_md_out	
+		note.md_out = previous_md_out

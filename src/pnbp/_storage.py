@@ -56,7 +56,7 @@ def retain_edit_draft(root, text):
 
 def iter_note_files(notebook) -> Iterator[Path]:
 	""" an internal method to safely iterate the "flat" notebook.NOTE_PATH/
-		directory, a "single", or full "recur"(sive) path, 
+		directory, a "single", or full "recur"(sive) path,
 		including (if advised, not by default) "all" (i.e. incl. hidden)
 	"""
 
@@ -107,9 +107,8 @@ def iter_note_files(notebook) -> Iterator[Path]:
 
 
 def read_note(notebook, f):
-	""" 
+	"""
 	:param str f: the .md note to open
-	:param dict notes: optional destination mapping used during atomic reloads
 	"""
 	from pnbp.models.note import Note
 
@@ -151,7 +150,7 @@ def read_note(notebook, f):
 
 
 def generate_note(notebook, name, md_out, overwrite=False, pnbp=False):
-	""" 
+	"""
 	:param name: the name of the note (without ".md") to generate
 	:param md_out: the desired string to save to the notebook at "name.md"
 	:param overwrite: if overwrite=True, allow existing file to be re-written
@@ -167,8 +166,6 @@ def generate_note(notebook, name, md_out, overwrite=False, pnbp=False):
 		name = name[:-3]
 	if not name:
 		raise ValueError("A note name is required.")
-
-	from pnbp.models.note import Note
 
 	root = Path(notebook.NOTE_PATH).expanduser().resolve()
 	destination = (root / f"{name}.md").resolve()

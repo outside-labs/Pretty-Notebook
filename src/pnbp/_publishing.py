@@ -39,8 +39,8 @@ def publication_plan(notebook, *, prune=False, refresh_images=False, limit=200):
 
 
 def write_local_html(notebook):
-	""" a local debugging mtd 
-		-> notebook.HTML_PATH/.html ... 
+	""" a local debugging mtd
+		-> notebook.HTML_PATH/.html ...
 	"""
 	notebook._require_clean_notes("publish local HTML")
 	notebook.open_md()
@@ -73,7 +73,7 @@ def request(notebook, method, path, **kwargs):
 
 
 def refresh_token(notebook):
-	""" request method to replace the authenticated user's bearer token 
+	""" request method to replace the authenticated user's bearer token
 	"""
 	u = input('Username: ')
 	p = getpass.getpass()
@@ -116,7 +116,7 @@ def refresh_token(notebook):
 
 
 def get_authed_user(notebook):
-	""" request method to get the authenticated user's username 
+	""" request method to get the authenticated user's username
 	"""
 	h = notebook.get_headers()
 	r = notebook._api_request(requests.get, '/api/users/me', headers=h)
@@ -126,7 +126,7 @@ def get_authed_user(notebook):
 
 
 def get_api_home(notebook):
-	""" request method to /api/ (testing auth) 
+	""" request method to /api/ (testing auth)
 	"""
 	h = notebook.get_headers()
 	r = notebook._api_request(requests.get, '/api', headers=h)
@@ -137,7 +137,7 @@ def get_api_home(notebook):
 
 def get_pub_commits(notebook)->dict:
 	""" (internal use)
-		request method for a remote filepath check 
+		request method for a remote filepath check
 		for the purpose of making smarter POST updates
 		against current publishments.
 	"""
@@ -285,8 +285,8 @@ def post_commits(
 
 
 def web_settings_post(notebook):
-	""" request method to POST layout update 
-		from notebook.NOTE_PATH/pnbp_settings.json 
+	""" request method to POST layout update
+		from notebook.NOTE_PATH/pnbp_settings.json
 		(see https://github.com/outside-labs/Pretty-Notebook/blob/main/apps/web-settings.json
 		for examples)
 	"""
@@ -295,10 +295,10 @@ def web_settings_post(notebook):
 	_config = notebook.config.copy()
 
 	bs_keys = tuple([
-					"NAV_BRAND", "NAV_PAGES", 
+					"NAV_BRAND", "NAV_PAGES",
 					"FOOTER", "TITLE",
-					"darkmode", 
-					"hljs_light", "hljs_dark", 
+					"darkmode",
+					"hljs_light", "hljs_dark",
 					"merm_light", "merm_dark"
 					])
 
@@ -318,20 +318,20 @@ def web_settings_post(notebook):
 
 
 def create_api_user(notebook, username='', bootstrap_token=None):
-	""" request method to generate an pnbp-web API user 
+	""" request method to generate an pnbp-web API user
 	"""
 	if not username:
 		username = input('username: ')
-	
-	print(f'username: {username}')	
-		
+
+	print(f'username: {username}')
+
 	while True:
 		p_1 = getpass.getpass("create password: ")
 		p_2 = getpass.getpass("password (again): ")
-		
+
 		if p_1 == p_2:
 			break
-		
+
 		print("The passwords do not match. Please try again.")
 
 	u = {
@@ -357,15 +357,15 @@ def create_api_user(notebook, username='', bootstrap_token=None):
 
 
 def reset_api_password(notebook):
-	""" request method to update the authed user's API password 
+	""" request method to update the authed user's API password
 	"""
 	while True:
 		p_1 = getpass.getpass("new password: ")
-		p_2 = getpass.getpass("password (again): ")		
+		p_2 = getpass.getpass("password (again): ")
 
 		if p_1 == p_2:
 			break
-		
+
 		print('passwords do not match...')
 
 	p = {"password_hash": p_1}
