@@ -16,7 +16,7 @@ single-SQLite, single-notebook deployment behind a TLS reverse proxy. Read the
 deployment contract and security boundaries before exposing it publicly. The
 macOS URL handlers remain unsupported.
 
-[Package documentation](docs/pnbp.md) · [0.9.0 release notes](docs/release-0.9.0.md) · [Web deployment](docs/web.md)
+[Package documentation](docs/pnbp.md) · [0.9.0 release notes](docs/release-0.9.0.md) · [Web deployment](docs/web.md) · [Development roadmap](docs/roadmap.md)
 
 ```mermaid
 graph BT
