@@ -308,7 +308,7 @@ def test_touch_all_public_touches_real_note_paths(publication_root) -> None:
 	assert uppercase_path.stat().st_mtime > 1
 	assert excluded_path.stat().st_mtime == 1
 	assert not (note_path / "alphamd").exists()
-	assert not (note_path / "Upper.md").exists()
+	assert "Upper.md" not in {path.name for path in note_path.iterdir()}
 
 
 def test_commit_remote_reports_http_failure_with_nonzero_status(
