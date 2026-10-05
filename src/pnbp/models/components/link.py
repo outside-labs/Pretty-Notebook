@@ -229,13 +229,18 @@ class Link(Component):
 
 		return slugname
 
-	def resolve(self, nb):
+	def resolve(self, nb, *, source=None):
 		""" 
 		:param nb: an Notebook instance
 		:returns: an Note instance
 		"""
-		return nb.get(self.note)
-
+		result = nb.resolve_link(self.link, source=source)
+		if result.state != "resolved":
+			return None
+		for note in nb.notes.values():
+			if note.source_path == result.path:
+				return note
+		return nb.open_note(result.path, notes={})
 
 
 
