@@ -5,6 +5,7 @@ one notebook. Starting the application now runs ordered schema migrations before
 accepting requests. It no longer generates the current ORM schema on every
 start. Migration version 1 establishes the supported account and contact inbox
 tables and records the baseline in `pnbp_schema_migrations`.
+Version 2 creates the publication catalog and its revision/head constraints.
 
 Existing 0.9 tables are retained. Account IDs, password hashes, token revocation
 state, inbox payloads/timestamps, and SQLite sequence counters are preserved.
@@ -43,5 +44,51 @@ application version. Check `/healthz`, owner authentication, token state, inbox
 messages, and public pages before returning the site to service. Never combine
 unrelated databases, pages, or sidecars from different backups.
 
-This baseline prepares the publication catalog migration. Existing flat pages
-and upload behavior remain in place until that migration is implemented.
+## Publication catalog
+
+The catalog contains one default notebook UUID, distinct note UUIDs, canonical
+flat routes, aliases, titles, public/deleted visibility, and a current revision.
+Each revision records its exact rendered/body SHA-256, optional source hash,
+optional renderer fingerprint, observed HTML features, and UTC publication time.
+Legacy HTML cannot prove Markdown or renderer provenance: those fields remain
+`NULL`. Catalog UUIDs are generated server identities; no content hash guesses
+the identity of a local source notebook. Explicit client identity binding and
+checked publication are the later PUB-05 protocol.
+
+Startup imports supported flat `pages/*.html` files into the catalog while
+retaining the original files and modification times. Known legacy template
+envelopes are unwrapped as data, including their line-ending variants; embedded
+Jinja syntax is never compiled. Identical page bodies can share one immutable
+blob while keeping distinct note UUIDs. A failed import rolls back all new note
+records, keeps originals, and can retry on the next start. Complete orphan blobs
+may remain after that failure.
+
+New bodies live in owner-only `pages/.blobs/SHA256.html` files. A body is fully
+written and synced before SQLite selects its revision. The revision and head
+commit in one transaction. A failed database write leaves the previous public
+head usable; a missing or corrupt selected blob fails closed. Retain the whole
+pages directory in stopped-site backups, including `.blobs` and legacy originals.
+
+The `/api/publishment`, `/api/publishments`, and delete response shapes remain
+compatible. Successful uploads now change the catalog instead of overwriting
+flat page files. Inventory timestamps describe selected revisions. Deletion
+removes the public head and listing while retaining historical revisions/blobs;
+republishing that route continues its existing catalog identity and revision.
+An uncataloged legacy file added externally remains readable as data until the
+next startup imports it. Existing catalog heads take precedence over original
+flat files, and deleted records prevent those originals from reappearing.
+
+## Orphan maintenance
+
+The process-local `app.state.publications.collect_orphans(dry_run=True, limit=200)`
+method previews a bounded batch of complete blobs that no revision references.
+Passing `dry_run=False` explicitly collects that batch. The collector shares
+the publication write lock, checks payload hashes, and considers every revision,
+including historical and deleted notes. It leaves unmanaged files and partial
+temporary files alone. A truncated report can be repeated for subsequent batches.
+No automatic history deletion or blob collection runs at startup.
+
+Use a complete backup before deliberate maintenance. A failed upload's orphan
+body can be removed only after the catalog proves it is unreferenced; existing
+flat originals should be retained until migration and public pages are verified.
+This catalog does not add independent notebook ownership or shared pruning.

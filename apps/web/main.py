@@ -4,7 +4,7 @@ from os import chmod
 
 import fastapi
 import web_config
-from api import auth_api, layout_api, publish_api, schema
+from api import auth_api, layout_api, publish_api, schema, catalog
 from api import forms as forms_api
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.staticfiles import StaticFiles
@@ -55,6 +55,8 @@ def create_app(
             generate_schemas=False,
         ):
             app.state.schema_migration = await schema.migrate()
+            app.state.publications = catalog.PublicationStore(app.state.pages_path)
+            await app.state.publications.start()
             yield
 
     app = fastapi.FastAPI(lifespan=lifespan, exception_handlers=tortoise_exception_handlers())
