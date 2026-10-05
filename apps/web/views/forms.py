@@ -77,4 +77,4 @@ async def submit_form(request: Request, form_name: str):
         )
 
     await save_submission(form_name, fields.model_dump())
-    return RedirectResponse(definition.success_path, status_code=303)
+    return RedirectResponse(request.scope.get("root_path", "") + definition.success_path, status_code=303)

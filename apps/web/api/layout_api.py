@@ -78,7 +78,7 @@ class PNBPWebLayout(BaseModel):
         return pages
 
 
-async def render_nav(pages: dict):
+async def render_nav(pages: dict, prefix=""):
     """pre-converting NAV_PAGES dict to html"""
     _nav_pages = ""
 
@@ -86,7 +86,7 @@ async def render_nav(pages: dict):
         s = ""
         if isinstance(v, str):
             label = escape(k)
-            url = escape(v, quote=True)
+            url = escape(prefix + v if v.startswith("/") else v, quote=True)
             if not _nav_pages:
                 s = f"""<li class="nav-item">
 			<a class="nav-link active" aria-current="page" href="{url}">{label}</a>
@@ -106,7 +106,7 @@ async def render_nav(pages: dict):
                 if isinstance(p, dict):
                     for k, v in p.items():
                         x = (
-                            f'<li><a class="dropdown-item" href="{escape(v, quote=True)}">'
+                            f'<li><a class="dropdown-item" href="{escape(prefix + v if v.startswith("/") else v, quote=True)}">'
                             f"{escape(k)}</a></li>"
                         )
                         s += x
@@ -118,11 +118,11 @@ async def render_nav(pages: dict):
     return _nav_pages
 
 
-async def get_layout_content():
+async def get_layout_content(prefix=""):
     """Read, validate, and prepare presentation settings for rendering."""
     async with aiofiles.open(WEB_SETTINGS_PATH, mode="r") as f:
         settings = PNBPWebLayout.model_validate_json(await f.read()).model_dump()
-        settings["NAV_PAGES"] = await render_nav(settings["NAV_PAGES"])
+        settings["NAV_PAGES"] = await render_nav(settings["NAV_PAGES"], prefix)
 
     return settings
 

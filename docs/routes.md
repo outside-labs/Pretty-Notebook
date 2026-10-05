@@ -26,3 +26,25 @@ exports use contained subdirectories matching their canonical routes.
 `ROUTE_MODE: "namespaced"` with `NOTEBOOK_SLUG: "field-notes"` prepares
 `/n/field-notes/...` routes. This is a mapping for the existing default notebook;
 independent notebook ownership and shared pruning remain deferred.
+
+## Server migration
+
+The authenticated `POST /api/routes/preview` endpoint accepts up to 200 claims:
+`[{"name": "python/functions", "aliases": ["/python-functions"]}]`.
+It returns `valid`, actionable `conflicts`, and `dry_run: true` without writing.
+Opt-in client publishing checks this endpoint before uploads. A conflict stops
+publishing and pruning. Resolve ambiguous flat aliases explicitly.
+
+To move an existing page, post its new `name` and `content` to
+`/api/publishment` with `previous_name: "python-functions"`. Optional `title`
+and `aliases` are independent metadata. The server preserves the existing note
+UUID and revision history, retains the old canonical path as a 308 redirect,
+and rejects another page's canonical route or aliases before writing blobs.
+Deleting the canonical publication also disables all its aliases. Existing
+legacy HTML originals remain untouched and do not reappear after restart.
+
+Set `PNBP_URL_PREFIX=/notes` before starting a server behind a prefix-stripping
+proxy (or configure the equivalent ASGI root path). Use the same `URL_PREFIX`
+in notebook settings and include `/notes` in `API_BASE`. Navigation settings
+store application-relative paths; fixed routes, forms, asset URLs, theme cookies,
+and alias redirects include the deployment prefix.
