@@ -9,7 +9,7 @@ from pathlib import Path
 import requests as requests
 
 from pnbp.settings import load_settings
-from pnbp import _storage, _rendering, _search, _publishing, _identities, _links
+from pnbp import _storage, _rendering, _search, _publishing, _identities, _links, _moves, _journal
 
 from .note import Note
 
@@ -84,6 +84,20 @@ class Notebook:
 	def resolve_link(self, target, *, source=None):
 		"""Resolve a target without fuzzy matching; inspect state before using path."""
 		return self.graph_index().resolve(target, source=source)
+
+	def rename_note(self, source, new_name, *, dry_run=False):
+		"""Rename within the source directory, preserving identity and backlinks."""
+		return _moves.move_note(self, source, new_name, rename=True, dry_run=dry_run)
+
+	def move_note(self, source, destination, *, dry_run=False):
+		"""Move to a notebook-relative path using a checked, recoverable journal."""
+		return _moves.move_note(self, source, destination, dry_run=dry_run)
+
+	def move_operations(self, *, limit=200):
+		return _journal.operations(self.NOTE_PATH, limit=limit)
+
+	def recover_move(self, operation_id, *, action="resume", dry_run=False):
+		return _moves.recover_move(self, operation_id, action=action, dry_run=dry_run)
 
 	def export_identities(self):
 		"""Return a portable, independent identity manifest with unchanged UUIDs."""
@@ -336,6 +350,7 @@ class Notebook:
 
 	def _publication_preflight(self, *, include_images=False):
 		"""Validate all publication inputs before writes or HTTP requests."""
+		_journal.ensure_clear(self.NOTE_PATH)
 		notes = tuple(note for note in self.notes.values() if self.is_publishable(note))
 		slugs = {}
 

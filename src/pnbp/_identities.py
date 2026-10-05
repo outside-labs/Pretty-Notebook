@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
-from pnbp import _storage
+from pnbp import _storage, _journal
 
 
 class IdentityError(ValueError):
@@ -154,7 +154,7 @@ def identity_status(root, *, limit=200):
 
 
 @contextmanager
-def identity_operation(root):
+def identity_operation(root, *, recovery=False):
 	state = Path(root) / ".pnbp"
 	if state.is_symlink():
 		raise IdentityError("Refusing to write identity state through a symlinked directory.")
@@ -166,6 +166,11 @@ def identity_operation(root):
 		raise IdentityError("Identity operation in progress or interrupted; inspect .pnbp/metadata.lock before retrying.") from error
 	try:
 		os.close(fd)
+		if not recovery:
+			try:
+				_journal.ensure_clear(root)
+			except _journal.JournalError as error:
+				raise IdentityError(str(error)) from error
 		path = state / "metadata.json"
 		yield path.read_bytes() if path.exists() else None
 	finally:

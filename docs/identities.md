@@ -72,8 +72,8 @@ unindexed destination; it preserves the selected UUID. A changed destination
 body is reported by `content_matches: false` and still requires that explicit
 choice. Case-only external renames work through the same exact-path mechanism.
 
-Reconciliation updates identity metadata only. Source-moving commands and
-backlink repair belong to LINK-02. Rerunning initialization preserves identities,
+Reconciliation updates identity metadata only. Use the [checked move commands](links.md#rename-and-move)
+to move source files and repair backlinks together. Rerunning initialization preserves identities,
 refreshes hashes, and assigns IDs to genuine new copies; it refuses unresolved
 missing paths so an external move cannot quietly become a new note identity.
 
