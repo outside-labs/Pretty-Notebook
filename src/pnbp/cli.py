@@ -64,7 +64,7 @@ def _json_echo(payload, notebook):
 			if notebook.API_TOKEN:
 				value = value.replace(notebook.API_TOKEN, "<redacted>")
 			return value[:4096]
-		if isinstance(value, list):
+		if isinstance(value, (list, tuple)):
 			return [clean(item) for item in value]
 		if isinstance(value, dict):
 			return {key: clean(item) for key, item in value.items()}
@@ -201,6 +201,48 @@ def note_edit(name, content, source):
 			raise click.ClickException("Save failed and a recovery draft could not be written.") from error
 		raise click.ClickException(f"Save failed: {error}. Draft retained at {draft}") from error
 	click.echo(f"Saved {saved.source_path}")
+
+
+@note_commands.command("rename")
+@click.argument("source")
+@click.argument("new_name")
+@click.option("--dry-run", is_flag=True)
+@_command_errors
+def note_rename(source, new_name, dry_run):
+	"""Rename within the current directory and repair matching wiki targets."""
+	nb = _open_notebook()
+	_json_echo(nb.rename_note(source, new_name, dry_run=dry_run), nb)
+
+
+@note_commands.command("move")
+@click.argument("source")
+@click.argument("destination")
+@click.option("--dry-run", is_flag=True)
+@_command_errors
+def note_move(source, destination, dry_run):
+	"""Move to a notebook-relative path with recoverable backlink updates."""
+	nb = _open_notebook()
+	_json_echo(nb.move_note(source, destination, dry_run=dry_run), nb)
+
+
+@note_commands.command("operations")
+@click.option("--limit", type=click.IntRange(1, 200), default=200)
+@_command_errors
+def note_operations(limit):
+	"""List local move journals and their recovery state."""
+	nb = _open_notebook()
+	_json_echo({"operations": nb.move_operations(limit=limit)}, nb)
+
+
+@note_commands.command("recover")
+@click.argument("operation_id")
+@click.option("--action", type=click.Choice(["resume", "rollback"]), default="resume", show_default=True)
+@click.option("--dry-run", is_flag=True)
+@_command_errors
+def note_recover(operation_id, action, dry_run):
+	"""Resume or roll back a checked local move journal."""
+	nb = _open_notebook()
+	_json_echo(nb.recover_move(operation_id, action=action, dry_run=dry_run), nb)
 
 
 @cli.command("search")
