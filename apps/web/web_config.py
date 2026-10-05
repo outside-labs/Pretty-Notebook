@@ -45,3 +45,10 @@ def allowed_hosts() -> list[str]:
 
 def asset_mode():
     return config("PNBP_ASSET_MODE", default="auto")
+
+
+def code_highlight():
+    value = config("PNBP_CODE_HIGHLIGHT", default="on")
+    if value not in {"on", "off"}:
+        raise RuntimeError("PNBP_CODE_HIGHLIGHT must be on or off.")
+    return value == "on"

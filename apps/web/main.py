@@ -70,6 +70,7 @@ def create_app(
     app.state.images_path = publish_api.IMG_PATH
     app.state.settings_path = layout_api.WEB_SETTINGS_PATH
     app.state.assets = asset_resolver
+    app.state.code_highlight = web_config.code_highlight()
 
     app.add_middleware(
         TrustedHostMiddleware,

@@ -36,6 +36,10 @@ settings. Add a new style with its version, hashes, local file, and notice in a
 reviewed change. Mermaid loads only for diagram publications; see
 [diagram rendering](diagrams.md).
 
+Highlight.js and its theme stylesheet load conditionally for eligible fenced
+code. The local copy/label script and optional highlighting policy are
+documented in [code presentation](code-tools.md).
+
 ## Layout and owner markup
 
 The local `static/css/site.css` supplies light/dark typography, layout, forms,
