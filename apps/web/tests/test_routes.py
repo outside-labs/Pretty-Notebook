@@ -106,8 +106,12 @@ def test_prefix_deployment_routes_assets_navigation_forms_and_redirects(web_stor
         store_call(client, "publish", "python/functions", "Functions", aliases=["/python-functions"])
         page = client.get("/notes/python/functions")
         assert page.status_code == 200
-        for expected in ('href="/notes/"', 'action="/notes/theme"', '/notes/static/css/bootstrap-icons.css'):
+        for expected in ('href="/notes/"', 'action="/notes/theme"', '/notes/static/vendor/bootstrap-icons/1.5.0/bootstrap-icons.css'):
             assert expected in page.text
+        assert client.get("/notes/healthz").headers["cache-control"] == "no-store"
+        assert client.get("/notes/api/unknown").headers["cache-control"] == "no-store"
+        asset = client.get("/notes/static/vendor/bootstrap/5.0.0-beta2/bootstrap.min.css")
+        assert asset.status_code == 200 and "immutable" in asset.headers["cache-control"]
         alias = client.get("/notes/python-functions", follow_redirects=False)
         assert alias.headers["location"] == "/notes/python/functions"
         contact = client.get("/notes/contact")

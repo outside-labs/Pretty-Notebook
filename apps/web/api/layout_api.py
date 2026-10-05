@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 
 import aiofiles
 import fastapi
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from web_config import SETTINGS_PATH
 
@@ -163,8 +163,12 @@ async def update_layout(
     response_model=PNBPWebLayout,
     dependencies=[Depends(get_current_user)],
 )
-async def layout_post(lout_in: PNBPWebLayout):
+async def layout_post(lout_in: PNBPWebLayout, request: Request):
     """Post Layout"""
+    try:
+        request.app.state.assets.validate_layout(lout_in.model_dump())
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
     nb = lout_in.NAV_BRAND
     np = lout_in.NAV_PAGES
     f = lout_in.FOOTER

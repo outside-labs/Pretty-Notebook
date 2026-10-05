@@ -23,6 +23,7 @@ async def get_template_content(request: Request) -> dict:
     if cookie_value in {"True", "False"}:
         content["darkmode"] = cookie_value == "True"
     content["request"] = request
+    content["assets"] = request.app.state.assets.layout_assets(content, request)
     content["root_path"] = prefix
     return content
 

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from os import chmod
 
 import fastapi
+import assets
 import web_config
 from api import auth_api, layout_api, publish_api, schema, catalog
 from api import forms as forms_api
@@ -45,6 +46,7 @@ def create_app(
     """Create the web application for one process and one persistent data root."""
     if not db_url.startswith("sqlite://"):
         raise RuntimeError("The supported web profile requires a SQLite database URL.")
+    asset_resolver = assets.AssetResolver(web_config.WEB_ROOT / "static", mode=web_config.asset_mode())
     prepare_storage()
 
     @asynccontextmanager
@@ -58,6 +60,7 @@ def create_app(
             app.state.schema_migration = await schema.migrate()
             app.state.publications = catalog.PublicationStore(app.state.pages_path)
             await app.state.publications.start()
+            asset_resolver.validate_layout(await layout_api.get_layout_content())
             yield
 
     from pnbp._routes import validate_prefix
@@ -66,6 +69,7 @@ def create_app(
     app.state.pages_path = publish_api.PUB_PATH
     app.state.images_path = publish_api.IMG_PATH
     app.state.settings_path = layout_api.WEB_SETTINGS_PATH
+    app.state.assets = asset_resolver
 
     app.add_middleware(
         TrustedHostMiddleware,
@@ -74,6 +78,7 @@ def create_app(
 
     @app.middleware("http")
     async def security_headers(request, call_next):
+        path = request.url.path.removeprefix(request.scope.get("root_path", ""))
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
@@ -84,7 +89,10 @@ def create_app(
             "Permissions-Policy",
             "camera=(), geolocation=(), microphone=()",
         )
-        if request.url.path.startswith("/api") or request.url.path == "/healthz":
+        response.headers.setdefault("Content-Security-Policy", asset_resolver.security_policy())
+        if response.status_code in {200, 206, 304} and asset_resolver.cacheable(path):
+            response.headers.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+        if path.startswith("/api") or path == "/healthz":
             response.headers.setdefault("Cache-Control", "no-store")
         return response
 

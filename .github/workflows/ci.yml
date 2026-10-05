@@ -126,14 +126,17 @@ jobs:
           python -m pip check
 
       - name: Compile web sources
-        run: python -W error -m compileall -q api views main.py web_config.py tests
+        run: python -W error -m compileall -q api views main.py web_config.py assets.py install_assets.py tests
 
       - name: Check release-blocking lint rules
-        run: python -m ruff check --select E9,F63,F7,F82,W605 api views main.py web_config.py tests
+        run: python -m ruff check --select E9,F63,F7,F82,W605 api views main.py web_config.py assets.py install_assets.py tests
+
+      - name: Verify reviewed local browser assets
+        run: python install_assets.py --check
 
       - name: Run web integration tests
         run: |
-          python -m coverage run --source=api,views,main -m pytest tests
+          python -m coverage run --source=api,views,main,assets,install_assets -m pytest tests
           python -m coverage report --show-missing --fail-under=90
 
       - name: Exercise supported deployment command
@@ -143,6 +146,7 @@ jobs:
           PNBP_ALLOWED_HOSTS: 127.0.0.1
           PNBP_BOOTSTRAP_TOKEN: ci-deployment-smoke-bootstrap-token-32-bytes
           PNBP_DATA_DIR: ${{ runner.temp }}/pnbp-web-state
+          PNBP_ASSET_MODE: local
         run: |
           gunicorn main:api \
             --workers 1 \
