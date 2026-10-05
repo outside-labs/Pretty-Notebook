@@ -1,4 +1,5 @@
 import re
+from pnbp._icons import render_icon
 
 from .component import Component
 
@@ -60,7 +61,7 @@ class Url(Component):
 
 		:param note: an Note instance
 		"""
-		_ext_icon = '<i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>'
+		_ext_icon = render_icon("external", size="sm")
 		_add_attrs = 'rel="nofollow" target="_blank"'
 
 		p = re.compile(r'<a href="([^"]+)">(.*?)</a>', re.DOTALL) # internal links use single quotes
@@ -94,7 +95,6 @@ class Url(Component):
 			return ".".join(self.baseurl.split('.')[-2:])
 
 		return None
-
 
 
 

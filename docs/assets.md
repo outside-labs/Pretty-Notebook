@@ -2,15 +2,14 @@
 
 `apps/web/static/asset-manifest.json` records reviewed versions, versioned local
 paths, SHA-256 checksums, SHA-384 browser integrity values, pinned CDN URLs,
-dependencies, and license notices. Bootstrap Icons 1.5.0, Highlight.js 10.7.2,
-and Mermaid 12.0.0 retain their reviewed versions. Bootstrap layout CSS/JavaScript
-and Popper have been removed. Icons remain until their separate replacement.
+dependencies, and license notices. Highlight.js 10.7.2 and Mermaid 12.0.0 retain
+their reviewed versions. Bootstrap layout CSS/JavaScript, Popper, and Bootstrap
+Icons CSS/fonts have been removed.
 
 Set `PNBP_ASSET_MODE` before starting the web process:
 
 - `auto` (default) uses verified local files, falling back to the manifest's
-  exact CDN URLs when files are missing. CSS with missing font dependencies
-  falls back as a group. Startup logs the missing assets.
+  exact CDN URLs when files are missing. Startup logs the missing assets.
 - `local` requires every reviewed runtime file and notice. Missing files,
   corrupt checksums, symlinks, or invalid metadata stop startup with an error.
   Runtime scripts, styles, and fonts need no external network connection.
@@ -56,3 +55,19 @@ owner markup, use `.shell`, `.stack`, `.button`, `.button-secondary`, `.field`,
 `.notice`, and `.notice-error`. Arbitrary Bootstrap grid, collapse, dropdown,
 and component APIs are no longer shipped. Convert those custom snippets to
 semantic HTML or supply owner styles; published Markdown needs no migration.
+
+## Inline icons
+
+The project-owned set has five symbols: `sun`, `moon`, `book`, `globe`, and
+`external`. Templates use `{{ icon('moon') | safe }}`; the same renderer supplies
+external-link symbols in generated HTML. Sizes are `sm`, `md`, and `lg`; styles
+are `default` and `muted`. A decorative symbol is hidden from assistive
+technology. Pass `label='Notebook'` for a standalone symbol; labels are escaped
+and become the SVG's accessible name. Theme actions retain visible text.
+
+The server displays the five old empty `bi` icon elements as equivalent SVGs
+without changing saved settings or publication revisions. Literal code and
+unknown markup remain intact. Replace custom icon-only branding with text or
+an explicitly named SVG when editing owner settings. Unknown Bootstrap Icons
+are no longer available. Both versioned and older duplicate icon fonts/CSS are
+removed, so neither local nor CDN mode requests an icon font.

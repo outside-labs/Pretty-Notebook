@@ -5,7 +5,7 @@
 	"API_BASE": "http://127.0.0.1:8000",
 	"API_TOKEN": "",
 	"PUB_LNK_ONLY": false,
-	"NAV_BRAND": "<i class='bi bi-book-fill'></i>&nbsp;<i class='bi bi-globe2'></i>",
+	"NAV_BRAND": "Pretty Notebook",
 	"NAV_PAGES": {
 		"content": "/index/",
 		"about": "/about/",

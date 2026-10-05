@@ -42,7 +42,7 @@ def test_local_page_and_all_runtime_assets_work_with_network_blocked(web_storage
         page = client.get("/")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert len(urls) == 4
+        assert len(urls) == 3
         assert all(urlsplit(url).netloc in {"", "testserver"} for url in urls)
         for entry in client.app.state.assets.entries.values():
             asset = client.get("/static/" + entry["path"])
@@ -63,21 +63,21 @@ def test_explicit_cdn_mode_uses_only_pinned_integrity_checked_entries(web_storag
         urls = RuntimeURLs(page.text).urls
         assert "/static/css/site.css" in urls
         assert all(urlsplit(url).hostname in {"cdn.jsdelivr.net", "cdnjs.cloudflare.com"} for url in urls if url != "/static/css/site.css")
-        assert page.text.count('integrity="sha384-') == 3
+        assert page.text.count('integrity="sha384-') == 2
         assert "https://cdn.jsdelivr.net" in page.headers["content-security-policy"]
 
 
-def test_mixed_auto_mode_falls_back_as_a_dependency_group(tmp_path):
+def test_mixed_auto_mode_falls_back_only_for_missing_assets(tmp_path):
     root = copied_assets(tmp_path)
     original = AssetResolver(root, mode="local")
-    original.path(original.entries["icons-woff2"]["path"]).unlink()
+    original.path(original.entries["highlight-js"]["path"]).unlink()
     resolver = AssetResolver(root, mode="auto")
-    assert resolver.local("icons-css") is False
-    assert resolver.local("highlight-js") is True
+    assert resolver.local("highlight-js") is False
+    assert resolver.local("mermaid-js") is True
     request = type("Request", (), {"url_for": lambda self, *args, **kwargs: "/static/" + kwargs["path"]})()
-    assert resolver.resolve("icons-css", request)["url"].startswith("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/")
-    assert resolver.resolve("highlight-js", request)["local"] is True
-    with pytest.raises(RuntimeError, match="Required local.*icons-woff2"):
+    assert resolver.resolve("highlight-js", request)["url"].startswith("https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/")
+    assert resolver.resolve("mermaid-js", request)["local"] is True
+    with pytest.raises(RuntimeError, match="Required local.*highlight-js"):
         AssetResolver(root, mode="local")
 
 
