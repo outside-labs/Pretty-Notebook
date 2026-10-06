@@ -1,4 +1,4 @@
-**commands**
+# CLI commands
 
 Commands that accept `--note` require an exact or terminal-extension-normalized note name by default. Add `--fuzzy` to explicitly accept the closest match before the command runs.
 
@@ -9,7 +9,6 @@ supported only in the [documented constrained topology](web.md). Before using
 entire page namespace; multi-notebook ownership is not a supported 0.9
 contract. See the [release notes](release-0.9.0.md).
 
---- 
 
 **core** : 
 
@@ -22,7 +21,6 @@ contract. See the [release notes](release-0.9.0.md).
 | pnbp collect-unlinked-mentions | ... -> nb/all unlinked mentions.md |
 | pnbp delete-all-graph-dash-name | ... |
 
---- 
 
 **correct** : 
 
@@ -40,7 +38,6 @@ contract. See the [release notes](release-0.9.0.md).
 | **pnbp link-unlinked-mentions --note “name”** | here is my favorite note -> here is my \[\[favorite note\]\] |
 | **pnbp remove-nonexistant-links --note “name”** | \[\[An Old Note\]\] link -> An Old Note link |
 
---- 
 
 **commit** :
 
@@ -49,7 +46,6 @@ contract. See the [release notes](release-0.9.0.md).
 | **pnbp git-commit-notebook** | safely commit the notebook to local Git |
 | pnbp collect-git-diff | notebook-scoped git diff -> nb/all diff.md |
 
---- 
 
 **-> pnbp-web** :
 
@@ -64,11 +60,9 @@ contract. See the [release notes](release-0.9.0.md).
 | pnbp commit-settings | update the remote web-settings.json values (local to server); use “--local” for localhost setups |
 | pnbp favicon PATH | 0.10 development: atomically replace the site's validated PNG favicon using owner credentials; `--local` targets localhost |
 
---- 
 
-#### **more commands** : 
+## More commands
 
---- 
 
 **collect.py**
 
@@ -118,15 +112,14 @@ contract. See the [release notes](release-0.9.0.md).
 	- ```"CONT_TAG": "#cont"``` -> explicit **\#tag** to *exclude* as MOC
 
 ```json
-	...
+{
 	"MOC_TAG": "#map",
-	"CONT_TAG": "#nam",
-	...
+	"CONT_TAG": "#nam"
+}
 ```
 
 
 
----
 
 **tasks.py**  
 
@@ -154,14 +147,13 @@ e.g. **note**(s) tagged **\#tasks** :
 - ```"COMPL_NOTE": "_complete"``` - a .md file name for pnbp to save bulleted tasks to, on **pnbp task-settle** 
 
 ```json
-	... 
+{
 	"TASKS_TAG": "#todos",
 	"COMPL_TAG": "#compl",
-	"COMPL_NOTE": "_compl",
-	... 
+	"COMPL_NOTE": "_compl"
+}
 ```
 
---- 
 
 **graph.py**
 
@@ -181,7 +173,6 @@ generating flat relationship graphs to .md using **[mermaid js](https://mermaid-
 - producing an \`\`\`mermaid \`\`\` graph to **nb/graph-tag-mytag.md**.
 
 
---- 
 
 **code.py**
 
@@ -215,7 +206,6 @@ body text is copied verbatim. JSON bodies are copied as JSON text rather than
 being encoded as JSON strings.
 
 
---- 
 
 **subl.py**
 
@@ -236,7 +226,6 @@ being encoded as JSON strings.
 ```
 
 
---- 
 
 **commit.py**
 
@@ -268,7 +257,6 @@ pnbp collect-git-diff --repo-root="/Users/alice/myproject"
 % pnbp init-git-ignore
 ```
 
---- 
 
 **pprint.py**
 
@@ -281,15 +269,12 @@ pnbp collect-git-diff --repo-root="/Users/alice/myproject"
 
 \# see [pnano](https://github.com/outside-labs/Pretty-Notebook/blob/main/apps/pnano) for more details.
 
---- 
 
-___ 
 
-### register new commands :
+## Register new commands
 
---- 
 
-##### **intro** :
+### **intro** :
 - -> ```pnbp do-this-thing``` will be the resulting command (when registered).
 - ```@pass_nb``` provides an instance of **Notebook**, if one isn't being provided.  
 - w/ ```def _func_name(nb=None):``` (decorator + leading underscore +  default) tells you that the function will be registered as a **command** ( in ../cli.py ). 
@@ -314,7 +299,7 @@ def _do_this_thing(nb=None):
 ...  
 
 
-##### **accepting a note by name** :
+### **accepting a note by name** :
 - -> ```pnbp parse-these-thing -n SCIENCE```
 
 ```py
@@ -329,7 +314,7 @@ def _parse_these_thing(note: Note, nb=None):
 
 ...  
 
-##### **accept your own click options** :
+### **accept your own click options** :
 -> ```pnbp search-for -s "blah blah"```
 
 ```py
@@ -353,7 +338,7 @@ def _search_for(search_str: str, nb=None):
 
 ... 
 
-##### pnbp=True -> 
+### pnbp=True ->
 nb.generate_note(..., **pnbp=True**)
 - on ```pnbp=True```, the note.md is tagged **\#pnbp** (at the bottom).
 - **ensuring that** : 
@@ -379,9 +364,8 @@ def _collect_something_new(nb=None):
 ```
 
 
---- 
 
-#### -> **[../cli.py](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/cli.py)**
+### -> **[../cli.py](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/cli.py)**
 
 
 1. import your module from the commands package (at the top) :
@@ -395,14 +379,14 @@ from .commands import new
 2. find and append to the ```create_all_commands()``` function : 
 
 ```py
-# ... 
+# ...
 def create_all_commands():
 	# ... 
 	# add individually : 
 	create_command(new._collect_something_new) # -> pnbp collect-something-new
 	# or by module :
 	create_commands(new, _all=True) # _func -> pnbp func 
-# ... 
+# ...
 ```
 
 3. navigate to ```pnbp/``` and run ```pip install --editable .``` again : 
@@ -410,13 +394,12 @@ def create_all_commands():
 ```py
 (venv) % cd pnbp
 (venv) % pip install --editable .
-# ... 
+# ...
 (venv) % pnbp --help
 # -> see your new command in the list !
 (venv) % pnbp do-this-thing
 ```
 
---- 
 
 <p align=center>
   <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
