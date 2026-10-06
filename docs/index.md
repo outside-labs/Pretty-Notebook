@@ -37,6 +37,7 @@ assets
 diagrams
 code-tools
 public-search
+public-navigation
 ```
 
 ```{toctree}

@@ -1,0 +1,21 @@
+<nav aria-label="Directory breadcrumbs" class="breadcrumbs">
+  <ol>
+    {% for crumb in notebook_index.breadcrumbs %}
+    <li>{% if loop.last %}<span aria-current="page">{{ crumb.label }}</span>{% else %}<a href="{{ crumb.url }}">{{ crumb.label }}</a>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</nav>
+<p><a href="{{ root_path }}/n/search">Search this notebook</a></p>
+{% if notebook_index['items'] %}
+<ul class="notebook-list">
+  {% for item in notebook_index['items'] %}
+  <li><a href="{{ item.url }}">{{ item.title }}</a>{% if item.kind == 'directory' %} <span class="text-muted">Directory</span>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No published entries in this directory.</p>
+{% endif %}
+<nav aria-label="Index pages" class="reading-links">
+  {% if notebook_index.previous_url %}<a href="{{ notebook_index.previous_url }}">Previous entries</a>{% endif %}
+  {% if notebook_index.next_url %}<a href="{{ notebook_index.next_url }}">Next entries</a>{% endif %}
+</nav>

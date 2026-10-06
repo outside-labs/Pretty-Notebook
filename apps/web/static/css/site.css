@@ -134,6 +134,16 @@ pre code.hljs { padding: 0; overflow: visible; }
 .text-center { text-align: center; }
 .icon { display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
 .icon-muted { color: var(--muted); }
+.breadcrumbs ol { display: flex; flex-wrap: wrap; gap: 0.4rem 0.75rem; list-style: none; padding: 0; }
+.breadcrumbs li + li::before { content: "/"; color: var(--muted); margin-inline-end: 0.75rem; }
+.reading-links { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-block: 1.5rem; }
+.reading-panel { max-width: 58rem; padding: 1rem; margin-block: 1.25rem; border: 1px solid var(--line); border-radius: 0.35rem; background: var(--surface); }
+.reading-panel h2 { font-size: 1.2rem; }
+.reading-panel summary { font-weight: 600; cursor: pointer; }
+.reading-panel ul, .reading-panel ol { margin-block: 0.75rem 0; }
+.heading-level-2 { margin-inline-start: 0.75rem; }
+.heading-level-3, .heading-level-4, .heading-level-5, .heading-level-6 { margin-inline-start: 1.5rem; }
+.notebook-list li { margin-block: 0.5rem; }
 @media (max-width: 40rem) {
   .site-brand, .nav-list { flex-basis: 100%; }
   .site-nav { gap: 0.75rem; }
