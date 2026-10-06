@@ -1,5 +1,4 @@
-
---- 
+# Models and methods
 
 a **Notebook** instance contains a dictionary of each **Note** available by it's name :
 
@@ -63,11 +62,10 @@ and **note**(s) can be individually queried against things:
 >>> n.is_linked(at_all=True) # ... 
 ```
 
---- 
-#### **update the contents of a note... ** 
+## **update the contents of a note... **
 
 
-##### **manually** :
+### **manually** :
 
 ```py
 >>> import pnbp
@@ -91,7 +89,7 @@ and **note**(s) can be individually queried against things:
 ```
 
 
-##### **search and destroy** :
+### **search and destroy** :
 
 ```py
 >>> nb.find(r'~!') #->n list, search notebook for regex 
@@ -101,7 +99,7 @@ and **note**(s) can be individually queried against things:
 ```
 
 
-##### **prime content protected** : 
+### **prime content protected** :
 
 ```py
 >>> import re
@@ -119,13 +117,13 @@ and **note**(s) can be individually queried against things:
 >>> n.prime_md_out_release(nb) # inplace save
 ```
 
-##### **HTML rendering contract** :
+### **HTML rendering contract** :
 
 `Notebook.convert_to_html(note)` is read-only with respect to the note's pending `md_out` state. Fenced code and inline code are treated as literal content: wiki links, tags, heading-like comments, `~~strikethrough~~`, and `==highlight==` inside code are not expanded. Mermaid fences are the intentional exception and render as Mermaid containers.
 
 Heading IDs are assigned only to parsed Markdown headings. Separate `~~strike~~` and `==highlight==` spans render separately; whitespace-delimited comparisons such as `x == y` remain ordinary text.
 
-##### **by section** :
+### **by section** :
 
 ```py
 >>> n = nb.get("SCIENCE")
@@ -143,9 +141,8 @@ Heading IDs are assigned only to parsed Markdown headings. Separate `~~strike~~`
 
 ^^ set **NOTE_HEADER** as an additional environment variable to define your own personal regex pattern (and overwrite the default: ```r"^Links"```). (e.g. ```export NOTE_HEADER="^Links: \[\[.+"``` would search for the same style header, but be ensuring that at least a single \[\[link\]\] is defined).
 
---- 
 
-##### **generate a new note** :
+### **generate a new note** :
 
 ```py
 >>> nb.generate_note(name='examp note 2', md_out='more *great* content here...')
@@ -156,9 +153,8 @@ more *great* content here...
 >>> nb.generate_note('example note', "**better** content", overwrite=True)
 ```
 
---- 
 
-### pnbp.models.components
+## pnbp.models.components
 
 **Link**, **Tag**, **CodeBlock**, and **Url** all subclass [models/components/component.**Component**](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/models/components/component.py).
 
@@ -191,7 +187,6 @@ False
 ['[[SCIENCE]]']
 ```
 
---- 
 
 <p align=center>
   <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>

@@ -1,3 +1,5 @@
+# Pretty Notebook
+
 pnbp = **"pretty notebook parser"**
 
 > **0.9.0:** The published package supports the Python library and `pnbp`
@@ -6,7 +8,6 @@ pnbp = **"pretty notebook parser"**
 > [release notes](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/release-0.9.0.md)
 > for migration and support details.
 
---- 
 
 **pnbp** provides programmatic access to a **notebook** via :
 - **[> pnbp/models](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)** : **models and methods**. 
@@ -23,30 +24,27 @@ a pretty **note** is a single .md file within the notebook directory.
 
 https://obsidian.md/ is the best example of this in action. 
 
---- 
 
-#### quickstart guide : 
+## quickstart guide :
 
---- 
 
-##### (0) -> update pip, then install the exact release
+### (0) -> update pip, then install the exact release
 
 ```bash
 python -m pip install --upgrade pip
 python -m pip install pnbp==0.9.0
 ```
 
-##### (1) -> [access via the Notebook model](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)
+### (1) -> [access via the Notebook model](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_models.md)
 
-##### (2) -> [cli commands](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_commands.md)
+### (2) -> [cli commands](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp_commands.md)
 
-##### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md) *(supported only in the documented single-worker, single-notebook topology; not included in the `pnbp` wheel)*
+### (3) -> [web application / api](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/web.md) *(supported only in the documented single-worker, single-notebook topology; not included in the `pnbp` wheel)*
 
-##### (4) -> [“pnano”](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md) *(experimental/unsupported in 0.9.0)*
+### (4) -> [“pnano”](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnano.md) *(experimental/unsupported in 0.9.0)*
 
---- 
 
-##### (-1) -> **git clone** the repo.
+### (-1) -> **git clone** the repo.
 
 ```bash
 git clone https://github.com/outside-labs/Pretty-Notebook/ pnbp
@@ -54,9 +52,8 @@ cd pnbp/
 python -m pip install --editable . # development checkout, including the pnbp CLI
 ```
 
---- 
 
-##### (2) -> choose a notebook path.
+### (2) -> choose a notebook path.
 
 In the 0.10 development checkout, `Notebook(path="~/notes")` and
 `Notebook.open("~/notes")` open an existing notebook without prompting or writing
@@ -84,9 +81,8 @@ The environment-based setup remains supported:
 
 ( ... on **Windows**? Environment Variable(s) can be set [here](https://docs.oracle.com/en/database/oracle/machine-learning/oml4r/1.5.1/oread/creating-and-modifying-environment-variables-on-windows.html#GUID-DD6F9982-60D5-48F6-8270-A27EC53807D0). Also, recall that in most places you'll also need to escape the "```\```" within any **path** strings (e.g. ```"IMG_PATH": "\\Users\\alice\\notebook\\imgs"```) used; the drive letter (e.g. ```"D:\\Media\imgs"```) is optional if it's your **\%HOMEDRIVE\%**. )
 
---- 
 
-##### (3) -> **access your notes in python3.11+ !**
+### (3) -> **access your notes in python3.11+ !**
 
 
 ```py
@@ -95,7 +91,6 @@ The environment-based setup remains supported:
 ... 
 ```
 
---- 
 
 <p align=center>
   <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
