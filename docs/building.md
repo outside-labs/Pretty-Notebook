@@ -14,6 +14,7 @@ python3.14 -m venv .venv-docs
 .venv-docs/bin/python -m pip install --editable . --requirement docs/requirements.txt
 .venv-docs/bin/python -m pip check
 .venv-docs/bin/python -m sphinx -b html -n -W --keep-going -E docs docs/_build/html
+.venv-docs/bin/python docs/check_html.py docs/_build/html --sources docs
 ```
 
 On Windows, use `.venv-docs\Scripts\python.exe` for the same commands.
@@ -22,6 +23,12 @@ after edits. `-E` rebuilds the environment, `-n` checks references, and `-W`
 makes warnings fail the build. API reference imports use this checkout's
 `src/` directory, while CLI help comes from the actual Click command registry
 without running commands.
+
+The emitted-HTML check verifies local file and fragment links, and rejects
+source names such as `search.md` that collide with Sphinx's generated search.
+The notebook's search guide is `local-search.md`; Sphinx retains `search.html`
+for searching the documentation itself. The check's failure cases run with
+`python -m unittest discover -s docs/tests`.
 
 The documentation CI workflow installs only the package and declared docs
 requirements, checks dependency compatibility, then runs that strict build.

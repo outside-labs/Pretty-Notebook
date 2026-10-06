@@ -16,7 +16,8 @@ wheel. The web application is a separate repository application with the
 pnbp
 settings
 editing
-search
+local-search
+navigation
 identities
 links
 routes
@@ -35,6 +36,7 @@ server-state
 assets
 diagrams
 code-tools
+public-search
 ```
 
 ```{toctree}

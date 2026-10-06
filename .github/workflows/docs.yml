@@ -36,3 +36,8 @@ jobs:
 
       - name: Build with strict references and warnings as errors
         run: python -m sphinx -b html -n -W --keep-going -E docs docs/_build/html
+
+      - name: Check emitted links and generated pages
+        run: |
+          python -m unittest discover -s docs/tests
+          python docs/check_html.py docs/_build/html --sources docs
