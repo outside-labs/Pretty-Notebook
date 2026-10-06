@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ TITLE }}</title>
+    <title>{% if page_title and page_title != TITLE %}{{ page_title }} · {% endif %}{{ TITLE }}</title>
+    {% if favicon_url %}<link rel="icon" type="image/png" href="{{ favicon_url }}">{% endif %}
     <link href="{{ root_path }}/static/css/site.css" rel="stylesheet">
   </head>
   <body>

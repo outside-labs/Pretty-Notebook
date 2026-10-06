@@ -618,6 +618,10 @@ class Notebook:
 		"""
 		return _publishing.web_settings_post(self)
 
+	def post_favicon(self, path):
+		"""Replace the site's PNG favicon; requires site-owner credentials."""
+		return _publishing.post_favicon(self, path)
+
 	def create_api_user(self, username='', bootstrap_token=None):
 		""" request method to generate an pnbp-web API user 
 		"""

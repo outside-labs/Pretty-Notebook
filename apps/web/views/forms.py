@@ -63,14 +63,14 @@ async def submit_form(request: Request, form_name: str):
         return home.templates.TemplateResponse(
             request,
             "shared/404.html",
-            {**await home.get_template_content(request), "unavailable_content": form_name},
+            {**await home.get_template_content(request, page_title="Page not found"), "unavailable_content": form_name},
             status_code=404,
         )
 
     try:
         fields = definition.schema.model_validate(dict(await request.form()))
     except ValidationError:
-        content = await home.get_template_content(request)
+        content = await home.get_template_content(request, page_title="Contact")
         content["form_error"] = definition.error_message
         return home.templates.TemplateResponse(
             request, definition.template, content, status_code=422
