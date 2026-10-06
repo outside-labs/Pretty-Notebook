@@ -1,5 +1,53 @@
 {% extends 'shared/layout.html' %}
 
 {% block content %}
+{% if navigation %}
+<nav aria-label="Note breadcrumbs" class="breadcrumbs">
+  <ol>
+    {% for crumb in navigation.breadcrumbs %}<li><a href="{{ crumb.url }}">{{ crumb.label }}</a></li>{% endfor %}
+    <li><span aria-current="page">{{ navigation.current.title }}</span></li>
+  </ol>
+</nav>
+<nav aria-label="Notebook navigation" class="reading-links">
+  <a class="button button-secondary" href="{{ navigation.index_url }}" data-notebook-back data-root-path="{{ root_path }}">Back</a>
+  <a href="{{ navigation.index_url }}">Directory index</a>
+  <a href="{{ root_path }}/n/search">Search</a>
+</nav>
+{% if navigation.outline %}
+<details class="reading-panel" open>
+  <summary>On this page</summary>
+  <ol class="heading-outline">
+    {% for heading in navigation.outline %}
+    <li class="heading-level-{{ heading.level }}">{% if heading.url %}<a href="{{ heading.url }}">{{ heading.title }}</a>{% else %}<span>{{ heading.title }}</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</details>
+{% endif %}
+{% endif %}
 <article class="prose" data-publication>{{ page_content | safe }}</article>
+{% if navigation %}
+<nav aria-label="Reading order" class="reading-links">
+  {% if navigation.previous %}<a rel="prev" href="{{ navigation.previous.url }}">Previous: {{ navigation.previous.title }}</a>{% endif %}
+  {% if navigation.next %}<a rel="next" href="{{ navigation.next.url }}">Next: {{ navigation.next.title }}</a>{% endif %}
+</nav>
+{% if navigation.backlinks %}
+<section class="reading-panel" aria-label="Linked from">
+  <h2>Linked from</h2>
+  <ul>{% for note in navigation.backlinks %}<li><a href="{{ note.url }}">{{ note.title }}</a></li>{% endfor %}</ul>
+</section>
+{% endif %}
+{% if navigation.related %}
+<details class="reading-panel">
+  <summary>Related notes</summary>
+  <ul>
+    {% for note in navigation.related %}
+    <li><a href="{{ note.url }}">{{ note.title }}</a>
+      <span class="text-muted">{% if note.linked_from %}Linked here{% endif %}{% if note.links_to %}{% if note.linked_from %}; {% endif %}links to this page{% endif %}{% if note.shared_tags %}{% if note.linked_from or note.links_to %}; {% endif %}shared tags: {% for tag in note.shared_tags %}#{{ tag }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+<script defer src="{{ root_path }}/static/js/notebook-navigation.js"></script>
+{% endif %}
 {% endblock %}

@@ -14,6 +14,7 @@ from tortoise import connections
 from tortoise.contrib.fastapi import RegisterTortoise, tortoise_exception_handlers
 from views import forms, home
 from views import search as search_view
+from views import navigation as navigation_view
 
 DEFAULT_DATABASE_URL = web_config.DATABASE_URL
 
@@ -141,6 +142,7 @@ def create_app(
 
     app.include_router(forms.router)
     app.include_router(search_view.router)
+    app.include_router(navigation_view.router)
     # The public path catch-all must remain after every fixed and API route.
     app.include_router(home.router)
 

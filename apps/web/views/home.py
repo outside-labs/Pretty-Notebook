@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 
 from api.layout_api import get_layout_content
 from api.publish_api import publication_path
+from api.public_navigation import snapshot_navigation
 from pnbp._routes import RESERVED
 from pnbp._icons import render_icon, replace_legacy_icons
 from fastapi import APIRouter, Form, HTTPException, Request, status
@@ -47,6 +48,8 @@ async def contact(request: Request):
 @router.get("/", include_in_schema=False)
 async def home(request: Request):
     content = await get_template_content(request)
+    navigation = await snapshot_navigation(request)
+    content["notebook_index"] = navigation.directory()
     return templates.TemplateResponse(request, "home/home.html", content)
 
 
@@ -95,7 +98,7 @@ async def favicon(request: Request):
 
 
 @router.get("/{content:path}", include_in_schema=False)
-async def content(request: Request, content: str):
+async def content(request: Request, content: str, related: bool = True):
     if content.split("/", 1)[0] in RESERVED - {"n"}:
         raise HTTPException(404, "Not Found")
     template_content = await get_template_content(request)
@@ -121,6 +124,8 @@ async def content(request: Request, content: str):
 
     template_content["page_title"] = resolved["title"] if resolved else content
     template_content["page_content"] = replace_legacy_icons(page["body"])
+    navigation = await snapshot_navigation(request)
+    template_content["navigation"] = navigation.page("/" + content, related=related)
     template_content["diagram_mode"] = "detect" if page["legacy"] else "required" if "mermaid" in page["feature_flags"] else None
     template_content["code_mode"] = "detect" if page["legacy"] else "required" if "code" in page["feature_flags"] else None
     return templates.TemplateResponse(
