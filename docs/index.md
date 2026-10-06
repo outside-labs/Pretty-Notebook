@@ -14,6 +14,8 @@ wheel. The web application is a separate repository application with the
 :caption: Library and command line
 
 pnbp
+tutorials
+versions
 settings
 editing
 local-search
