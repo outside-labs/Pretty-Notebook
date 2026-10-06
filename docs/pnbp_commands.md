@@ -62,6 +62,7 @@ contract. See the [release notes](release-0.9.0.md).
 | pnbp commit-stage | *only* print commit- changes against nb.API_BASE (staging view) |
 | pnbp touch-all-public | update the mod date for all #public (remote debug) |
 | pnbp commit-settings | update the remote web-settings.json values (local to server); use “--local” for localhost setups |
+| pnbp favicon PATH | 0.10 development: atomically replace the site's validated PNG favicon using owner credentials; `--local` targets localhost |
 
 --- 
 

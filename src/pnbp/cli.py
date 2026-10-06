@@ -383,6 +383,22 @@ def commit_settings(local):
 
 
 @cli.command()
+@click.argument("path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--local", is_flag=True, help="Upload to localhost instead of the configured API_BASE.")
+@_command_errors
+def favicon(path, local):
+	"""Replace the site's PNG favicon using site-owner credentials."""
+	nb = _open_notebook()
+	if local:
+		nb.API_BASE = "http://127.0.0.1:8000"
+	try:
+		response = nb.post_favicon(path)
+	except requests.RequestException as error:
+		raise click.ClickException("Could not update the site favicon.") from error
+	click.echo(response.json()["url"])
+
+
+@cli.command()
 def git_clone_pnbp_web():
 	""" command to clone from github to ./pnbp_web/
 	"""
