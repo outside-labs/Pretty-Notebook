@@ -1,5 +1,8 @@
 # Published notebook navigation
 
+**0.10 development:** this guide describes the current checkout, rather than
+the published 0.9.0 package.
+
 The public site provides a generated notebook index at `/n`, with directory
 indexes at `/n?directory=guides`. The home page includes the same public index
 while retaining the owner's navigation, title, footer, and theme settings.
