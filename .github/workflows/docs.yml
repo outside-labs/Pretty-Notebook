@@ -1,0 +1,43 @@
+name: Documentation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Strict documentation build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install package and documentation tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --editable . --requirement docs/requirements.txt
+          python -m pip check
+
+      - name: Build with strict references and warnings as errors
+        run: python -m sphinx -b html -n -W --keep-going -E docs docs/_build/html
+
+      - name: Check emitted links and generated pages
+        run: |
+          python -m unittest discover -s docs/tests
+          python docs/check_html.py docs/_build/html --sources docs

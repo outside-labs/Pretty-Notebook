@@ -1,11 +1,13 @@
+# pnano (unsupported)
+
 > [!WARNING]
 > **0.9 status:** the `pnano.app` and `ppnbp.app` protocol handlers are experimental and unsupported. Do not install or register them as part of a supported 0.9 setup. Their scripts do not safely validate URL input.
 
 **pnano** ("protocol-ed nano") is ultimately a non-nano name to call some monkey patch that handles for the (unused) URI protocol namespace of ```nano://``` to open files directly to the nano text editor. (e.g. as written for macos, when clicking ```nano:///Users/alice/hello.py```, ```hello.py``` will be opened in ```nano``` to the second (to the right) pane in a split-pane iTerm2 window (closed/->reopened).
 
 Why? 
-- (a) [vim]() has a [wiki](https://vimwiki.github.io/) system.
-- (b) [emacs]() has a [wiki](https://github.com/caiorss/org-wiki) system.
+- (a) vim has a [wiki](https://vimwiki.github.io/) system.
+- (b) emacs has a [wiki](https://github.com/caiorss/org-wiki) system.
 - (c) [nano](https://www.nano-editor.org/) *doesn't* have a wiki system.
 
 ... 
@@ -42,9 +44,9 @@ With [pnbp](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/pnbp.
 on ```pnbp pprint -n mynote```, before rich [Markdown](https://rich.readthedocs.io/en/stable/markdown.html) handling, every internal **\[\[link\]\]** is converted to **\[link\]\(pnbp:///path/to/notebook/mynote.md\)** and a frame is added to the pretty print-out w/ : 
 
 MENU : 
---->: [refresh]() - re-print the current note (e.g. on update)    
-nano: [mynote]() - split-pane and open the currently printed (`-n`) note to ```nano```    
-nano: [new note]() - split-pane to a new (incremented, default name) .md note on path    
+--->: refresh - re-print the current note (e.g. on update)
+nano: mynote - split-pane and open the currently printed (`-n`) note to ```nano```
+nano: new note - split-pane to a new (incremented, default name) .md note on path
 
 if the markdown wasn't being marked-up and rendered, it would look like this e.g. :
 
@@ -75,7 +77,7 @@ nano: [new note](nano:///Users/alice/notebook/new2.md)
 % # ...
 ```
 
-Every internal link (e.g. ```[[LINK]]```) within the content of the current pretty printed note (e.g. as [LINK]()) being redirected to ```pnbp://```, on click, will call ```ppnbp.app```, -> iTerm's current window (the one you clicked in) is instructed to ```clear ``` (fully) and then ```pnano pprint -n "LINK.md"```. This "refreshes" the window to the exclusive content of the newly clicked note (so that any scrolling instance only holds the current note context).
+Every internal link (e.g. ```[[LINK]]```) within the content of the current pretty printed note (e.g. as `LINK`) being redirected to ```pnbp://```, on click, will call ```ppnbp.app```, -> iTerm's current window (the one you clicked in) is instructed to ```clear ``` (fully) and then ```pnano pprint -n "LINK.md"```. This "refreshes" the window to the exclusive content of the newly clicked note (so that any scrolling instance only holds the current note context).
 
 --- 
 

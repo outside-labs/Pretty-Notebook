@@ -86,7 +86,7 @@ characters. Literal matching is the default, and matching is case insensitive.
 Queries contain 1–512 characters, limits are 1–200, and offsets are nonnegative.
 Regex is an explicit local option; invalid expressions fail clearly. Existing
 `nb.find(regex)` remains the legacy stored-source reporter. See
-[local search](search.md) for title/content/tag selection and exact tag filters.
+[local search](local-search.md) for title/content/tag selection and exact tag filters.
 
 ```bash
 pnbp --profile work search 'literal [text]' --json --limit 20

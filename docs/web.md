@@ -84,7 +84,7 @@ python -c 'import secrets; print(secrets.token_urlsafe(32))'
 
 Put the two different generated values in an untracked `apps/web/.env` file:
 
-```dotenv
+```bash
 PNBP_DATA_DIR=/srv/pnbp-web
 PNBP_ALLOWED_HOSTS=notes.example.com
 PNBP_DATABASE_URL=sqlite:///srv/pnbp-web/db.sqlite3

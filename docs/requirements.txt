@@ -1,0 +1,3 @@
+# Documentation build tools only; never installed with the runtime package.
+Sphinx==9.1.0
+myst-parser==5.1.0
