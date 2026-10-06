@@ -370,6 +370,19 @@ def web_settings_post(notebook):
 	return r
 
 
+def post_favicon(notebook, path):
+	"""Upload one PNG favicon using the notebook's configured site credentials."""
+	path = Path(path).expanduser()
+	if path.suffix.lower() != ".png":
+		raise ValueError("Favicon must use the PNG format.")
+	with path.open("rb") as source:
+		content = source.read(1024 * 1024 + 1)
+	if len(content) > 1024 * 1024:
+		raise ValueError("Favicon exceeds the 1 MiB limit.")
+	return notebook._api_request(requests.post, "/api/favicon",
+		files={"file": (path.name, content, "image/png")}, headers=notebook.get_headers())
+
+
 def create_api_user(notebook, username='', bootstrap_token=None):
 	""" request method to generate an pnbp-web API user
 	"""

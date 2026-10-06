@@ -20,7 +20,6 @@ async def notebook_index(request: Request, directory: Annotated[str, Query(max_l
         raise HTTPException(422, str(error)) from error
     navigation = await snapshot_navigation(request)
     report = navigation.directory(directory, limit=limit, offset=offset)
-    content = await home.get_template_content(request)
-    content.update(page_title=directory.rsplit("/", 1)[-1] if directory else "Notebook",
-                   notebook_index=report)
+    content = await home.get_template_content(request, page_title=directory.rsplit("/", 1)[-1] if directory else "Notebook")
+    content["notebook_index"] = report
     return home.templates.TemplateResponse(request, "home/notebook.html", content)
