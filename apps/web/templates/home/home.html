@@ -3,7 +3,7 @@
 {% block content %}
 <section class="prose">
   <h1>{{ TITLE }}</h1>
-  <p>Explore the published notebook using the navigation above.</p>
+  {% include 'shared/notebook-index.html' %}
   <p><a href="{{ root_path }}/contact">Leave a message</a></p>
 </section>
 {% endblock %}

@@ -14,6 +14,8 @@ from .catalog import _read_blob, blob_path
 MAX_DOCUMENTS = 5_000
 MAX_INDEX_BYTES = 16 * 1024 * 1024
 FIELDS = ("any", "title", "content", "tag")
+MAX_HEADINGS = 100
+MAX_LINKS = 200
 
 
 class IndexCapacityError(RuntimeError):
@@ -32,10 +34,27 @@ class _VisibleText(HTMLParser):
         self.tag_parts = []
         self.hidden = 0
         self.literal = 0
+        self.headings = []
+        self.links = []
+        self.anchors = set()
+        self.heading = None
 
     def handle_starttag(self, tag, attrs):
         if tag in self.HIDDEN:
             self.hidden += 1
+        if not self.hidden and not self.literal:
+            if tag == "a" and len(self.links) < MAX_LINKS:
+                href = next((value for name, value in attrs if name == "href"), None)
+                if isinstance(href, str) and len(href) <= 2_000 and href not in self.links:
+                    self.links.append(href)
+            if tag in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                self._finish_heading()
+                anchor = next((value for name, value in attrs if name == "id"), None)
+                if not isinstance(anchor, str) or not 1 <= len(anchor) <= 200 or any(character.isspace() or ord(character) < 32 for character in anchor) or anchor in self.anchors:
+                    anchor = None
+                if anchor is not None:
+                    self.anchors.add(anchor)
+                self.heading = (tag, int(tag[1]), anchor, [])
         if tag in self.TAG_LITERALS:
             self.literal += 1
             self.tag_parts.append(" ")
@@ -44,6 +63,8 @@ class _VisibleText(HTMLParser):
             self.tag_parts.append(" ")
 
     def handle_endtag(self, tag):
+        if not self.hidden and self.heading is not None and tag == self.heading[0]:
+            self._finish_heading()
         if tag in self.HIDDEN:
             self.hidden = max(0, self.hidden - 1)
         if tag in self.TAG_LITERALS:
@@ -60,8 +81,29 @@ class _VisibleText(HTMLParser):
     def handle_data(self, text):
         if not self.hidden:
             self.parts.append(text)
+            if self.heading is not None:
+                self.heading[3].append(text)
             if not self.literal:
                 self.tag_parts.append(text)
+
+    def _finish_heading(self):
+        if self.heading is not None:
+            _, level, anchor, parts = self.heading
+            title = re.sub(r"\s+", " ", "".join(parts)).strip()[:200]
+            if title and len(self.headings) < MAX_HEADINGS:
+                self.headings.append(PublicHeading(level, title, anchor))
+            self.heading = None
+
+    def close(self):
+        super().close()
+        self._finish_heading()
+
+
+@dataclass(frozen=True)
+class PublicHeading:
+    level: int
+    title: str
+    anchor: str | None
 
 
 @dataclass(frozen=True)
@@ -71,6 +113,8 @@ class PublicDocument:
     text: str
     tags: tuple[str, ...]
     aliases: tuple[str, ...]
+    headings: tuple[PublicHeading, ...] = ()
+    links: tuple[str, ...] = ()
 
 
 def _fingerprint(store, rows):
@@ -96,10 +140,13 @@ def _derive(store, rows):
         text = re.sub(r"\s+", " ", "".join(parser.parts)).strip()
         tags = tuple(sorted({tag.casefold() for tag in Tag.collect_tags("".join(parser.tag_parts))}))
         size += len(text.encode("utf-8")) + len(row["title"].encode("utf-8"))
+        size += sum(len(link.encode("utf-8")) for link in parser.links)
+        size += sum(len((heading.anchor or "").encode("utf-8")) for heading in parser.headings)
         if size > MAX_INDEX_BYTES:
             raise IndexCapacityError("Public index exceeds the 16 MiB visible-text limit.")
         documents.append(PublicDocument(row["canonical_route"], row["title"], text,
-                                        tags, tuple(json.loads(row["aliases"]))))
+                                        tags, tuple(json.loads(row["aliases"])),
+                                        tuple(parser.headings), tuple(parser.links)))
     return tuple(documents)
 
 
