@@ -11,13 +11,14 @@ from pnbp._icons import render_icon, replace_legacy_icons
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
+from api.site_api import favicon_url, read_favicon
 
 router = APIRouter()
 WEB_ROOT = Path(__file__).resolve().parents[1]
 templates = Jinja2Templates(WEB_ROOT / "templates")
 
 
-async def get_template_content(request: Request) -> dict:
+async def get_template_content(request: Request, *, page_title: str | None = None) -> dict:
     prefix = request.scope.get("root_path", "")
     content = await get_layout_content(prefix)
     cookie_value = request.cookies.get("darkmode")
@@ -30,12 +31,15 @@ async def get_template_content(request: Request) -> dict:
         content[field] = replace_legacy_icons(content[field])
     content["assets"] = request.app.state.assets.layout_assets(content, request)
     content["root_path"] = prefix
+    content["page_title"] = page_title
+    favicon = await read_favicon(request)
+    content["favicon_url"] = favicon_url(request, favicon) if favicon is not None else None
     return content
 
 
 @router.get("/contact", include_in_schema=False)
 async def contact(request: Request):
-    content = await get_template_content(request)
+    content = await get_template_content(request, page_title="Contact")
     content["form_sent"] = request.query_params.get("sent") == "1"
     return templates.TemplateResponse(request, "home/contact.html", content)
 
@@ -82,8 +86,12 @@ async def set_theme(
 
 
 @router.get("/favicon.ico", include_in_schema=False)
-def favicon():
-    raise HTTPException(status_code=404, detail="Favicon not found")
+async def favicon(request: Request):
+    content = await read_favicon(request)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Favicon not found")
+    return RedirectResponse(favicon_url(request, content), status_code=307,
+                            headers={"Cache-Control": "no-store"})
 
 
 @router.get("/{content:path}", include_in_schema=False)
@@ -103,6 +111,7 @@ async def content(request: Request, content: str):
             raise FileNotFoundError
     except (HTTPException, FileNotFoundError, IsADirectoryError):
         template_content["unavailable_content"] = content
+        template_content["page_title"] = "Page not found"
         return templates.TemplateResponse(
             request,
             "shared/404.html",
@@ -110,6 +119,7 @@ async def content(request: Request, content: str):
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
+    template_content["page_title"] = resolved["title"] if resolved else content
     template_content["page_content"] = replace_legacy_icons(page["body"])
     template_content["diagram_mode"] = "detect" if page["legacy"] else "required" if "mermaid" in page["feature_flags"] else None
     template_content["code_mode"] = "detect" if page["legacy"] else "required" if "code" in page["feature_flags"] else None

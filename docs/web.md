@@ -200,6 +200,46 @@ page, image, or layout replacement is atomic, and a failed upload stops the
 client before pruning. Earlier successful uploads from that run remain in
 place and can safely be retried.
 
+## Site titles and favicon
+
+The layout's `TITLE` is the site title. Set it in the notebook's presentation
+settings and send it with `pnbp commit-settings` or authenticated
+`POST /api/layout`. The home page uses that title; publication pages use
+their configured publication title followed by the site title. Contact and
+missing-page responses have their own page titles. Titles are escaped as text.
+
+The 0.10 development client adds a dedicated favicon command:
+
+```bash
+pnbp favicon ./site.png
+# For the local development server:
+pnbp favicon ./site.png --local
+```
+
+From Python, use `nb.post_favicon("./site.png")`. Both use the notebook's
+`API_BASE` and bearer token. The server requires the initial owner account
+(user ID 1) for site-wide favicon changes. Other equally trusted editors retain
+their existing publication permissions; a future role model must preserve this
+site-management boundary.
+
+The request is `POST /api/favicon` with a multipart field named `file`, a
+`.png` filename and the owner's `Authorization: Bearer ...` header. A successful
+request returns `201` with `url`, `width`, and `height`. Static PNG files are
+limited to 1 MiB and 512 pixels per side; chunk checksums, pixel-data lengths and
+PNG encoding are validated. Animated PNG, ICO, SVG, corrupt or truncated images
+are rejected with `400`; files exceeding 1 MiB return `413`. Invalid or absent
+tokens return `401`, and other accounts return `403`.
+
+The validated file is atomically stored as `PNBP_DATA_DIR/favicon.png` and
+survives restarts and stopped-site backups. Every rendered page links to
+`/static/favicon/<sha256>.png`, including a configured URL prefix. That route
+serves `image/png` with an immutable cache policy. Replacement changes the URL;
+a newly loaded page therefore requests the replacement without reusing a stale
+cache entry. Old version URLs return `404` from the server. `/favicon.ico`
+redirects to the current PNG with `307` and `Cache-Control: no-store`.
+Without an uploaded favicon, no icon link is emitted and favicon requests
+return `404`. A failed write preserves the previous icon.
+
 ## Public routes and local inbox
 
 The home page, published single-slug pages, images, theme switch, contact page,
@@ -230,6 +270,7 @@ The data directory contains:
 | `pages/.blobs/*.html` | Immutable catalog-selected bodies and referenced history |
 | `migration-backups/*.sqlite3` | Private pre-migration database snapshots |
 | `images/*` | Validated published images |
+| `favicon.png` | Validated owner-managed site favicon, when configured |
 | `web-settings.json` | Navigation, title, theme, and owner-authored layout HTML |
 
 New directories are created with mode `0700`, and a newly seeded settings file
