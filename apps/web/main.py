@@ -5,7 +5,7 @@ from os import chmod
 import fastapi
 import assets
 import web_config
-from api import auth_api, layout_api, publish_api, publishing_api, schema, catalog
+from api import auth_api, layout_api, publish_api, publishing_api, schema, catalog, site_api
 from api import forms as forms_api
 from api import search_api, public_index
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -72,6 +72,8 @@ def create_app(
     app.state.pages_path = publish_api.PUB_PATH
     app.state.images_path = publish_api.IMG_PATH
     app.state.settings_path = layout_api.WEB_SETTINGS_PATH
+    app.state.favicon_path = layout_api.WEB_SETTINGS_PATH.parent / "favicon.png"
+    app.state.favicon_lock = asyncio.Lock()
     app.state.assets = asset_resolver
     app.state.code_highlight = web_config.code_highlight()
 
@@ -99,6 +101,9 @@ def create_app(
         if path.startswith("/api") or path == "/healthz":
             response.headers.setdefault("Cache-Control", "no-store")
         return response
+
+    # Dynamic favicon assets must precede the repository static-file mount.
+    app.include_router(site_api.router)
 
     app.mount(
         "/static/imgs",
