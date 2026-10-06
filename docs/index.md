@@ -16,6 +16,7 @@ wheel. The web application is a separate repository application with the
 pnbp
 settings
 editing
+search
 identities
 links
 routes
