@@ -36,8 +36,8 @@ Resolution follows these rules:
 `nb.resolve_link(target, source=...)` returns a `LinkResolution` with `state`
 (`resolved`, `missing`, `ambiguous`, or `invalid`), `path`, `note_id`, candidates,
 and an optional heading diagnostic. `Link.resolve(nb, source=...)` uses this
-same resolver and returns a note or `None`, without fuzzy matching. Existing
-flat publication URLs remain in place until route migration is implemented.
+same resolver and returns a note or `None`, without fuzzy matching. Flat
+publication URLs remain the default; [route migration](routes.md) is explicit.
 
 Heading diagnostics recognize Markdown heading IDs, explicit attribute IDs,
 and standard generated anchors. A missing heading is reported separately from

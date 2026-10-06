@@ -14,7 +14,7 @@ also be used as `Notebook.open(path)`; `nb.open()` reloads an existing instance.
 
 ```{eval-rst}
 .. autoclass:: pnbp.Notebook
-   :members: get, reload, generate_note, get_tagged, search, resolve_link, graph_index, rename_note, move_note, initialize_identities, identity_status, publication_routes, prepare_publication, execute_publication, post_favicon
+   :members: get, reload, generate_note, get_tagged, search, navigation_index, traversal, resolve_link, graph_index, rename_note, move_note, initialize_identities, identity_status, publication_routes, prepare_publication, execute_publication, post_favicon
 ```
 
 ## Note
@@ -36,6 +36,18 @@ file for concurrent changes and returns the refreshed note.
 
 ```{eval-rst}
 .. autoexception:: pnbp.SettingsError
+```
+
+## Search and navigation
+
+```{eval-rst}
+.. autoclass:: pnbp.SearchHit
+
+.. autoclass:: pnbp.NavigationIndex
+   :members: directory, entry, breadcrumbs, outline, backlinks, neighbors, related
+
+.. autoclass:: pnbp.NavigationHistory
+   :members: visit, current, back, forward
 ```
 
 ## CLI overview

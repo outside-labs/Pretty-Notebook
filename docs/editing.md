@@ -80,8 +80,8 @@ hits = nb.search("literal [text]", limit=20, offset=0)
 hits = nb.search(r"pattern.*", regex=True)
 ```
 
-Search returns typed hits (`name`, `start`, `end`, `excerpt`) in note-name order.
-Offsets refer to characters in `current_md`; excerpts contain at most 160
+Search returns typed hits (`name`, `start`, `end`, `excerpt`, `field`) in note-name order.
+Offsets refer to characters in the matched field; excerpts contain at most 160
 characters. Literal matching is the default, and matching is case insensitive.
 Queries contain 1–512 characters, limits are 1–200, and offsets are nonnegative.
 Regex is an explicit local option; invalid expressions fail clearly. Existing
@@ -97,10 +97,11 @@ pnbp --profile work commit-stage --json --limit 100
 JSON reports use specific fields, bounded rows/text, and redact the active API
 token. They contain no complete settings or credentials object. Status is local;
 publication preview may read remote page/image inventories but writes no local
-or remote files. Preview reports identify `mode: "legacy-0.9"`, page/image actions,
-counts, and truncation. They use the existing timestamp comparison and preserve
-remote pages by default. They do not claim revision or hash concurrency checks;
-those arrive with PUB-05. Existing one-notebook ownership and explicit-prune
+or remote files. [Checked publishing](checked-publishing.md) negotiates the
+revision protocol by default and reports page/image actions, counts and conflicts.
+Only a capabilities `404` permits the explicit `legacy-0.9` timestamp fallback;
+authentication or transport failures stop planning. Remote pages are preserved
+by default in both modes. Existing one-notebook ownership and explicit-prune
 restrictions still apply.
 
 Settings, storage, rendering, search, and publishing now live in focused modules,

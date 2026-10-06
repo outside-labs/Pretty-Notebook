@@ -1,193 +1,52 @@
 # Models and methods
 
-a **Notebook** instance contains a dictionary of each **Note** available by it's name :
+Import the notebook and settings from the package, note types from its models,
+and components from their dedicated module:
 
-```py
->>> import pnbp
->>> nb = pnbp.Notebook()
->>> nb.notes.values() # k=note name, v=pnbp.Note
->>> n = nb.notes['SCIENCE']
->>> n = nb.notes.get('SCIENCE')
+```python
+from pnbp import Notebook, NotebookSettings, SearchHit
+from pnbp.models import Note
+from pnbp.models.components import Link, Tag, CodeBlock, Url
 ```
 
-best accessed directly from the nb with .get() :
+The [generated API reference](reference.md) provides selected current signatures;
+the [workflow tutorial](tutorials.md) runs complete local examples. These imports
+refer to the development checkout; follow [versions and support](versions.md)
+when using the published wheel.
 
-```py
->>> from pnbp.models.components import Link
->>> nb.get('SCIENCE') # exact names are checked first
->>> nb.get('SCIENCE.md') # only a terminal .md or .html is normalized
->>> # get by best match ~
->>> n = nb.get('sc13nce')
->>> nb.get('sc13nce', fuzzy=False) # exact/normalized lookup only
->>> nb.get(Link('SCIENCE#method')) # Link targets resolve through Link.note
-```
+## Lookup and source content
 
-each note exposes lists of **Link**s, **Tag**s, **CodeBlock**s, **Url**s, (and more) :
+`nb.notes` maps source names without their terminal `.md` extension to loaded
+notes. `nb.get(name, fuzzy=False)` uses exact/normalized lookup and returns `None`
+for a miss. `nb.get(name)` additionally permits the legacy close-name fallback.
+Commands require explicit `--fuzzy` before using an approximate match.
 
-```py
->>> n.name #-> str, the name of the note (sans ".md")
->>> n.md #-> str, the actual file content
->>> n.links #-> list, the str name of all double-bracketed internal [[links]] found
->>> n.tags #-> list, the #tags found (outside of any code, url, or \#escaped)
->>> n.urls #-> list, the http(s) external links 
->>> n.codeblocks #->list, any blocks of code via triple-backtick 
->>> # -> e.g. 
->>> n.slugname #->str n.name=Example Note => n.slugname=example-note
->>> n.sections #->list the n.md str split at "---"
->>> n.header # -> bool, via looking for "Links: ..."
->>> n.mtime #->str the file's modification date 
->>> # ... 
-```
+A note's tuple fields (`name`, `md`, `links`, `tags`, `urls`, `codeblocks`, `mtime`)
+are loaded snapshots. Pending edits use `md_out` and `current_md`; current parsed
+views use `current_links`, `current_tags`, `current_urls`, and `current_codeblocks`.
+Saving returns a refreshed note, and rendering preserves pending edits. The
+[editing guide](editing.md) is authoritative for save/discard/concurrency behavior.
 
- the **notebook** instance can provide collections of things: 
+## Components
 
-```py
->>> nb.get_tagged('#egtag') # ->n list
->>> nb.get_linked('SCIENCE') # ->n list
->>> nb.tags #-> list of all notebook found tags
->>> nb.links #-> list of all notes by name (is nb.notes.keys())
->>> nb.urls #-> list of all unique urls from all notes
-```
+`Link`, `Tag`, `CodeBlock` and `Url` are string subtypes. Positional and named
+construction create the same component type. Equality and hashing are exact;
+use `matches()` for explicit query normalization. Tags accept a query with or
+without `#`; links match note names without optional brackets, section or label.
 
-and **note**(s) can be individually queried against things: 
+For path, alias, heading and stable-ID resolution, use `nb.resolve_link()` or
+`Link.resolve(nb, source=...)` as described in [links and graph lookup](links.md).
+These resolver operations do not use fuzzy guesses.
 
-```py
->>> n.is_tagged('#egtag') #->bool
->>> n.is_tagged(['#taga', '#tagb', '#tagc']) #-> True if any tags found
->>> n.is_tagged(['#taga', '#tagb', '#tagc'], to_all=True) #-> True if all found
->>> n.is_tagged(at_all=True) #-> True if tags in n.tags at all
->>> n.is_linked('example note') #->bool
->>> n.is_linked(['note-a', '[[note-b]]', '[[ NoTE-C ]]']) # accept brackets and case-insensitive
->>> n.is_linked(['note-a', 'note-b', 'note-c'], to_all=True) # ... 
->>> n.is_linked(at_all=True) # ... 
-```
+## Notebook reports and writes
 
-## **update the contents of a note... **
+Ordinary discovery, search, graphs and navigation write no source files or
+identity state. Each [navigation snapshot](navigation.md) must be rebuilt after
+edits, and [traversal](navigation.md#explicit-traversal-history) records visits
+only through an explicit history object.
 
-
-### **manually** :
-
-```py
->>> import pnbp
->>> 
->>> nb = pnbp.Notebook()
->>> # get note directly by name
->>> n = nb.get('example note')
->>> # update content -> md_out
->>> n.md_out = n.md + '\nappending an example line~!'
->>> # save it to the notebook
->>> n.save(nb) 
->>> # the nb holds the live changes from n.save(nb) inplace
->>> n = nb.get('example note')
->>> # and is eqivalent to 
->>> n = n.save(nb)
->>> # noting that n itself doesn't inplace
->>> # meaning,
->>> n.md_out = "entirely new"
->>> n.save(nb)
->>> n.md # n here is older than what's in the nb !
-```
-
-
-### **search and destroy** :
-
-```py
->>> nb.find(r'~!') #->n list, search notebook for regex 
->>> nb.find_and_replace(r'~!', '!!') # inline replacements (be careful!!)
->>> # ... 
->>> nb.find_and_replace("appending an example line!!", "")
-```
-
-
-### **prime content protected** :
-
-```py
->>> import re
->>> n = nb.get("SCIENCE")
->>> n.prime_md_out_protect()
->>> # inplace, n.md_out becomes n.md
->>> # but w/ all n.links, n.tags, n.urls, n.codeblocks
->>> # protected against change 
->>> # by being replaced with a string key e.g. l_01.
->>> n.md_out = re.sub(r'example', 'e.x.', n.md_out) # ... 
->>> n.prime_md_out_release() # l_01. -> [[example note]]
->>> # enure unharmed! -> 
->>> n.save(nb)
->>> # or
->>> n.prime_md_out_release(nb) # inplace save
-```
-
-### **HTML rendering contract** :
-
-`Notebook.convert_to_html(note)` is read-only with respect to the note's pending `md_out` state. Fenced code and inline code are treated as literal content: wiki links, tags, heading-like comments, `~~strikethrough~~`, and `==highlight==` inside code are not expanded. Mermaid fences are the intentional exception and render as Mermaid containers.
-
-Heading IDs are assigned only to parsed Markdown headings. Separate `~~strike~~` and `==highlight==` spans render separately; whitespace-delimited comparisons such as `x == y` remain ordinary text.
-
-### **by section** :
-
-```py
->>> n = nb.get("SCIENCE")
->>> new_section = "The Scientific Method\n\nblah blah blah"
->>> n.append_section(new_section) # to the end
->>> n = n.save(nb)
->>> n.insert_section(0, "An added section by index")
->>> n = n.save(nb)
->>> n.prepend_section("Add to the beginning, but not before an n.header.")
->>> n.discard_changes() # nevermind, don't want that
->>> n.prepend_today_section(nb)
->>> # ^^ added section headered w/ YYYY-MM-DD
->>> # and saved inplace
-```
-
-^^ set **NOTE_HEADER** as an additional environment variable to define your own personal regex pattern (and overwrite the default: ```r"^Links"```). (e.g. ```export NOTE_HEADER="^Links: \[\[.+"``` would search for the same style header, but be ensuring that at least a single \[\[link\]\] is defined).
-
-
-### **generate a new note** :
-
-```py
->>> nb.generate_note(name='examp note 2', md_out='more *great* content here...')
->>> n = nb.get('examp note 2')
->>> n.md # from the new nb.NOTE_PATH/examp note 2.md
-more *great* content here...
->>> # must overwrite=True if note exists (else throw error and no deal)
->>> nb.generate_note('example note', "**better** content", overwrite=True)
-```
-
-
-## pnbp.models.components
-
-**Link**, **Tag**, **CodeBlock**, and **Url** all subclass [models/components/component.**Component**](https://github.com/outside-labs/Pretty-Notebook/blob/main/src/pnbp/models/components/component.py).
-
-A **Component** subclass is a stable string subtype with a named view of its value (e.g. ```Link(link="SCIENCE").link```, ```Tag(tag="#tag").tag```, ... ). Positional and named construction produce the same component type.
-
-In order to maintain simple access to them as though referencing against their string-ed value, the **Component** class provides methods that make them shake hands as such : 
-
-```py
->>> n = nb.get("SCIENCE")
->>> "#tag" in n.tags
-True
->>> n.links[0] == "SCIENCE"
-True
->>> n.links[0] + " *is* a linked note in n !"
-"SCIENCE *is* a linked note in n !"
-```
-
-String equality and hashing remain exact. Query normalization is explicit through ```.matches()```: tags may be queried with or without ```#```, while links are matched case-insensitively by note name without their optional brackets, section, or label.
-
-Each subclass definition holds its own regex pattern, various string replacement methods, and class-specific instance properties:
-
-```py
->>> n.tags[0].matches("tag")
-True
->>> n.tags[0] == "tag"
-False
->>> n.links
-['SCIENCE']
->>> [l.aslink for l in n.links]
-['[[SCIENCE]]']
-```
-
-
-<p align=center>
-  <img src=https://raw.githubusercontent.com/outside-labs/Pretty-Notebook/main/docs/IMG_pnbp.png alt=Pretty-Notebook width=200>
-</p>
+Use `generate_note()` for new source, `Note.save()` for pending source, and the
+[checked rename/move operations](links.md#rename-and-move) to preserve IDs and
+repair backlinks. Initialize [identities](identities.md) before managed moves.
+Saving generated reports as Markdown is an explicit operation; projections
+remain rebuildable from source.

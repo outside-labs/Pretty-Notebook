@@ -167,22 +167,27 @@ upload images, change layout settings, and read the local inbox, so create
 accounts only for equally trusted site editors.
 
 Tokens last 30 days. Issuing a new token or resetting a password revokes that
-account's previous token. Store the notebook's `pnbp_settings.json` with mode
-`0600`, exclude it from version control and backups shared with others, and
-treat its `API_TOKEN` as a password.
+account's previous token. The development client stores refreshed tokens in a
+separate private `.pnbp/secrets.json`; portable settings contain no credentials.
+Legacy `pnbp_settings.json` tokens remain readable. Follow
+[credential storage](settings.md#credentials-and-sharing), exclude credentials
+from shared backups, and treat every bearer token as a password.
 
 ## Publish from one notebook
 
 Review changes before sending them:
 
 ```bash
-pnbp commit-stage
-pnbp commit-remote
+pnbp commit-stage --json --mode checked
+pnbp commit-remote --mode checked
 ```
 
-Publishing updates only pages newer than their remote copy and uploads missing
-referenced images. `pnbp touch-all-public` marks all publishable notes for a
-refresh; `--refresh-images` resends referenced images.
+The 0.10 development client compares source/rendered/image hashes and checked
+remote revisions. Preview writes no local receipts or remote content, and a
+conflict requires a fresh reviewed plan. See [checked publishing](checked-publishing.md)
+for preconditions, retries and legacy fallback. The published 0.9.0 client uses
+timestamp comparisons; `touch-all-public` requests a refresh in that legacy mode.
+`--refresh-images` explicitly resends referenced images.
 
 Pruning is intentionally explicit. Use `--prune` only after reviewing
 `pnbp commit-stage` and confirming that this notebook owns the entire server
@@ -190,7 +195,7 @@ namespace. It deletes every remote page absent from the notebook. Shared
 multi-notebook ownership is not a supported 0.9 contract.
 
 The server accepts publication slugs made from lowercase letters, digits, and
-single hyphens. It limits publication bodies to 2,000,000 characters. Image
+single hyphens, with explicit hierarchical routes in development. It limits publication bodies to 2,000,000 characters. Image
 uploads are limited to 10 MiB, must use PNG, JPEG, GIF, or WebP extensions, and
 must match the corresponding file signature. SVG and arbitrary file uploads
 are rejected.
