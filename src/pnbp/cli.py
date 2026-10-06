@@ -247,14 +247,17 @@ def note_recover(operation_id, action, dry_run):
 
 @cli.command("search")
 @click.argument("query")
+@click.option("--field", type=click.Choice(["content", "title", "tag", "any"]), default="content", show_default=True, help="Choose the matching note field.")
+@click.option("--tag", "tags", multiple=True, help="Require this exact tag; repeat to require every tag.")
 @click.option("--regex", is_flag=True, help="Treat the query as a local regular expression.")
 @click.option("--limit", type=click.IntRange(1, 200), default=50, show_default=True)
 @click.option("--offset", type=click.IntRange(min=0), default=0)
 @click.option("--json", "output_json", is_flag=True)
 @_command_errors
-def search_notes(query, regex, limit, offset, output_json):
+def search_notes(query, field, tags, regex, limit, offset, output_json):
+	"""Search local notes using literal, case-insensitive matching by default."""
 	nb = _open_notebook()
-	hits = nb.search(query, regex=regex, limit=limit, offset=offset)
+	hits = nb.search(query, field=field, tags=tags, regex=regex, limit=limit, offset=offset)
 	if output_json:
 		_json_echo({"hits": [asdict(hit) for hit in hits], "limit": limit, "offset": offset}, nb)
 	else:

@@ -413,9 +413,12 @@ class Notebook:
 		"""
 		return _search.find(self, regex)
 
-	def search(self, query, *, regex=False, limit=50, offset=0):
-		"""Return quiet typed hits from current content, in note-name order."""
-		return _search.search(self, query, regex=regex, limit=limit, offset=offset)
+	def search(
+		self, query: str, *, field: _search.SearchField = "content", tags=(),
+		regex: bool = False, limit: int = 50, offset: int = 0,
+	) -> list[_search.SearchHit]:
+		"""Return quiet, bounded current-note hits with field and exact tag filters."""
+		return _search.search(self, query, field=field, tags=tags, regex=regex, limit=limit, offset=offset)
 
 	def find_and_replace(self, regex, replace, notes=[]):
 		""" 
