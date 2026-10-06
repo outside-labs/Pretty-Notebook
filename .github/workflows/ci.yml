@@ -144,8 +144,8 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Check conditional diagram loading
-        run: node --test tests/diagram-loader.test.cjs
+      - name: Check local browser interactions
+        run: node --test tests/*.test.cjs
 
       - name: Exercise supported deployment command
         env:

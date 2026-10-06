@@ -23,7 +23,8 @@ def test_fixed_routes_and_known_plain_pages_have_no_diagram_loader(client, auth_
         response = client.get(path)
         assert "diagram-loader.js" not in response.text
         assert "mermaid.min.js" not in response.text
-        assert "hljs.highlightAll" in response.text
+        assert "hljs.highlightAll" not in response.text
+        assert ("code-tools.js" in response.text) is (path == "/plain")
 
 
 @pytest.mark.parametrize("asset_mode", ["local", "cdn"], indirect=True)

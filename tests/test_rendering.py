@@ -103,3 +103,45 @@ def test_mermaid_source_is_literal_html_and_readable_without_javascript(notebook
 	assert "&lt;script&gt;alert(1)&lt;/script&gt;" in rendered
 	assert "<script>" not in rendered
 	assert note.md_out.startswith("```mermaid")
+
+
+@pytest.mark.parametrize("info", ["python", "{.python #sample}", "", "unknown-language"])
+def test_fenced_code_preserves_exact_tabs_unicode_and_trailing_newlines(notebook, info):
+	body = '  first\t☃\n\t[[other]] #tag <b>& text\n\n'
+	nb = Notebook()
+	note = nb.notes["other"]
+	note.md_out = f"```{info}\n{body}```\n"
+	rendered = nb.convert_to_html(note)
+	assert _code_fragments(rendered) == [body]
+	assert note.md_out == f"```{info}\n{body}```\n"
+	if info == "{.python #sample}":
+		assert 'id="sample"' in rendered and 'class="language-python"' in rendered
+
+
+def test_code_body_placeholders_cannot_collide_with_source_or_each_other(notebook):
+	nb = Notebook()
+	note = nb.notes["other"]
+	first = 'PNBPCODEBODY0TOKEN\nfirst\tblock\n'
+	second = 'second\tblock\n'
+	note.md_out = f'```text\n{first}```\n\n```text\n{second}```\n'
+	assert _code_fragments(nb.convert_to_html(note)) == [first, second]
+
+
+def test_empty_fences_and_long_code_lines_keep_their_text(notebook):
+	nb = Notebook()
+	note = nb.notes["other"]
+	body = 'x' * 100001 + '\n'
+	note.md_out = f'```text\n```\n\n```text\n{body}```\n'
+	assert _code_fragments(nb.convert_to_html(note)) == ['', body]
+
+
+def test_indented_fences_keep_body_indentation_and_unsupported_info_never_leaks_placeholders(notebook):
+	nb = Notebook()
+	note = nb.notes["other"]
+	body = '  print(1)\t☃\n'
+	note.md_out = f'  ```python\n{body}  ```\n'
+	assert _code_fragments(nb.convert_to_html(note)) == [body]
+	note.md_out = f'```python extra-info\n{body}```\n'
+	rendered = nb.convert_to_html(note)
+	assert 'PNBPCODEBODY' not in rendered
+	assert body in html.unescape(rendered)

@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ TITLE }}</title>
     <link href="{{ root_path }}/static/css/site.css" rel="stylesheet">
-    <link href="{{ assets['highlight-css'].url }}" rel="stylesheet" integrity="{{ assets['highlight-css'].integrity }}" crossorigin="anonymous">
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -23,7 +22,13 @@
             data-mermaid-theme="{{ merm_dark if darkmode else merm_light }}"
             data-diagram-mode="{{ diagram_mode }}"></script>
     {% endif %}
-    <script src="{{ assets['highlight-js'].url }}" integrity="{{ assets['highlight-js'].integrity }}" crossorigin="anonymous"></script>
-    <script>hljs.highlightAll();</script>
+    {% if code_mode %}
+    <script defer src="{{ root_path }}/static/js/code-tools.js"
+            data-highlight="{{ 'on' if highlight_code else 'off' }}"
+            data-highlight-src="{{ assets['highlight-js'].url }}"
+            data-highlight-integrity="{{ assets['highlight-js'].integrity }}"
+            data-highlight-style="{{ assets['highlight-css'].url }}"
+            data-highlight-style-integrity="{{ assets['highlight-css'].integrity }}"></script>
+    {% endif %}
   </body>
 </html>

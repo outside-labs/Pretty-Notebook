@@ -42,7 +42,7 @@ def test_local_page_and_all_runtime_assets_work_with_network_blocked(web_storage
         page = client.get("/")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert len(urls) == 3
+        assert urls == ["/static/css/site.css"]
         assert all(urlsplit(url).netloc in {"", "testserver"} for url in urls)
         for entry in client.app.state.assets.entries.values():
             asset = client.get("/static/" + entry["path"])
@@ -57,13 +57,15 @@ def test_local_page_and_all_runtime_assets_work_with_network_blocked(web_storage
 
 def test_explicit_cdn_mode_uses_only_pinned_integrity_checked_entries(web_storage, monkeypatch):
     monkeypatch.setenv("PNBP_ASSET_MODE", "cdn")
+    (web_storage.pages / "code.html").write_text('<pre><code class="language-python">print(1)</code></pre>')
     with TestClient(create_app(db_url="sqlite://:memory:")) as client:
-        page = client.get("/")
+        page = client.get("/code")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert "/static/css/site.css" in urls
-        assert all(urlsplit(url).hostname in {"cdn.jsdelivr.net", "cdnjs.cloudflare.com"} for url in urls if url != "/static/css/site.css")
-        assert page.text.count('integrity="sha384-') == 2
+        assert urls == ["/static/css/site.css", "/static/js/diagram-loader.js", "/static/js/code-tools.js"]
+        assert 'data-highlight-src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"' in page.text
+        assert 'data-highlight-style="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css"' in page.text
+        assert page.text.count('integrity="sha384-') == 3
         assert "https://cdn.jsdelivr.net" in page.headers["content-security-policy"]
 
 

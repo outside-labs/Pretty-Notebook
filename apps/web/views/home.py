@@ -25,6 +25,7 @@ async def get_template_content(request: Request) -> dict:
         content["darkmode"] = cookie_value == "True"
     content["request"] = request
     content["icon"] = render_icon
+    content["highlight_code"] = request.app.state.code_highlight
     for field in ("NAV_BRAND", "FOOTER"):
         content[field] = replace_legacy_icons(content[field])
     content["assets"] = request.app.state.assets.layout_assets(content, request)
@@ -111,6 +112,7 @@ async def content(request: Request, content: str):
 
     template_content["page_content"] = replace_legacy_icons(page["body"])
     template_content["diagram_mode"] = "detect" if page["legacy"] else "required" if "mermaid" in page["feature_flags"] else None
+    template_content["code_mode"] = "detect" if page["legacy"] else "required" if "code" in page["feature_flags"] else None
     return templates.TemplateResponse(
         request,
         "shared/published.html",
