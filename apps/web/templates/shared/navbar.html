@@ -1,7 +1,7 @@
 <header class="site-header">
   <nav class="shell site-nav" aria-label="Main navigation">
     <a class="site-brand" href="{{ root_path }}/">{{ NAV_BRAND | safe }}</a>
-    <ul class="nav-list">{{ NAV_PAGES | safe }}</ul>
+    <ul class="nav-list">{{ NAV_PAGES | safe }}<li><a class="nav-link" href="{{ root_path }}/n/search">Search</a></li></ul>
     <form class="theme-form" action="{{ root_path }}/theme" method="POST">
       <input type="hidden" name="return_to" value="{{ request.url.path }}">
       <button type="submit" class="button button-secondary" name="darkmode" value="{{ 'lightmode' if darkmode else 'darkmode' }}">

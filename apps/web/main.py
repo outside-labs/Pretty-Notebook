@@ -7,11 +7,13 @@ import assets
 import web_config
 from api import auth_api, layout_api, publish_api, publishing_api, schema, catalog
 from api import forms as forms_api
+from api import search_api, public_index
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.staticfiles import StaticFiles
 from tortoise import connections
 from tortoise.contrib.fastapi import RegisterTortoise, tortoise_exception_handlers
 from views import forms, home
+from views import search as search_view
 
 DEFAULT_DATABASE_URL = web_config.DATABASE_URL
 
@@ -60,6 +62,7 @@ def create_app(
             app.state.schema_migration = await schema.migrate()
             app.state.publications = catalog.PublicationStore(app.state.pages_path)
             await app.state.publications.start()
+            app.state.public_index = public_index.PublicIndex(app.state.publications)
             asset_resolver.validate_layout(await layout_api.get_layout_content())
             yield
 
@@ -125,12 +128,14 @@ def create_app(
     app.include_router(auth_api.router)
     app.include_router(layout_api.router)
     app.include_router(forms_api.router)
+    app.include_router(search_api.router)
 
     @app.api_route("/api/{unknown:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], include_in_schema=False)
     async def unknown_api(unknown: str):
         raise fastapi.HTTPException(404, "Not Found")
 
     app.include_router(forms.router)
+    app.include_router(search_view.router)
     # The public path catch-all must remain after every fixed and API route.
     app.include_router(home.router)
 
