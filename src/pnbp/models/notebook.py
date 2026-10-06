@@ -9,7 +9,7 @@ from pathlib import Path
 import requests as requests
 
 from pnbp.settings import load_settings
-from pnbp import _storage, _rendering, _search, _publishing, _identities, _links, _moves, _journal, _routes
+from pnbp import _storage, _rendering, _search, _publishing, _identities, _links, _moves, _journal, _routes, _navigation
 
 from .note import Note
 
@@ -84,6 +84,14 @@ class Notebook:
 	def resolve_link(self, target, *, source=None):
 		"""Resolve a target without fuzzy matching; inspect state before using path."""
 		return self.graph_index().resolve(target, source=source)
+
+	def navigation_index(self, *, public_only=False) -> _navigation.NavigationIndex:
+		"""Generate a read-only navigation snapshot from current loaded notes."""
+		return _navigation.NavigationIndex(self, public_only=public_only)
+
+	def traversal(self, *, public_only=False, limit=200) -> _navigation.NavigationHistory:
+		"""Create independent opt-in visit history; ordinary lookups never record it."""
+		return _navigation.NavigationHistory(self, public_only=public_only, limit=limit)
 
 	def rename_note(self, source, new_name, *, dry_run=False):
 		"""Rename within the source directory, preserving identity and backlinks."""
