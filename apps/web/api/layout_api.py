@@ -173,4 +173,5 @@ async def layout_post(lout_in: PNBPWebLayout, request: Request):
     mml = lout_in.merm_light
     mmd = lout_in.merm_dark
 
-    return await update_layout(nb, np, f, t, dm, hll, hld, mml, mmd, lout_in.APPEARANCE)
+    async with request.app.state.storage_lock:
+        return await update_layout(nb, np, f, t, dm, hll, hld, mml, mmd, lout_in.APPEARANCE)

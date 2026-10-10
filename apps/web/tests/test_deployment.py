@@ -1,4 +1,4 @@
-"""Integration coverage for the supported persistent, single-process topology."""
+"""Integration coverage for the supported persistent local-host topology."""
 
 import shutil
 from stat import S_IMODE

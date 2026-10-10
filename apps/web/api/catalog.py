@@ -157,12 +157,12 @@ def _write_blob(directory, body):
 
 
 class PublicationStore:
-    """A process-local coordinator; SQLite and immutable blobs are authority."""
+    """Coordinated mutations; SQLite and immutable blobs are authority."""
 
-    def __init__(self, pages):
+    def __init__(self, pages, *, lock=None):
         self.pages = Path(pages)
         self.blobs = self.pages / ".blobs"
-        self.lock = asyncio.Lock()
+        self.lock = lock if lock is not None else asyncio.Lock()
         self.notebook_id = None
 
     async def start(self):

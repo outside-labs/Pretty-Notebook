@@ -1,6 +1,6 @@
-import asyncio
 from contextlib import asynccontextmanager
 from os import chmod
+from api.process_lock import ProcessLock
 
 import fastapi
 import assets
@@ -27,7 +27,7 @@ def prepare_storage() -> None:
         layout_api.WEB_SETTINGS_PATH.parent,
     }:
         if not directory.exists():
-            directory.mkdir(parents=True, mode=0o700)
+            directory.mkdir(parents=True, mode=0o700, exist_ok=True)
 
     if not layout_api.WEB_SETTINGS_PATH.exists():
         defaults = web_config.DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8")
@@ -46,7 +46,7 @@ def create_app(
     allowed_hosts: list[str] | None = None,
     root_path: str | None = None,
 ) -> fastapi.FastAPI:
-    """Create the web application for one process and one persistent data root."""
+    """Create a worker sharing one local persistent data root."""
     if not db_url.startswith("sqlite://"):
         raise RuntimeError("The supported web profile requires a SQLite database URL.")
     asset_resolver = assets.AssetResolver(web_config.WEB_ROOT / "static", mode=web_config.asset_mode())
@@ -60,8 +60,9 @@ def create_app(
             modules={"models": ["api.auth_api", "api.forms"]},
             generate_schemas=False,
         ):
-            app.state.schema_migration = await schema.migrate()
-            app.state.publications = catalog.PublicationStore(app.state.pages_path)
+            async with app.state.storage_lock:
+                app.state.schema_migration = await schema.migrate()
+            app.state.publications = catalog.PublicationStore(app.state.pages_path, lock=app.state.storage_lock)
             await app.state.publications.start()
             app.state.public_index = public_index.PublicIndex(app.state.publications)
             asset_resolver.validate_layout(await layout_api.get_layout_content())
@@ -69,12 +70,13 @@ def create_app(
 
     from pretty_notebook._internal.routes import validate_prefix
     app = fastapi.FastAPI(lifespan=lifespan, exception_handlers=tortoise_exception_handlers(), root_path=validate_prefix(root_path if root_path is not None else web_config.url_prefix()))
-    app.state.bootstrap_lock = asyncio.Lock()
+    app.state.storage_lock = ProcessLock(layout_api.WEB_SETTINGS_PATH.parent / "site.lock")
+    app.state.bootstrap_lock = app.state.storage_lock
     app.state.pages_path = publish_api.PUB_PATH
     app.state.images_path = publish_api.IMG_PATH
     app.state.settings_path = layout_api.WEB_SETTINGS_PATH
     app.state.favicon_path = layout_api.WEB_SETTINGS_PATH.parent / "favicon.png"
-    app.state.favicon_lock = asyncio.Lock()
+    app.state.favicon_lock = app.state.storage_lock
     app.state.assets = asset_resolver
     app.state.code_highlight = web_config.code_highlight()
 

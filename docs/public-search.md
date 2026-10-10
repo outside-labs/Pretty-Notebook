@@ -34,5 +34,5 @@ with permissions before exposing private results.
 The simple derived view supports up to 5,000 active publications and 16 MiB of
 visible text and titles. Exceeding either limit returns 503 rather than partial
 results. The view is rebuildable and does not change authoritative SQLite state
-or rendered blobs. The existing one-worker, local-SQLite, trusted-editor profile
+or rendered blobs. The supported one-host, local-SQLite, trusted-editor profile
 continues to apply. URLs include the configured proxy prefix.

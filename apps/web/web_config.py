@@ -1,4 +1,4 @@
-"""Runtime configuration for the supported single-process web topology."""
+"""Runtime configuration for the supported local-host web topology."""
 
 from pathlib import Path
 

@@ -1,7 +1,7 @@
 # Versioned server state (0.10 development)
 
-The supported web profile remains one process, one local SQLite database, and
-one notebook. Starting the application now runs ordered schema migrations before
+The supported web profile is one Gunicorn instance with up to four workers, one local
+SQLite database, and one owning notebook. Starting the application now runs ordered schema migrations before
 accepting requests. It no longer generates the current ORM schema on every
 start. Migration version 1 establishes the supported account and contact inbox
 tables and records the baseline in `pnbp_schema_migrations`.
@@ -92,3 +92,26 @@ Use a complete backup before deliberate maintenance. A failed upload's orphan
 body can be removed only after the catalog proves it is unreferenced; existing
 flat originals should be retained until migration and public pages are verified.
 This catalog does not add independent notebook ownership or shared pruning.
+
+## Worker coordination
+
+Workers on the same Linux host share `site.lock` in the persistent settings
+root. A task lock plus a POSIX file lock serializes migrations, legacy imports,
+initial owner claims, checked publication writes/deletions, blob collection,
+attachment writes/pruning and owner presentation writes. The OS releases a
+process's lock when it exits; cancelled waiters close their descriptors.
+Never delete or replace `site.lock` while workers are running.
+
+SQLite and immutable blobs remain authoritative. Each worker refreshes public
+search/navigation snapshots from committed revision signatures, so another
+worker's publication is visible without restarting. There is one SQLite writer
+at a time; more workers increase request concurrency, not write throughput.
+This profile does not support network filesystems or multiple hosts.
+
+The earlier single-worker limit reflected process-local locks and untested
+concurrent migration/bootstrap paths. Four workers reading ordinary pages could
+appear healthy while simultaneous writes or fresh startup still raced. The
+0.10 tests now start four real Gunicorn workers on fresh and legacy databases,
+race owner claims and stale writes, verify reads through every worker, and
+restart the same state. Full-version upgrades still stop the service before
+backing up and migrating; do not mix different application versions.

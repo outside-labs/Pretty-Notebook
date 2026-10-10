@@ -21,10 +21,10 @@ contracts together. To inspect a release's historical source, select its tag in
 GitHub rather than treating `main` as the installed release's reference.
 
 The FastAPI publisher is a separate repository application with its own pinned
-dependencies. Its supported deployment remains one worker, one local SQLite
-database and one default notebook behind a TLS proxy. Follow [web deployment](web.md)
+dependencies. Its supported deployment is one Gunicorn instance with up to four workers,
+one local SQLite database and one default notebook behind a TLS proxy. Follow [web deployment](web.md)
 for the current contract. Shared notebook ownership, reader roles and distributed
-or multi-worker storage are deferred. macOS protocol handlers remain unsupported.
+or multi-host storage are deferred. macOS protocol handlers remain unsupported.
 
 Sphinx/MyST build tools are documentation-only and require Python 3.12 or newer;
 CI uses Python 3.14. This does not alter the library's Python 3.11 support.
