@@ -15,9 +15,9 @@ maintainers = [{ name = "Outside Labs" }]
 dependencies = ["pretty-notebook==0.10.0"]
 
 [project.urls]
-Repository = "https://github.com/outside-labs/Pretty-Notebook"
-Documentation = "https://github.com/outside-labs/Pretty-Notebook/tree/v0.10.0/docs"
-Issues = "https://github.com/outside-labs/Pretty-Notebook/issues"
+Repository = "https://github.com/outside-labs/pretty-notebook"
+Documentation = "https://github.com/outside-labs/pretty-notebook/tree/v0.10.0/docs"
+Issues = "https://github.com/outside-labs/pretty-notebook/issues"
 
 [tool.setuptools]
 packages = []

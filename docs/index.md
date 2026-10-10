@@ -59,5 +59,5 @@ pnano
 building
 ```
 
-The [delivery roadmap](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/roadmap.md)
+The [delivery roadmap](https://github.com/outside-labs/pretty-notebook/blob/main/docs/roadmap.md)
 remains in the repository and its linked issue queue.
