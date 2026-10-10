@@ -2,6 +2,7 @@ import json
 import os
 import pwd
 import shutil
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -158,7 +159,15 @@ def test_generated_nginx_config_passes_platform_parser(tmp_path):
     cert, key = tmp_path / 'certificate.pem', tmp_path / 'key.pem'
     subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-subj', '/CN=notes.example.com', '-days', '1', '-out', str(cert), '-keyout', str(key)], check=True, capture_output=True)
     spec = DeploySpec(REVISION, 'notes.example.com', tls_cert=cert, tls_key=key, prefix='/notes')
+    generated = bundle(spec)['nginx.conf']
+    assert 'listen 80;' in generated and 'listen 443 ssl;' in generated
+    # The validator binds listeners too; use private ephemeral ports in tests.
+    with socket.socket() as http, socket.socket() as https:
+        http.bind(('127.0.0.1', 0))
+        https.bind(('127.0.0.1', 0))
+        generated = generated.replace('listen 80;', f'listen 127.0.0.1:{http.getsockname()[1]};')
+        generated = generated.replace('listen 443 ssl;', f'listen 127.0.0.1:{https.getsockname()[1]} ssl;')
     config = tmp_path / 'nginx.conf'
-    config.write_text(f'error_log stderr;\npid {tmp_path}/nginx.pid;\nevents {{}}\nhttp {{ access_log off; client_body_temp_path {tmp_path}/body; proxy_temp_path {tmp_path}/proxy;\n' + bundle(spec)['nginx.conf'] + '\n}\n')
+    config.write_text(f'error_log stderr;\npid {tmp_path}/nginx.pid;\nevents {{}}\nhttp {{ access_log off; client_body_temp_path {tmp_path}/body; proxy_temp_path {tmp_path}/proxy;\n' + generated + '\n}\n')
     result = subprocess.run(['nginx', '-t', '-p', str(tmp_path), '-c', str(config)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
