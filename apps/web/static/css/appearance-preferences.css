@@ -7,8 +7,17 @@
 }
 .theme-example h2 { font-size: 1rem; margin-block: 0 1rem; }
 .theme-example p { color: var(--color-text-muted); font-size: 0.85rem; margin: 1rem 0 0; }
-.theme-example-notebook { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.4rem; padding: 0.75rem; font-family: var(--font-serif); }
-.theme-example-lines { display: block; width: 75%; height: 1.25rem; margin-block-start: 0.5rem; border-block: 2px solid var(--color-primary); opacity: 0.55; }
+.theme-example-heading { display: flex; align-items: center; gap: .65rem; }
+.theme-example-symbol { display: inline-grid; place-items: center; background: var(--color-surface); border-radius: .5rem; padding: .4rem; }
+.theme-example-notebook { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: .5rem; padding: 1rem; min-height: 5.5rem; display: grid; align-content: center; gap: .3rem; }
+.theme-example-notebook strong { color: var(--color-text); font-weight: 600; }
+.theme-example-notebook span { color: var(--color-text-muted); font-size: .8rem; }
+.appearance-icon { display: inline-block; width: 1.2em; height: 1.2em; flex: none; vertical-align: -.2em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-example-symbol .appearance-icon { width: 1.35rem; height: 1.35rem; }
+.preview-brand { display: flex; align-items: center; gap: .55rem; }
+.preview-menu { display: inline-flex; align-items: center; }
+.preview-actions .button, .configuration-actions .button { display: inline-flex; align-items: center; gap: .45rem; }
+
 .appearance-workspace { display: grid; grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
 .appearance-controls { padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.75rem; }
 .appearance-controls .field { margin: 0; }

@@ -12,9 +12,8 @@
   <div class="theme-families" aria-label="Example theme families">
     {% for family, description in [('paper', 'A warm reading surface'), ('midnight', 'Blue-tinted dark mode'), ('forest', 'Soft botanical colors'), ('dark', 'Neutral charcoal')] %}
       <article class="theme-example" data-preview-palette="{{ family }}" data-preview-mode="{{ theme_families[family] }}">
-        <h2>{{ family | title }}</h2>
-        <div class="theme-example-notebook">Notebook<span class="theme-example-lines" aria-hidden="true"></span></div>
-        <p>{{ description }}</p>
+        <h2 class="theme-example-heading"><span class="theme-example-symbol"><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#{{ { "paper": "book-open", "midnight": "moon", "forest": "leaf", "dark": "contrast" }[family] }}"></use></svg></span>{{ family | title }}</h2>
+        <div class="theme-example-notebook"><strong>Notebook</strong><span>{{ description }}</span></div>
       </article>
     {% endfor %}
   </div>
@@ -53,19 +52,19 @@
       <article class="appearance-preview" aria-label="Notebook appearance preview" data-appearance-preview
                data-preview-palette="{{ preference_theme }}" data-preview-mode="{{ theme_families[preference_theme] }}"
                data-font="{{ appearance_font }}" data-density="{{ APPEARANCE.density }}" style="{{ appearance_tokens | safe }}">
-        <header class="preview-header"><span>Pretty Notebook</span><span aria-hidden="true">{{ icon('book') | safe }}</span></header>
+        <header class="preview-header"><span class="preview-brand"><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#book-open"></use></svg> Pretty Notebook</span><span class="preview-menu"><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#menu"></use></svg></span></header>
         <div class="preview-note">
           <p class="preview-eyebrow">MY NOTEBOOK / WRITING</p>
           <h2 data-preview-title>Every good idea begins somewhere.</h2>
           <p data-preview-body>A place to collect thoughts, stories, and discoveries.</p>
           <div class="preview-actions">
-            <button type="button" class="button" data-preview-new hidden>New note</button>
-            <button type="button" class="button button-secondary" data-preview-edit hidden>Edit notebook</button>
+            <button type="button" class="button" data-preview-new hidden><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#plus"></use></svg> New note</button>
+            <button type="button" class="button button-secondary" data-preview-edit hidden><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#pencil"></use></svg> Edit notebook</button>
           </div>
         </div>
       </article>
       <div class="configuration-actions">
-        <button type="button" class="button button-secondary" data-copy-appearance hidden>Copy configuration</button>
+        <button type="button" class="button button-secondary" data-copy-appearance hidden><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#copy"></use></svg> Copy configuration</button>
         <p role="status" aria-live="polite" data-appearance-status></p>
       </div>
       <label class="field" data-configuration-fallback hidden>Configuration
