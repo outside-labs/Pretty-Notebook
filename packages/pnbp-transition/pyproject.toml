@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pnbp"
-version = "0.10.0rc1"
+version = "0.10.0rc2"
 description = "Compatibility distribution that installs Pretty Notebook."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,11 +12,11 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "prettynb" }]
 maintainers = [{ name = "Outside Labs" }]
-dependencies = ["pretty-notebook==0.10.0rc1"]
+dependencies = ["pretty-notebook==0.10.0rc2"]
 
 [project.urls]
 Repository = "https://github.com/outside-labs/Pretty-Notebook"
-Documentation = "https://github.com/outside-labs/Pretty-Notebook/tree/v0.10.0rc1/docs"
+Documentation = "https://github.com/outside-labs/Pretty-Notebook/tree/v0.10.0rc2/docs"
 Issues = "https://github.com/outside-labs/Pretty-Notebook/issues"
 
 [tool.setuptools]

@@ -7,12 +7,12 @@ package `pretty_notebook`. The executable remains `pnbp`:
 from pretty_notebook import Notebook, Note
 ```
 
-The candidate version is `0.10.0rc1`. Remove an old `pnbp` installation
+The candidate version is `0.10.0rc2`. Remove an old `pnbp` installation
 before installing it:
 
 ```sh
 python -m pip uninstall pnbp
-python -m pip install pretty-notebook==0.10.0rc1
+python -m pip install pretty-notebook==0.10.0rc2
 ```
 
 The final `pnbp==0.10.0` will be a metadata-only compatibility distribution
