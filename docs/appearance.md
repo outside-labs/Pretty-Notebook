@@ -9,6 +9,10 @@ supports light and dark mode. Normal pages load only the selected palette;
 the preferences page also loads the four example families, scoped to their
 preview cards. Themes never control navigation behavior.
 
+The inner theme-card box represents the note content surface
+(`--color-surface`). Published note articles and the full notebook preview
+use that same surface, inside the surrounding page background (`--color-bg`).
+
 Set `APPEARANCE` in portable notebook settings, then publish it with
 `pnbp commit-settings`. The same validated contract is used by the library and
 `POST /api/layout`:
@@ -40,7 +44,7 @@ Set `APPEARANCE` in portable notebook settings, then publish it with
 | `site_width` | Integer 48–120 rem; still constrained by the viewport |
 | `accent`, `header_bg`, `header_text`, `footer_bg`, `footer_text` | Six-digit hex colors or null |
 | `button_labels` | Boolean; show icon text or retain it only as an accessible name |
-| `nav_breakpoint` | Integer 480–1440 pixels; default 992 |
+| `nav_breakpoint` | Legacy integer 480–1440 pixels; retained for settings compatibility |
 | `custom_css` | Boolean; enable the persistent owner stylesheet |
 
 Missing fields get defaults. Unknown keys, arbitrary filenames, CSS expressions
@@ -69,6 +73,12 @@ Edit notebook edit only the sample. Without JavaScript, the save form works;
 preview editing and copy controls are hidden.
 
 Quick appearance retains light, dark or system mode and body-font selection.
+The book and site brand sit on the left. The sun theme toggle and `menu` icon
+remain at the far right at every screen width. Navigation links and quick
+appearance controls stack at the left inside the menu. The native disclosure
+also works without JavaScript; Escape closes the active dropdown and restores
+focus when JavaScript is enabled. The sun remains the theme-toggle icon in both
+light and dark mode; its accessible name describes the next mode.
 Preferences persist for one year in HttpOnly cookies scoped to the configured
 URL prefix. Invalid cookie values fall back to owner defaults. System mode follows operating-system changes;
 code highlighting and diagram themes follow the displayed mode. The existing
@@ -101,9 +111,10 @@ with the rest of the data root. An unset or missing stylesheet returns 404.
 
 ## Responsive navigation
 
-Branding and compact controls remain visible. Below `nav_breakpoint`, a Menu
-button opens the links and Appearance panel. Its expanded state is announced;
-Escape closes an open native dropdown first, then the panel, restoring focus.
+Branding, the sun toggle and Menu remain visible at every width. The native
+Menu disclosure contains vertically stacked links and quick appearance controls.
+Its expanded state is announced; Escape closes an open native dropdown first,
+then the menu, restoring focus.
 Desktop links remain visible. Without JavaScript, links stay visible and wrap
 within the viewport. The behavior is shared by every palette. `button_labels`
 controls visible icon labels while accessible names remain available.

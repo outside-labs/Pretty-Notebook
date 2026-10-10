@@ -1,51 +1,41 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { initialize } = require('../static/js/site-navigation.js');
-function fixture(narrow) {
+function fixture(open = false) {
   const handlers = {};
-  const button = { hidden: true, attributes: {}, addEventListener(name, callback) { handlers[name] = callback; },
-    setAttribute(name, value) { this.attributes[name] = value; }, focus() { this.focused = true; } };
-  const panel = { hidden: false };
-  const nav = { querySelector(selector) { return selector === '.nav-toggle' ? button : panel; },
+  const summary = { focus() { this.focused = true; } };
+  const menu = { open, querySelector() { return summary; } };
+  const nav = { querySelector() { return menu; },
     addEventListener(name, callback) { handlers[name] = callback; } };
-  const media = { matches: narrow, addEventListener(name, callback) { handlers.resize = callback; } };
-  initialize(nav, media);
-  return { handlers, button, panel, media };
+  initialize(nav);
+  return { handlers, menu, summary };
 }
-test('mobile disclosure announces state, Escape closes and restores focus', () => {
-  const { handlers, button, panel } = fixture(true);
-  assert.equal(panel.hidden, true);
-  assert.equal(button.hidden, false);
-  assert.equal(button.attributes['aria-expanded'], 'false');
-  handlers.click();
-  assert.equal(panel.hidden, false);
-  assert.equal(button.attributes['aria-expanded'], 'true');
+test('native disclosure keeps its initial state without viewport-dependent resets', () => {
+  assert.equal(fixture().menu.open, false);
+  assert.equal(fixture(true).menu.open, true);
+});
+test('Escape closes the open menu and returns focus to its summary', () => {
+  const { handlers, menu, summary } = fixture(true);
   let prevented = false;
   handlers.keydown({ key: 'Escape', target: {}, preventDefault() { prevented = true; } });
-  assert.equal(panel.hidden, true);
-  assert.equal(button.focused, true);
+  assert.equal(menu.open, false);
+  assert.equal(summary.focused, true);
   assert.equal(prevented, true);
 });
-test('desktop links remain visible and resize resets the mobile panel', () => {
-  const { handlers, button, panel, media } = fixture(false);
-  assert.equal(panel.hidden, false);
-  assert.equal(button.hidden, true);
-  media.matches = true;
-  handlers.resize();
-  assert.equal(panel.hidden, true);
-  handlers.click();
-  media.matches = false;
-  handlers.resize();
-  assert.equal(panel.hidden, false);
-  assert.equal(button.hidden, true);
-});
-test('Escape closes native dropdowns before the surrounding disclosure', () => {
-  const { handlers, panel } = fixture(true);
-  handlers.click();
+test('Escape closes nested appearance dropdowns before the surrounding menu', () => {
+  const { handlers, menu } = fixture(true);
   let focused = false;
   const details = { open: true, querySelector() { return { focus() { focused = true; } }; } };
   handlers.keydown({ key: 'Escape', target: { closest() { return details; } }, preventDefault() {} });
   assert.equal(details.open, false);
   assert.equal(focused, true);
-  assert.equal(panel.hidden, false);
+  assert.equal(menu.open, true);
+});
+test('closed menus and unrelated keys do not consume keyboard events', () => {
+  const { handlers, menu } = fixture();
+  const unexpected = () => assert.fail('Unhandled key was consumed');
+  handlers.keydown({ key: 'Escape', target: {}, preventDefault: unexpected });
+  menu.open = true;
+  handlers.keydown({ key: 'Enter', target: {}, preventDefault: unexpected });
+  assert.equal(menu.open, true);
 });
