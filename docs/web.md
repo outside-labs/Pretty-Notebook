@@ -376,3 +376,6 @@ See [browser assets](assets.md) for the reviewed manifest, local/CDN policy,
 integrity checks, supported Highlight themes, and deployment verification.
 The default selects local assets first; strict local mode requires no runtime
 script, style, or font requests to external services.
+
+See the [web coverage audit](web-coverage.md) for measured statement/branch
+coverage, residual paths, and the distinction between coverage and support.

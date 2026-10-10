@@ -9,14 +9,20 @@ and verification; current status comes from GitHub.
 
 ## Release scope
 
-- **0.10:** 17 required notebook/publishing tasks and 3 optional builder/operations
+- **0.10:** 17 original required tasks plus 6 required tasks in the final
+  package/appearance/deployment/coverage block, and 3 optional builder/operations
   tasks. Optional work can move intact to a later release.
-- **0.11 proposed:** 9 collaboration tasks and 1 optional packaging task.
+- **0.11 proposed:** 9 collaboration tasks, the operation-logging proposal,
+  and 1 optional packaging task.
 - **0.12 proposed:** 4 Markdown-engine tasks with explicit compatibility gates.
 - **Later:** 8 follow-on tasks. Later version labels are planning buckets.
 
-Keep the current `pnbp` package/import/executable names and supported one-worker,
-local-SQLite, default-notebook, trusted-editor deployment behind a TLS proxy.
+The additional 0.10 block introduces the canonical `pretty_notebook` import and
+`pretty-notebook` development distribution, compatible `pnbp` imports/CLI, theme
+preferences, responsive navigation, coordinated local workers, VPS bundles and
+coverage auditing. Its six required child tasks are #145–#150; logging #151 is
+queued for 0.11. Retain local SQLite, one owning notebook, trusted editors and a
+TLS proxy, with one Gunicorn instance and up to four coordinated workers.
 Release publication, hosted deployment, and new external service/provider
 decisions have their own authorization boundaries.
 
