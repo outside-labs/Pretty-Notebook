@@ -11,7 +11,7 @@
 		"about": "/about/",
 		"contact": [
 			{
-				"github": "https://github.com/outside-labs/Pretty-Notebook"
+				"github": "https://github.com/outside-labs/pretty-notebook"
 			},
 			{
 				"subname2": "/subroute2/"

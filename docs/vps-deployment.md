@@ -1,4 +1,4 @@
-# VPS deployment and upgrades (0.10 release candidate)
+# VPS deployment and upgrades (0.10)
 
 `pnbp deploy` prepares inspectable Linux VPS bundles for the
 [supported web profile](web.md). It uses systemd and nginx, one dedicated service
@@ -97,7 +97,7 @@ state/environment/service/proxy, installs that revision's locked dependencies,
 and checks health. This deliberately restores credential and database state
 from the checkpoint; do not mix snapshots. Check owner authentication, token
 revocation, inbox messages, images, CSS and public pages after recovery. The
-separate [OPS-03 task](https://github.com/outside-labs/Pretty-Notebook/issues/94)
+separate [OPS-03 task](https://github.com/outside-labs/pretty-notebook/issues/94)
 retains broader standalone backup/restore tooling.
 
 This is a **stopped-service upgrade**, with brief downtime. It does not claim

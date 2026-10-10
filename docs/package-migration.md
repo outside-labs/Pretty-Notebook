@@ -1,4 +1,4 @@
-# Package naming in 0.10 release candidate
+# Package naming in 0.10
 
 The canonical distribution is prepared as `pretty-notebook`, with the import
 package `pretty_notebook`. The executable remains `pnbp`:
@@ -7,16 +7,16 @@ package `pretty_notebook`. The executable remains `pnbp`:
 from pretty_notebook import Notebook, Note
 ```
 
-The candidate version is `0.10.0rc2`. Remove an old `pnbp` installation
+The release version is `0.10.0`. Remove an old `pnbp` installation
 before installing it:
 
 ```sh
 python -m pip uninstall pnbp
-python -m pip install pretty-notebook==0.10.0rc2
+python -m pip install pretty-notebook==0.10.0
 ```
 
-The final `pnbp==0.10.0` will be a metadata-only compatibility distribution
-that depends on `pretty-notebook==0.10.0`. It will not contain implementation
+The final `pnbp==0.10.0` is a metadata-only compatibility distribution
+that depends on `pretty-notebook==0.10.0`. It does not contain implementation
 modules or its own executable. The canonical package owns all imports and CLI
 files. New installations should request `pretty-notebook` directly.
 

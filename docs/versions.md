@@ -1,17 +1,14 @@
 # Versions and support
 
-The stable published package is `pnbp==0.9.0`, supporting the Python library and
-CLI on Python 3.11 or newer. Its [release notes](release-0.9.0.md) define the
-installed-wheel contract. The [candidate notes](release-0.9.0rc1.md) and
-[readiness record](release-0.9.0-readiness.md) retain their historical meaning.
+The current release is `pretty-notebook==0.10.0`, supporting the Python library
+and CLI on Python 3.11 or newer. `pretty_notebook` is the canonical import;
+compatible `pnbp` imports and the CLI remain supported. The final `pnbp==0.10.0`
+distribution contains metadata only and installs the canonical package.
 
-The 0.10 candidate is `pretty-notebook==0.10.0rc2`. It includes explicit
-settings/profiles, current-content editing, identities, checked moves/routes/
-publication, search/navigation, managed favicons and appearance preferences.
-`pretty_notebook` is the canonical import; `pnbp` imports and the CLI remain
-compatible. See [package migration](package-migration.md) and
-[0.10 notes](release-0.10.0.md). A final release follows the installed-candidate
-exercise; optional and later features remain explicitly deferred.
+The historical `pnbp==0.9.0` release retains its versioned contract in the
+[0.9 notes](release-0.9.0.md). See [package migration](package-migration.md),
+[0.10 notes](release-0.10.0.md) and [readiness evidence](release-0.10.0-readiness.md).
+Optional and later features remain explicitly deferred.
 
 The repository Markdown is the canonical documentation. The documentation
 build reads that source and the current package for API signatures and CLI help.

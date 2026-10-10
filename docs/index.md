@@ -4,10 +4,10 @@ Pretty Notebook provides a Python library and a command-line interface for
 interconnected Markdown notebooks. These pages are built directly from the
 repository's Markdown documentation, which remains the editable source.
 
-The package's published release is 0.9.0. Pages labelled **0.10 release candidate**
-describe the current checkout; those features are not promised by the 0.9.0
-wheel. The web application is a separate repository application with the
-[documented deployment constraints](web.md).
+The package release is `pretty-notebook==0.10.0`, with compatible `pnbp`
+imports and the command-line executable. The web application is a separate
+repository application with the [documented deployment constraints](web.md).
+See [package migration](package-migration.md) before upgrading from the old name.
 
 ```{toctree}
 :maxdepth: 2
@@ -59,5 +59,5 @@ pnano
 building
 ```
 
-The [delivery roadmap](https://github.com/outside-labs/Pretty-Notebook/blob/main/docs/roadmap.md)
+The [delivery roadmap](https://github.com/outside-labs/pretty-notebook/blob/main/docs/roadmap.md)
 remains in the repository and its linked issue queue.
