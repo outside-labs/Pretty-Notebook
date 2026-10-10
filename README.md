@@ -18,13 +18,13 @@ macOS URL handlers remain unsupported.
 
 [Documentation index](docs/index.md) · [Workflow tutorial](docs/tutorials.md) · [0.9.0 release notes](docs/release-0.9.0.md) · [Web deployment](docs/web.md) · [Development roadmap](docs/roadmap.md)
 
-The 0.10 release candidate is `pretty-notebook==0.10.0rc1`. It includes current
+The 0.10 release candidate is `pretty-notebook==0.10.0rc2`. It includes current
 settings/profiles, identities, checked publication, search/navigation, appearance
 preferences and coordinated worker deployments. Candidate installation:
 
 ```sh
 python -m pip uninstall pnbp
-python -m pip install pretty-notebook==0.10.0rc1
+python -m pip install pretty-notebook==0.10.0rc2
 ```
 
 The old stable release remains `pnbp==0.9.0` until the candidate exercise passes.

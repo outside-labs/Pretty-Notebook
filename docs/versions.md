@@ -5,7 +5,7 @@ CLI on Python 3.11 or newer. Its [release notes](release-0.9.0.md) define the
 installed-wheel contract. The [candidate notes](release-0.9.0rc1.md) and
 [readiness record](release-0.9.0-readiness.md) retain their historical meaning.
 
-The 0.10 candidate is `pretty-notebook==0.10.0rc1`. It includes explicit
+The 0.10 candidate is `pretty-notebook==0.10.0rc2`. It includes explicit
 settings/profiles, current-content editing, identities, checked moves/routes/
 publication, search/navigation, managed favicons and appearance preferences.
 `pretty_notebook` is the canonical import; `pnbp` imports and the CLI remain

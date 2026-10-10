@@ -50,7 +50,7 @@ Versioned GitHub source documentation is the canonical release reference.
 
 ## Candidate and final release process
 
-`v0.10.0rc1` publishes only the canonical candidate. Exercise its actual PyPI
+`v0.10.0rc2` publishes only the canonical candidate. Exercise its actual PyPI
 wheel with fresh notebooks and a 0.9 upgrade before preparing the final version.
 The final `v0.10.0` release publishes `pretty-notebook` first, then the
 metadata-only `pnbp` distribution. Both use the existing `release.yaml` workflow

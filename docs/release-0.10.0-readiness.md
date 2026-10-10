@@ -1,6 +1,6 @@
 # Pretty Notebook 0.10 readiness
 
-The candidate is `pretty-notebook==0.10.0rc1`, selected by `v0.10.0rc1`.
+The candidate is `pretty-notebook==0.10.0rc2`, selected by `v0.10.0rc2`.
 The `pnbp` compatibility distribution is built and checked alongside it but is
 uploaded only for the final release.
 
@@ -9,7 +9,7 @@ Before final publication:
 1. Verify passing library, web/coverage, JavaScript, deployment and strict docs CI.
 2. Install the actual candidate from PyPI in fresh Python 3.11 and 3.14 environments.
 3. Verify canonical/legacy import identity, CLI/deployment resources and dependency consistency.
-4. Run `scripts/exercise_release.py 0.10.0rc1` against fresh synthetic notes.
+4. Run `scripts/exercise_release.py 0.10.0rc2` against fresh synthetic notes.
 5. Save synthetic notes with the published 0.9 wheel, uninstall it, install the
    candidate, then exercise legacy settings migration, identity-preserving rename,
    backlink repair, pending save, routes, search/navigation and local publication.
