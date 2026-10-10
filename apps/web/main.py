@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
-from os import chmod
 from api.process_lock import ProcessLock
+from api.atomic_io import create_text_once
 
 import fastapi
 import assets
@@ -31,13 +31,7 @@ def prepare_storage() -> None:
 
     if not layout_api.WEB_SETTINGS_PATH.exists():
         defaults = web_config.DEFAULT_SETTINGS_PATH.read_text(encoding="utf-8")
-        try:
-            with layout_api.WEB_SETTINGS_PATH.open("x", encoding="utf-8") as output:
-                output.write(defaults)
-        except FileExistsError:
-            pass
-        else:
-            chmod(layout_api.WEB_SETTINGS_PATH, 0o600)
+        create_text_once(layout_api.WEB_SETTINGS_PATH, defaults)
 
 
 def create_app(

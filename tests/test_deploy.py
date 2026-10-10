@@ -34,6 +34,7 @@ def test_bundle_is_deterministic_and_preserves_owner_edits(tmp_path):
     assert write_bundle(spec, tmp_path) == first
     unit = (tmp_path / 'pretty-notebook.service').read_text()
     assert '--workers 4' in unit and '--bind 127.0.0.1:8000' in unit
+    assert '--no-control-socket' in unit
     assert 'User=pretty-notebook' in unit and 'UMask=0077' in unit
     proxy = (tmp_path / 'nginx.conf').read_text()
     assert 'location /notes/' in proxy and 'https://notes.example.com$request_uri' in proxy

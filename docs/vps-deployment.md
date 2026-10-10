@@ -113,3 +113,7 @@ and nginx's [proxy](https://nginx.org/en/docs/http/ngx_http_proxy_module.html) a
 Linux CI parses generated systemd/nginx configuration; the web suite exercises
 real four-worker fresh/legacy startup and restart. Live DNS/TLS, service-account
 permissions and clean-host provisioning still require verification on the target VPS.
+
+The pinned Gunicorn's optional administration socket is explicitly disabled with
+`--no-control-socket`, so startup creates no implicit state in the service user's
+home. Administration uses systemd. See [Gunicorn control settings](https://gunicorn.org/reference/settings/#control_socket_disable).
