@@ -1,5 +1,6 @@
 /* Midnight palette: color tokens only. */
-:root {
+:root:where([data-palette="midnight"]),
+[data-preview-palette="midnight"] {
   color-scheme: light;
   --color-bg: #f6f8ff;
   --color-surface: #e8edf9;
@@ -13,7 +14,8 @@
   --color-error-surface: #fff0f2;
   --color-code: #e8edf9;
 }
-[data-theme="dark"] {
+:root:where([data-palette="midnight"][data-theme="dark"]),
+[data-preview-palette="midnight"][data-preview-mode="dark"] {
   color-scheme: dark;
   --color-bg: #0b1220;
   --color-surface: #162235;

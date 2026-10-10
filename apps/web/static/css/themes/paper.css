@@ -1,5 +1,6 @@
 /* Paper palette: color tokens only. */
-:root {
+:root:where([data-palette="paper"]),
+[data-preview-palette="paper"] {
   color-scheme: light;
   --color-bg: #faf6ec;
   --color-surface: #eee7d9;
@@ -13,7 +14,8 @@
   --color-error-surface: #fff0f2;
   --color-code: #eee7d9;
 }
-[data-theme="dark"] {
+:root:where([data-palette="paper"][data-theme="dark"]),
+[data-preview-palette="paper"][data-preview-mode="dark"] {
   color-scheme: dark;
   --color-bg: #1b201a;
   --color-surface: #2a3228;

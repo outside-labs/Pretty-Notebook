@@ -5,7 +5,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 
 SEGMENT = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*\Z")
-RESERVED = {"api", "static", "assets", "forms", "theme", "contact", "healthz", "docs", "redoc", "openapi", "favicon", "n"}
+RESERVED = {"api", "static", "assets", "forms", "theme", "appearance", "contact", "healthz", "docs", "redoc", "openapi", "favicon", "n"}
 
 
 def validate_route(route, *, allow_namespace=False, reserved=True):

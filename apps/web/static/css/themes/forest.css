@@ -1,5 +1,6 @@
 /* Forest palette: color tokens only. */
-:root {
+:root:where([data-palette="forest"]),
+[data-preview-palette="forest"] {
   color-scheme: light;
   --color-bg: #f5faf4;
   --color-surface: #e5efe3;
@@ -13,7 +14,8 @@
   --color-error-surface: #fff0f2;
   --color-code: #e5efe3;
 }
-[data-theme="dark"] {
+:root:where([data-palette="forest"][data-theme="dark"]),
+[data-preview-palette="forest"][data-preview-mode="dark"] {
   color-scheme: dark;
   --color-bg: #12221a;
   --color-surface: #20392b;

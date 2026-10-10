@@ -24,10 +24,12 @@
   font-family: var(--font-body);
   line-height: 1.6;
 }
+[data-font="sans"] { --font-body: var(--font-sans); }
 [data-font="serif"] { --font-body: var(--font-serif); }
 [data-font="mono"] { --font-body: var(--font-mono); }
 [data-heading-font="serif"] { --font-heading: var(--font-serif); }
 [data-heading-font="mono"] { --font-heading: var(--font-mono); }
+[data-density="comfortable"] { --space-unit: 0.25rem; }
 [data-density="compact"] { --space-unit: 0.2rem; line-height: 1.45; }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); }
 *, *::before, *::after { box-sizing: border-box; }

@@ -1,5 +1,6 @@
 /* Slate palette: color tokens only. */
-:root {
+:root:where([data-palette="slate"]),
+[data-preview-palette="slate"] {
   color-scheme: light;
   --color-bg: #ffffff;
   --color-surface: #f1f4f8;
@@ -13,7 +14,8 @@
   --color-error-surface: #fff0f2;
   --color-code: #edf1f6;
 }
-[data-theme="dark"] {
+:root:where([data-palette="slate"][data-theme="dark"]),
+[data-preview-palette="slate"][data-preview-mode="dark"] {
   color-scheme: dark;
   --color-bg: #141a24;
   --color-surface: #202a38;

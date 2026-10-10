@@ -1,0 +1,48 @@
+/* The preference page reuses the site's color, font, spacing and shape contract. */
+.appearance-page { max-width: 68rem; margin-inline: auto; }
+.theme-families { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-block: 1.5rem 2.5rem; }
+.theme-example {
+  background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border);
+  border-radius: 0.75rem; padding: 1rem; min-width: 0;
+}
+.theme-example h2 { font-size: 1rem; margin-block: 0 1rem; }
+.theme-example p { color: var(--color-text-muted); font-size: 0.85rem; margin: 1rem 0 0; }
+.theme-example-heading { display: flex; align-items: center; gap: .65rem; }
+.theme-example-symbol { display: inline-grid; place-items: center; background: var(--color-surface); border-radius: .5rem; padding: .4rem; }
+.theme-example-notebook { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: .5rem; padding: 1rem; min-height: 5.5rem; display: grid; align-content: center; gap: .3rem; }
+.theme-example-notebook strong { color: var(--color-text); font-weight: 600; }
+.theme-example-notebook span { color: var(--color-text-muted); font-size: .8rem; }
+.appearance-icon { display: inline-block; width: 1.2em; height: 1.2em; flex: none; vertical-align: -.2em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-example-symbol .appearance-icon { width: 1.35rem; height: 1.35rem; }
+.preview-brand { display: flex; align-items: center; gap: .55rem; }
+.preview-menu { display: inline-flex; align-items: center; }
+.preview-actions .button, .configuration-actions .button { display: inline-flex; align-items: center; gap: .45rem; }
+
+.appearance-workspace { display: grid; grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr); gap: 2.5rem; align-items: start; }
+.appearance-controls { padding: 1.5rem; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.75rem; }
+.appearance-controls .field { margin: 0; }
+.accent-control { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; }
+.accent-control input[type="color"] { width: 3.5rem; height: 2.75rem; padding: 0.25rem; cursor: pointer; }
+.accent-control .button { font-size: 0.85rem; padding-inline: 0.6rem; }
+.appearance-controls input[type="range"] { padding: 0; border: 0; accent-color: var(--color-primary); cursor: pointer; }
+.appearance-preview-column { min-width: 0; }
+.appearance-preview {
+  --nav-bg: var(--color-surface); --nav-text: var(--color-text);
+  font-family: var(--font-body); line-height: 1.6; color: var(--color-text); background: var(--color-bg);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;
+}
+.appearance-preview[data-density="compact"] { line-height: 1.45; }
+.appearance-preview h2 { font-family: var(--font-body); font-size: clamp(1.6rem, 3vw, 2.4rem); margin-block: 0 1rem; }
+.preview-header { background: var(--color-surface); border-bottom: 1px solid var(--color-border); padding: calc(5 * var(--space-unit)) calc(8 * var(--space-unit)); display: flex; justify-content: space-between; gap: 1rem; font-weight: 600; }
+.preview-note { padding: calc(10 * var(--space-unit)); }
+.preview-eyebrow { font-size: 0.75rem; letter-spacing: 0.12em; color: var(--color-text-muted); margin-block: 0 1.5rem; }
+.preview-actions { display: flex; flex-wrap: wrap; gap: calc(3 * var(--space-unit)); margin-block-start: calc(8 * var(--space-unit)); }
+.preview-note [contenteditable="true"] { border: 1px dashed var(--color-border); padding: 0.5rem; border-radius: var(--radius-md); }
+.configuration-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-block: 1.25rem; }
+.configuration-actions p { margin: 0; color: var(--color-text-muted); }
+[data-configuration-text] { font-family: var(--font-mono); }
+@media (max-width: 52rem) {
+  .theme-families { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .appearance-workspace { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+}
+@media (max-width: 24rem) { .theme-families { grid-template-columns: minmax(0, 1fr); } }

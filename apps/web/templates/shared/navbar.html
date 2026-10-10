@@ -14,9 +14,9 @@
       {{ icon('menu') | safe }}<span class="control-label{% if not APPEARANCE.button_labels %} visually-hidden{% endif %}">Menu</span>
     </button>
     <div id="site-navigation" class="nav-panel">
-      <ul class="nav-list">{{ NAV_PAGES | safe }}<li><a class="nav-link" href="{{ root_path }}/n/search">Search</a></li></ul>
+      <ul class="nav-list">{{ NAV_PAGES | safe }}<li><a class="nav-link" href="{{ root_path }}/n/search">Search</a></li><li><a class="nav-link" href="{{ root_path }}/appearance">Appearance</a></li></ul>
       <details class="appearance-picker">
-        <summary>Appearance</summary>
+        <summary>Quick appearance</summary>
         <form action="{{ root_path }}/appearance" method="POST" class="stack">
           <input type="hidden" name="return_to" value="{{ request.url.path }}">
           <label>Mode<select name="mode">
@@ -26,6 +26,7 @@
             {% for value in ['sans', 'serif', 'mono'] %}<option value="{{ value }}"{% if appearance_font == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
           </select></label>
           <button class="button" type="submit">Save appearance</button>
+          <a href="{{ root_path }}/appearance">Appearance preferences</a>
         </form>
       </details>
     </div>
