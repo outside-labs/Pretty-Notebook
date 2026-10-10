@@ -1,7 +1,7 @@
 import pytest
 
-from pnbp import Notebook
-from pnbp.commands.correct import (
+from pretty_notebook import Notebook
+from pretty_notebook.commands.correct import (
 	_collect_unlinked_mentions,
 	_link_unlinked_mentions,
 )

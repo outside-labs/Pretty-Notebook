@@ -1,6 +1,6 @@
-from pnbp import Notebook
-from pnbp.commands.correct import _delete_all_empty, _delete_all_pnbp
-from pnbp.commands.graph import _delete_all_graph_dash_name
+from pretty_notebook import Notebook
+from pretty_notebook.commands.correct import _delete_all_empty, _delete_all_pnbp
+from pretty_notebook.commands.graph import _delete_all_graph_dash_name
 
 
 def make_notebook(monkeypatch, tmp_path, files):

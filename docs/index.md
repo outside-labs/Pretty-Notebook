@@ -16,6 +16,7 @@ wheel. The web application is a separate repository application with the
 pnbp
 tutorials
 versions
+package-migration
 settings
 editing
 local-search

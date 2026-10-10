@@ -8,8 +8,9 @@ import pytest
 import requests
 from click.testing import CliRunner
 
-from pnbp import Notebook, _publication_plan as plans, _publication_state as state
-from pnbp.cli import cli
+from pretty_notebook import Notebook
+from pretty_notebook._internal import publication_plan as plans, publication_state as state
+from pretty_notebook.cli import cli
 
 SERVER_ID = "a02a9862-f303-41b8-baa0-ef6c1eb04e3f"
 

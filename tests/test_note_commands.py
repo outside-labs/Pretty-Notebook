@@ -5,9 +5,9 @@ from stat import S_IMODE
 import pytest
 from click.testing import CliRunner
 
-from pnbp import Notebook
-from pnbp.cli import cli, BUILTIN_COMMANDS
-from pnbp.settings import initialize_notebook
+from pretty_notebook import Notebook
+from pretty_notebook.cli import cli, BUILTIN_COMMANDS
+from pretty_notebook.settings import initialize_notebook
 
 
 @pytest.fixture

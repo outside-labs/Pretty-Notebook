@@ -4,8 +4,8 @@ Import the notebook and settings from the package, note types from its models,
 and components from their dedicated module:
 
 ```python
-from pnbp import Notebook, NotebookSettings, SearchHit
-from pnbp.models import Note
+from pretty_notebook import Notebook, NotebookSettings, SearchHit
+from pretty_notebook import Note
 from pnbp.models.components import Link, Tag, CodeBlock, Url
 ```
 

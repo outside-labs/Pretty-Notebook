@@ -8,45 +8,45 @@ below are generated from the package itself when the documentation is built.
 
 ## Notebook
 
-Import the notebook with `from pnbp import Notebook`. Opening an existing path
+Import the notebook with `from pretty_notebook import Notebook`. Opening an existing path
 does not initialize settings or identity metadata. The `open` entry point can
 also be used as `Notebook.open(path)`; `nb.open()` reloads an existing instance.
 
 ```{eval-rst}
-.. autoclass:: pnbp.Notebook
+.. autoclass:: pretty_notebook.Notebook
    :members: get, reload, generate_note, get_tagged, search, navigation_index, traversal, resolve_link, graph_index, rename_note, move_note, initialize_identities, identity_status, publication_routes, prepare_publication, execute_publication, post_favicon
 ```
 
 ## Note
 
-Get notes from a notebook; for type imports use `from pnbp.models import Note`.
+Get notes from a notebook; for type imports use `from pretty_notebook import Note`.
 Loaded Markdown and pending Markdown are distinct. Saving checks the source
 file for concurrent changes and returns the refreshed note.
 
 ```{eval-rst}
-.. autoclass:: pnbp.models.Note
+.. autoclass:: pretty_notebook.Note
    :members: current_md, md_out, is_unsaved, discard_changes, save
 ```
 
 ## Settings
 
 ```{eval-rst}
-.. autoclass:: pnbp.NotebookSettings
+.. autoclass:: pretty_notebook.NotebookSettings
 ```
 
 ```{eval-rst}
-.. autoexception:: pnbp.SettingsError
+.. autoexception:: pretty_notebook.SettingsError
 ```
 
 ## Search and navigation
 
 ```{eval-rst}
-.. autoclass:: pnbp.SearchHit
+.. autoclass:: pretty_notebook.SearchHit
 
-.. autoclass:: pnbp.NavigationIndex
+.. autoclass:: pretty_notebook.NavigationIndex
    :members: directory, entry, breadcrumbs, outline, backlinks, neighbors, related
 
-.. autoclass:: pnbp.NavigationHistory
+.. autoclass:: pretty_notebook.NavigationHistory
    :members: visit, current, back, forward
 ```
 

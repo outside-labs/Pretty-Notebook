@@ -3,7 +3,7 @@
 The 0.10 development API exposes a read-only graph and shared resolver:
 
 ```python
-from pnbp import Notebook
+from pretty_notebook import Notebook
 
 nb = Notebook.open("/path/to/notes")
 graph = nb.graph_index()

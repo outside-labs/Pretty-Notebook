@@ -1,6 +1,6 @@
 # Pretty Notebook package
 
-`pnbp` is a Python library and command-line interface for interconnected
+Pretty Notebook is a Python library and command-line interface for interconnected
 Markdown notebooks. A notebook is an existing directory of Markdown files;
 a note is one source file. Wiki links, tags, code blocks and URLs have explicit
 models, while ordinary Markdown remains the authoritative content.
@@ -15,7 +15,8 @@ pnbp --help
 ```
 
 The current checkout contains features targeting **0.10 development**. Its
-package metadata remains 0.9.0 until a separately authorized release. Do not
+package metadata prepares `pretty-notebook==0.10.0.dev0`. See the
+[package migration](package-migration.md) for the canonical import and compatibility. Do not
 assume development APIs exist in the published 0.9.0 wheel. See
 [versions and support](versions.md) and the [0.9.0 release notes](release-0.9.0.md).
 
@@ -37,7 +38,7 @@ initialization, pending edits, checked renames, search and navigation. Its local
 examples are executed by the documentation build.
 
 ```python
-from pnbp import Notebook
+from pretty_notebook import Notebook
 
 nb = Notebook.open("~/notes", settings={"NOTE_NESTED": "recurs"})
 note = nb.get("guides/overview", fuzzy=False)

@@ -2,9 +2,10 @@ from dataclasses import replace
 
 import pytest
 
-from pnbp import Notebook, _identities
-from pnbp._links import GraphIndex, wiki_targets
-from pnbp.models.components import Link
+from pretty_notebook import Notebook
+from pretty_notebook._internal import identities as _identities
+from pretty_notebook._internal.links import GraphIndex, wiki_targets
+from pretty_notebook.models.components import Link
 
 
 @pytest.fixture

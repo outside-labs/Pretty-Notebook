@@ -7,9 +7,9 @@ from uuid import UUID
 import pytest
 from click.testing import CliRunner
 
-from pnbp import Notebook, IdentityError
-from pnbp.cli import cli
-from pnbp import _identities
+from pretty_notebook import Notebook, IdentityError
+from pretty_notebook.cli import cli
+from pretty_notebook._internal import identities as _identities
 
 
 @pytest.fixture

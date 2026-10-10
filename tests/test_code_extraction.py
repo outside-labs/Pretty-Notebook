@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from pnbp import Notebook
-from pnbp.commands.code import _extract_all_code_blocks, _extract_code_blocks
+from pretty_notebook import Notebook
+from pretty_notebook.commands.code import _extract_all_code_blocks, _extract_code_blocks
 
 
 @pytest.fixture

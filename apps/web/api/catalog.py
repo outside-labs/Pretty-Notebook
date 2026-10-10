@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 from uuid import uuid4
-from pnbp._routes import validate_route
+from pretty_notebook._internal.routes import validate_route
 
 from tortoise import connections
 from tortoise.transactions import in_transaction

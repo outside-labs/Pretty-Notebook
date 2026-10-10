@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from pnbp import Notebook
+from pretty_notebook import Notebook
 
 
 @pytest.fixture

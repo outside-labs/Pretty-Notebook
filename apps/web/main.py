@@ -67,7 +67,7 @@ def create_app(
             asset_resolver.validate_layout(await layout_api.get_layout_content())
             yield
 
-    from pnbp._routes import validate_prefix
+    from pretty_notebook._internal.routes import validate_prefix
     app = fastapi.FastAPI(lifespan=lifespan, exception_handlers=tortoise_exception_handlers(), root_path=validate_prefix(root_path if root_path is not None else web_config.url_prefix()))
     app.state.bootstrap_lock = asyncio.Lock()
     app.state.pages_path = publish_api.PUB_PATH

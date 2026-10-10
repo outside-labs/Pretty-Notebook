@@ -1,8 +1,8 @@
 import pytest
 
-from pnbp import Notebook
-from pnbp._routes import validate_route
-from pnbp.settings import NotebookSettings, SettingsError
+from pretty_notebook import Notebook
+from pretty_notebook._internal.routes import validate_route
+from pretty_notebook.settings import NotebookSettings, SettingsError
 
 
 def notebook_at(root, sources, **settings):

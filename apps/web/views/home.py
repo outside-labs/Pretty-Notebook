@@ -7,8 +7,8 @@ from urllib.parse import urlsplit
 from api.layout_api import get_layout_content
 from api.publish_api import publication_path
 from api.public_navigation import snapshot_navigation
-from pnbp._routes import RESERVED
-from pnbp._icons import render_icon, replace_legacy_icons
+from pretty_notebook._internal.routes import RESERVED
+from pretty_notebook._internal.icons import render_icon, replace_legacy_icons
 from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
 from starlette.templating import Jinja2Templates

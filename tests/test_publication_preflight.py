@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from pnbp import Notebook
-from pnbp.models.components import Link
+from pretty_notebook import Notebook
+from pretty_notebook.models.components import Link
 
 
 class FakeResponse:

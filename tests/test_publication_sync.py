@@ -5,10 +5,10 @@ import pytest
 import requests
 from click.testing import CliRunner
 
-from pnbp import Notebook
-from pnbp.cli import cli
-from pnbp.commands.correct import _touch_all_public
-from pnbp.helpers import _convert_datetime
+from pretty_notebook import Notebook
+from pretty_notebook.cli import cli
+from pretty_notebook.commands.correct import _touch_all_public
+from pretty_notebook.helpers import _convert_datetime
 
 
 class FakeResponse:

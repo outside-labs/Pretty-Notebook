@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from html.parser import HTMLParser
 
-from pnbp.models.components import Tag
+from pretty_notebook.models.components import Tag
 from tortoise import connections
 
 from .catalog import _read_blob, blob_path

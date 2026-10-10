@@ -1,4 +1,4 @@
-from pnbp.models import Note
+from pretty_notebook.models import Note
 
 
 def empty_note():

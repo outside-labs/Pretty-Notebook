@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from pnbp import Notebook, NavigationHistory, NavigationIndex
-from pnbp._navigation import Breadcrumb, DirectoryIndex, Heading, ReadingNeighbors
+from pretty_notebook import Notebook, NavigationHistory, NavigationIndex
+from pretty_notebook._internal.navigation import Breadcrumb, DirectoryIndex, Heading, ReadingNeighbors
 
 
 @pytest.fixture

@@ -21,7 +21,7 @@ temporary directory; substitute your own existing path when keeping the notes:
 ```{doctest} workflow
 >>> from pathlib import Path
 >>> from tempfile import TemporaryDirectory
->>> from pnbp import Notebook
+>>> from pretty_notebook import Notebook
 >>> workspace = TemporaryDirectory()
 >>> root = Path(workspace.name)
 >>> nb = Notebook.open(root, settings={"NOTE_NESTED": "recurs"})

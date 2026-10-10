@@ -2,8 +2,8 @@ from xml.etree import ElementTree
 
 import pytest
 
-from pnbp import Notebook
-from pnbp._icons import render_icon, replace_legacy_icons
+from pretty_notebook import Notebook
+from pretty_notebook._internal.icons import render_icon, replace_legacy_icons
 
 
 @pytest.mark.parametrize('name', ['sun', 'moon', 'book', 'globe', 'external'])

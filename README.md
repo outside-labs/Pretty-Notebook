@@ -19,13 +19,17 @@ macOS URL handlers remain unsupported.
 [Documentation index](docs/index.md) · [Workflow tutorial](docs/tutorials.md) · [0.9.0 release notes](docs/release-0.9.0.md) · [Web deployment](docs/web.md) · [Development roadmap](docs/roadmap.md)
 
 The current checkout includes features targeting **0.10 development**, while
-package metadata remains 0.9.0 until release preparation. Use an editable
+package metadata prepares `pretty-notebook==0.10.0.dev0`. Use an editable
 checkout for current settings/profiles, identities, checked moves/publication,
 field/tag search, navigation and favicon management. Those APIs are not promised
 by the published 0.9.0 wheel. [Versions and support](docs/versions.md) defines the
 distinction; [building the documentation](docs/building.md) checks the same
 canonical Markdown with strict references, emitted HTML links and runnable local
 examples. Hosted documentation publication remains pending separately.
+
+New code uses `from pretty_notebook import Notebook, Note`; existing `pnbp`
+imports and the `pnbp` executable remain compatible. See the
+[package migration](docs/package-migration.md) before upgrading old installations.
 
 ```mermaid
 graph BT

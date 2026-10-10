@@ -34,7 +34,7 @@ functions out of the command menu. See [settings and profiles](settings.md).
 ## Source, pending text, and save results
 
 ```python
-from pnbp import Notebook
+from pretty_notebook import Notebook
 
 nb = Notebook("~/notes")
 note = nb.get("example", fuzzy=False)

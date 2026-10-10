@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 import requests
 
-from pnbp import Notebook, _publication_plan as plans
+from pretty_notebook import Notebook
+from pretty_notebook._internal import publication_plan as plans
 
 SERVER_ID = "a02a9862-f303-41b8-baa0-ef6c1eb04e3f"
 NOTE_ID = "71630f18-f7b5-41eb-92df-2ad5a92b61cc"

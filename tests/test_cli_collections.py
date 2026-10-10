@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 
-from pnbp.cli import cli
-from pnbp.commands import collect
+from pretty_notebook.cli import cli
+from pretty_notebook.commands import collect
 
 
 EXPECTED_COLLECTORS = (

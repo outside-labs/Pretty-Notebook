@@ -1,8 +1,8 @@
 import pytest
 
-from pnbp.commands.correct import _collect_unlinked_mentions
-from pnbp.commands.pprint import get_rich_note
-from pnbp import Notebook
+from pretty_notebook.commands.correct import _collect_unlinked_mentions
+from pretty_notebook.commands.pprint import get_rich_note
+from pretty_notebook import Notebook
 
 
 @pytest.fixture
