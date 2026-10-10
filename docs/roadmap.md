@@ -15,8 +15,12 @@ and verification; current status comes from GitHub.
 - **0.12 proposed:** 4 Markdown-engine tasks with explicit compatibility gates.
 - **Later:** 8 follow-on tasks. Later version labels are planning buckets.
 
-Keep the current `pnbp` package/import/executable names and supported one-worker,
-local-SQLite, default-notebook, trusted-editor deployment behind a TLS proxy.
+The additional 0.10 block introduces the canonical `pretty_notebook` import and
+`pretty-notebook` development distribution, compatible `pnbp` imports/CLI, theme
+preferences, responsive navigation, coordinated local workers, VPS bundles and
+coverage auditing. Its six required child tasks are #145–#150; logging #151 is
+queued for 0.11. Retain local SQLite, one owning notebook, trusted editors and a
+TLS proxy, with one Gunicorn instance and up to four coordinated workers.
 Release publication, hosted deployment, and new external service/provider
 decisions have their own authorization boundaries.
 

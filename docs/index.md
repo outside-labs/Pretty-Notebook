@@ -36,6 +36,7 @@ pnbp_commands
 
 web
 vps-deployment
+web-coverage
 server-state
 assets
 appearance
