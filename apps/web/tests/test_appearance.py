@@ -129,3 +129,20 @@ def test_invalid_preference_cookies_fall_back_to_owner_defaults(client):
     assert '--radius-md:6px' in client.get('/').text
     assert client.post('/appearance', data={'font': 'sans'}).status_code == 422
     assert client.post('/appearance', data={'theme': 'paper', 'font': 'sans', 'return_to': '//evil.test'}).status_code == 400
+
+
+def test_appearance_icon_sprite_and_visual_preview_structure(client):
+    page = client.get('/appearance')
+    assert page.status_code == 200
+    for symbol in ('book-open', 'moon', 'leaf', 'contrast', 'menu', 'plus', 'pencil', 'copy'):
+        assert f'/static/icons/appearance.svg#{symbol}' in page.text
+    assert 'class="theme-example-notebook"' in page.text
+    assert 'class="preview-brand"' in page.text
+    assert 'class="preview-menu"' in page.text
+    sprite = client.get('/static/icons/appearance.svg')
+    assert sprite.status_code == 200
+    for symbol in ('book-open', 'moon', 'sun', 'leaf', 'contrast', 'menu',
+                   'plus', 'pencil', 'copy', 'check', 'sliders', 'type', 'notebook'):
+        assert f'id="{symbol}"' in sprite.text
+
+
