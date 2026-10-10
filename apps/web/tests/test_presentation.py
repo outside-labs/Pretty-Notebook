@@ -61,14 +61,14 @@ def luminance(color):
 
 
 def test_theme_colors_have_readable_text_and_visible_control_boundaries():
-    css = (Path(__file__).resolve().parents[1] / 'static/css/site.css').read_text()
+    css = '\n'.join(path.read_text() for path in (Path(__file__).resolve().parents[1] / 'static/css/themes').glob('*.css'))
     themes = re.findall(r'(?:^:root|\[data-theme="dark"\])\s*\{([^}]+)', css, re.MULTILINE)
-    assert len(themes) == 2
+    assert len(themes) == 10
     for theme in themes:
         colors = dict(re.findall(r'(--[\w-]+):\s*(#[a-f0-9]{6})', theme))
-        pairs = [('text', 'page', 4.5), ('text', 'surface', 4.5), ('link', 'surface', 4.5),
-                 ('muted', 'page', 4.5), ('on-button', 'button', 4.5),
-                 ('error', 'error-surface', 4.5), ('line', 'page', 3), ('focus', 'surface', 3)]
+        pairs = [('color-text', 'color-bg', 4.5), ('color-text', 'color-surface', 4.5), ('color-primary', 'color-surface', 4.5),
+                 ('color-text-muted', 'color-bg', 4.5), ('color-on-primary', 'color-primary', 4.5),
+                 ('color-error', 'color-error-surface', 4.5), ('color-border', 'color-bg', 3), ('color-focus', 'color-surface', 3)]
         for foreground, background, minimum in pairs:
             bright, dark = sorted([luminance(colors['--' + foreground]), luminance(colors['--' + background])], reverse=True)
             assert (bright + 0.05) / (dark + 0.05) >= minimum, (foreground, background)

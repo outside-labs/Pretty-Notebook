@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ 'dark' if darkmode else 'light' }}">
+<html lang="en" data-theme="{{ 'dark' if darkmode else 'light' }}" data-mode="{{ appearance_mode }}"
+      data-font="{{ appearance_font }}" data-heading-font="{{ APPEARANCE.heading_font }}" data-density="{{ APPEARANCE.density }}">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% if page_title and page_title != TITLE %}{{ page_title }} · {% endif %}{{ TITLE }}</title>
     {% if favicon_url %}<link rel="icon" type="image/png" href="{{ favicon_url }}">{% endif %}
     <link href="{{ root_path }}/static/css/site.css" rel="stylesheet">
+    <link href="{{ root_path }}/static/css/themes/{{ APPEARANCE.palette }}.css" rel="stylesheet">
+    <style>:root { {{ appearance_tokens | safe }} }</style>
+    {% if APPEARANCE.custom_css %}<link href="{{ root_path }}/static/custom/appearance.css" rel="stylesheet">{% endif %}
+    <script src="{{ root_path }}/static/js/appearance.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -21,6 +26,7 @@
             data-mermaid-src="{{ assets['mermaid-js'].url }}"
             data-mermaid-integrity="{{ assets['mermaid-js'].integrity }}"
             data-mermaid-theme="{{ merm_dark if darkmode else merm_light }}"
+            data-mermaid-light="{{ merm_light }}" data-mermaid-dark="{{ merm_dark }}"
             data-diagram-mode="{{ diagram_mode }}"></script>
     {% endif %}
     {% if code_mode %}
@@ -29,6 +35,10 @@
             data-highlight-src="{{ assets['highlight-js'].url }}"
             data-highlight-integrity="{{ assets['highlight-js'].integrity }}"
             data-highlight-style="{{ assets['highlight-css'].url }}"
+            data-highlight-style-light="{{ assets['highlight-css-light'].url }}"
+            data-highlight-style-dark="{{ assets['highlight-css-dark'].url }}"
+            data-highlight-integrity-light="{{ assets['highlight-css-light'].integrity }}"
+            data-highlight-integrity-dark="{{ assets['highlight-css-dark'].integrity }}"
             data-highlight-style-integrity="{{ assets['highlight-css'].integrity }}"></script>
     {% endif %}
   </body>

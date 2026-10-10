@@ -37,6 +37,7 @@ pnbp_commands
 web
 server-state
 assets
+appearance
 diagrams
 code-tools
 public-search

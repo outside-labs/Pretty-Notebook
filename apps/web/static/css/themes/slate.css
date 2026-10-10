@@ -1,0 +1,29 @@
+/* Slate palette: color tokens only. */
+:root {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-surface: #f1f4f8;
+  --color-text: #253248;
+  --color-text-muted: #506078;
+  --color-border: #8996a8;
+  --color-primary: #2157a8;
+  --color-on-primary: #ffffff;
+  --color-focus: #a34200;
+  --color-error: #9b1c31;
+  --color-error-surface: #fff0f2;
+  --color-code: #edf1f6;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #141a24;
+  --color-surface: #202a38;
+  --color-text: #ecf1fa;
+  --color-text-muted: #bac7db;
+  --color-border: #7c8da5;
+  --color-primary: #9ac6ff;
+  --color-on-primary: #141a24;
+  --color-focus: #ffc27a;
+  --color-error: #ffb8c3;
+  --color-error-surface: #38212b;
+  --color-code: #202a38;
+}

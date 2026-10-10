@@ -1,0 +1,29 @@
+/* Forest palette: color tokens only. */
+:root {
+  color-scheme: light;
+  --color-bg: #f5faf4;
+  --color-surface: #e5efe3;
+  --color-text: #203528;
+  --color-text-muted: #4b6152;
+  --color-border: #728374;
+  --color-primary: #205d3a;
+  --color-on-primary: #ffffff;
+  --color-focus: #a34200;
+  --color-error: #9b1c31;
+  --color-error-surface: #fff0f2;
+  --color-code: #e5efe3;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #12221a;
+  --color-surface: #20392b;
+  --color-text: #e9f5eb;
+  --color-text-muted: #b5d1bd;
+  --color-border: #87a58f;
+  --color-primary: #a4deb7;
+  --color-on-primary: #12221a;
+  --color-focus: #ffc27a;
+  --color-error: #ffb8c3;
+  --color-error-surface: #38212b;
+  --color-code: #20392b;
+}

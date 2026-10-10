@@ -350,7 +350,7 @@ def web_settings_post(notebook):
 	bs_keys = tuple([
 					"NAV_BRAND", "NAV_PAGES",
 					"FOOTER", "TITLE",
-					"darkmode",
+					"darkmode", "APPEARANCE",
 					"hljs_light", "hljs_dark",
 					"merm_light", "merm_dark"
 					])

@@ -9,6 +9,7 @@ import fastapi
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from web_config import SETTINGS_PATH
+from pretty_notebook.appearance import validate_appearance
 
 from .atomic_io import atomic_write_text
 from .auth_api import get_current_user
@@ -25,6 +26,13 @@ class PNBPWebLayout(BaseModel):
     NAV_PAGES: dict[str, str | list[dict[str, str]]]
     FOOTER: str = Field(max_length=50_000)
     TITLE: str = Field(max_length=500)
+
+    APPEARANCE: dict = Field(default_factory=dict)
+
+    @field_validator("APPEARANCE")
+    @classmethod
+    def valid_appearance(cls, value):
+        return validate_appearance(value)
 
     darkmode: bool
     hljs_light: str = Field(max_length=100)
@@ -105,6 +113,7 @@ async def get_layout_content(prefix=""):
     """Read, validate, and prepare presentation settings for rendering."""
     async with aiofiles.open(WEB_SETTINGS_PATH, mode="r") as f:
         settings = PNBPWebLayout.model_validate_json(await f.read()).model_dump()
+        settings["APPEARANCE"] = validate_appearance(settings["APPEARANCE"])
         settings["NAV_PAGES"] = await render_nav(settings["NAV_PAGES"], prefix)
 
     return settings
@@ -120,9 +129,11 @@ async def update_layout(
     hljs_dark: str,
     merm_light: str,
     merm_dark: str,
+    appearance: dict | None = None,
 ):
     """Atomically persist validated presentation settings."""
     lout = {
+        "APPEARANCE": validate_appearance(appearance or {}),
         "NAV_BRAND": NAV_BRAND,
         "NAV_PAGES": NAV_PAGES,
         "FOOTER": FOOTER,
@@ -162,4 +173,4 @@ async def layout_post(lout_in: PNBPWebLayout, request: Request):
     mml = lout_in.merm_light
     mmd = lout_in.merm_dark
 
-    return await update_layout(nb, np, f, t, dm, hll, hld, mml, mmd)
+    return await update_layout(nb, np, f, t, dm, hll, hld, mml, mmd, lout_in.APPEARANCE)

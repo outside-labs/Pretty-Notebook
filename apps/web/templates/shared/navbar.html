@@ -9,5 +9,18 @@
         {{ 'Light theme' if darkmode else 'Dark theme' }}
       </button>
     </form>
+    <details class="appearance-picker">
+      <summary>Appearance</summary>
+      <form action="{{ root_path }}/appearance" method="POST" class="stack">
+        <input type="hidden" name="return_to" value="{{ request.url.path }}">
+        <label>Mode<select name="mode">
+          {% for value in ['light', 'dark', 'system'] %}<option value="{{ value }}"{% if appearance_mode == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
+        </select></label>
+        <label>Font<select name="font">
+          {% for value in ['sans', 'serif', 'mono'] %}<option value="{{ value }}"{% if appearance_font == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
+        </select></label>
+        <button class="button" type="submit">Save appearance</button>
+      </form>
+    </details>
   </nav>
 </header>

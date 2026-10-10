@@ -42,7 +42,7 @@ def test_local_page_and_all_runtime_assets_work_with_network_blocked(web_storage
         page = client.get("/")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert urls == ["/static/css/site.css"]
+        assert urls == ["/static/css/site.css", "/static/css/themes/slate.css", "/static/js/appearance.js"]
         assert all(urlsplit(url).netloc in {"", "testserver"} for url in urls)
         for entry in client.app.state.assets.entries.values():
             asset = client.get("/static/" + entry["path"])
@@ -62,7 +62,7 @@ def test_explicit_cdn_mode_uses_only_pinned_integrity_checked_entries(web_storag
         page = client.get("/code")
         assert page.status_code == 200
         urls = RuntimeURLs(page.text).urls
-        assert urls == ["/static/css/site.css", "/static/js/notebook-navigation.js", "/static/js/diagram-loader.js", "/static/js/code-tools.js"]
+        assert urls == ["/static/css/site.css", "/static/css/themes/slate.css", "/static/js/appearance.js", "/static/js/notebook-navigation.js", "/static/js/diagram-loader.js", "/static/js/code-tools.js"]
         assert 'data-highlight-src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"' in page.text
         assert 'data-highlight-style="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/default.min.css"' in page.text
         assert page.text.count('integrity="sha384-') == 3

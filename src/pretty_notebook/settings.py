@@ -45,7 +45,14 @@ def _validate_config(config):
 	if _contains_credentials(config):
 		raise SettingsError("Use api_token, the API_TOKEN environment variable, or .pnbp/secrets.json for credentials.")
 	for key, value in config.items():
-		if key == "PUBLICATION_ROUTES":
+		if key == "APPEARANCE":
+			from .appearance import validate_appearance
+			try:
+				validate_appearance(value)
+			except ValueError as error:
+				raise SettingsError(str(error)) from error
+			continue
+		elif key == "PUBLICATION_ROUTES":
 			if not isinstance(value, dict) or any(not isinstance(k, str) or not k.endswith(".md") or k.startswith("/") or any(part in {"", ".", ".."} for part in k.split("/")) or "\\" in k or not isinstance(v, str) for k, v in value.items()):
 				raise SettingsError("PUBLICATION_ROUTES must map relative Markdown source paths to routes.")
 			continue
@@ -121,6 +128,7 @@ class NotebookSettings:
 	nav_brand: str = ""
 	nav_pages: dict[str, str | list[dict[str, str]]] = field(default_factory=dict)
 	footer: str = ""
+	appearance: dict = field(default_factory=dict)
 	darkmode: bool = False
 	hljs_light: str = "default"
 	hljs_dark: str = "xt256"

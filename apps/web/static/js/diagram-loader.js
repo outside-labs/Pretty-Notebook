@@ -2,11 +2,14 @@
 (() => {
   "use strict";
   const settings = document.currentScript.dataset;
+  function preferredTheme() {
+    return settings[document.documentElement?.dataset?.theme === "dark" ? "mermaidDark" : "mermaidLight"] || settings.mermaidTheme;
+  }
   const themes = new Set(["default", "dark", "forest", "neutral", "base"]);
   const options = {
     source: settings.mermaidSrc,
     integrity: settings.mermaidIntegrity,
-    theme: themes.has(settings.mermaidTheme) ? settings.mermaidTheme : "default",
+    theme: themes.has(preferredTheme()) ? preferredTheme() : "default",
   };
   if (window.pnbpDiagrams) {
     window.pnbpDiagrams.setTheme(options.theme);
@@ -147,6 +150,7 @@
   window.addEventListener("pageshow", render);
   document.addEventListener("pnbp:content", render);
   document.addEventListener("pnbp:theme", (event) => setTheme(event.detail?.theme));
+  document.addEventListener("pnbp:appearance", () => setTheme(preferredTheme()));
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", render, { once: true });
   else render();
 })();
