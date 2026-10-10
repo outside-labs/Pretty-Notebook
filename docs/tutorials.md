@@ -236,12 +236,12 @@ protocol and recovery guide.
 Use [reviewed local assets](assets.md) for production; diagrams and code copying
 load their assets only when the page needs them. After installing the web app's
 declared requirements and configuring private storage and signing settings from
-the deployment guide, verify the reviewed assets and start the one-worker server:
+the deployment guide, verify the reviewed assets and start the four-worker server:
 
 ```bash
 cd apps/web
 python install_assets.py --check
-PNBP_ASSET_MODE=local gunicorn main:api --workers 1 \
+PNBP_ASSET_MODE=local gunicorn main:api --workers 4 \
   --worker-class uvicorn_worker.UvicornWorker --bind 127.0.0.1:8000
 ```
 
@@ -257,7 +257,7 @@ A deployment prefix applies to all
 of those routes. Local private notes are absent from public results and reading
 navigation. Reader roles and multi-notebook ownership remain deferred.
 
-The [web deployment guide](web.md) owns startup, one-worker constraints, TLS,
+The [web deployment guide](web.md) owns startup, local-host worker coordination, TLS,
 bootstrap, backup and restore instructions. Package releases and hosted
 documentation publication remain separate from notebook publishing.
 

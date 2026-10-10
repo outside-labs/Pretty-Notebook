@@ -1,7 +1,7 @@
 # Checked publishing
 
 The optional web server supports the authenticated `revision-1` protocol alongside
-the legacy 0.9 publishing endpoints. It retains the supported one-worker, SQLite,
+the legacy 0.9 publishing endpoints. It retains the supported one-host, local-SQLite,
 single-notebook deployment profile.
 
 Read `GET /api/publishing/capabilities` to negotiate the protocol. A client may

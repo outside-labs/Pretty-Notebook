@@ -157,7 +157,7 @@ jobs:
           PNBP_ASSET_MODE: local
         run: |
           gunicorn main:api \
-            --workers 1 \
+            --workers 4 \
             --worker-class uvicorn_worker.UvicornWorker \
             --bind 127.0.0.1:8765 &
           server_pid=$!

@@ -56,7 +56,7 @@ configuration. Initialize deliberately with `pnbp init PATH`; see the canonical
 - [Local search](local-search.md), [navigation](navigation.md) and [links](links.md): read-only projections and explicit traversal.
 - [Stable identities](identities.md) and [publication routes](routes.md): identity, source paths and URLs remain separate.
 - [Checked publishing](checked-publishing.md): dry-run plans, ETags, retries and explicit pruning.
-- [Web deployment](web.md): separate application, bootstrap, durable state and the supported one-worker profile.
+- [Web deployment](web.md): separate application, bootstrap, durable state and the supported local-host worker profile.
 
 The macOS URL handlers are [unsupported](pnano.md). The FastAPI app and its
 optional dependencies are absent from the `pnbp` wheel.

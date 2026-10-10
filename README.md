@@ -11,8 +11,8 @@ python -m pip install --upgrade pip
 python -m pip install pnbp==0.9.0
 ```
 
-The repository supports the `apps/web` publisher only as a single-worker,
-single-SQLite, single-notebook deployment behind a TLS reverse proxy. Read the
+The repository supports the `apps/web` publisher as one Gunicorn instance with up to four workers,
+one local SQLite database and one owning notebook behind a TLS reverse proxy. Read the
 deployment contract and security boundaries before exposing it publicly. The
 macOS URL handlers remain unsupported.
 

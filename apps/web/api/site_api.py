@@ -37,7 +37,8 @@ async def stylesheet_put(request: Request):
     except UnicodeError as error:
         raise HTTPException(400, "Stylesheet must be UTF-8.") from error
     try:
-        await atomic_write_bytes(request.app.state.settings_path.parent / "appearance.css", bytes(content))
+        async with request.app.state.storage_lock:
+            await atomic_write_bytes(request.app.state.settings_path.parent / "appearance.css", bytes(content))
     except OSError as error:
         raise HTTPException(503, "Stylesheet storage is unavailable.") from error
     return Response(status_code=204)

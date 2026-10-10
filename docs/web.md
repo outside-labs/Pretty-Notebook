@@ -3,7 +3,8 @@
 > [!IMPORTANT]
 > `apps/web` is supported for public deployment only in the constrained
 > topology described here. A deployment outside this profile has not passed
-> the 0.9 safety gate.
+> the documented 0.10 development checks. The released 0.9 contract remains
+> a single-worker deployment.
 
 The FastAPI application publishes HTML and images produced by `pnbp`, serves a
 small public site, and stores contact-form messages in a local inbox. The web
@@ -15,14 +16,14 @@ wheel.
 | Area | Supported contract |
 | --- | --- |
 | Platform | Linux x86_64 with CPython 3.11 or 3.14 and the hash-locked wheel set |
-| Application | One Gunicorn instance with exactly one `uvicorn_worker.UvicornWorker` |
+| Application | One Gunicorn instance with 1–4 `uvicorn_worker.UvicornWorker` processes; four by default |
 | State | One local persistent data directory containing one SQLite database, pages, images, and layout settings |
 | Publication ownership | One notebook owns the server's complete page namespace |
 | Editors | Every API account is a trusted site editor; user ID 1 is the owner that may create more accounts |
 | Network | The application binds to loopback behind a TLS-terminating reverse proxy |
 | Operations | One host, stopped-site backups, and version-matched restores |
 
-Multiple workers, multiple application instances, shared or network filesystems,
+Multiple application instances, shared or network filesystems,
 remote databases, untrusted editors, and independent notebooks sharing a page
 namespace are not supported. The macOS URL handlers are also outside this
 support decision.
@@ -34,13 +35,15 @@ as a server-side Jinja template.
 
 ## Install a reviewed checkout
 
-Use a dedicated service account and a reviewed tag or commit. The 0.9 release
-tag is `v0.9.0`.
+Use a dedicated service account and an explicitly reviewed 0.10 development
+commit. Set `PNBP_REVISION` to that full commit SHA. The released `v0.9.0`
+tag retains its historical single-worker contract.
 
 ```bash
 git clone https://github.com/outside-labs/Pretty-Notebook.git pnbp
 cd pnbp
-git checkout v0.9.0
+: "${PNBP_REVISION:?Set a reviewed 0.10 commit SHA}"
+git checkout --detach "$PNBP_REVISION"
 
 python3.11 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
@@ -110,7 +113,7 @@ Run from `apps/web` with a restrictive umask:
 cd apps/web
 umask 077
 exec ../../.venv/bin/gunicorn main:api \
-  --workers 1 \
+  --workers 4 \
   --worker-class uvicorn_worker.UvicornWorker \
   --bind 127.0.0.1:8000 \
   --access-logfile -
@@ -133,11 +136,11 @@ Monitor `GET /healthz` over the loopback listener. It checks SQLite and the
 validated layout file and returns `503` when either is unavailable. It does not
 test free disk space, a writable filesystem, or external CDNs.
 
-The rendered site loads version-pinned Bootstrap, Mermaid, and Highlight.js
-assets from public CDNs. Executable CDN scripts and Bootstrap CSS use
-subresource integrity. The selected Highlight.js theme CSS is version-pinned
-but does not have an integrity attribute, so CDN availability and stylesheet
-delivery remain external dependencies.
+The default layout uses local project-owned CSS and SVGs. Select
+`PNBP_ASSET_MODE=local` for reviewed local Mermaid and Highlight.js assets with
+validated checksums and integrity metadata; no browser CDN is needed in this
+profile. See [browser assets](assets.md) for explicitly selected CDN fallbacks
+and [appearance](appearance.md) for palettes and persistent overrides.
 
 ## Claim the initial owner
 
@@ -157,7 +160,7 @@ Passwords must contain at least 12 characters and no more than 72 UTF-8 bytes.
 After the owner is created:
 
 1. Remove `PNBP_BOOTSTRAP_TOKEN` from the server environment.
-2. Restart the single application process.
+2. Restart the Gunicorn service and its workers.
 3. Confirm `/healthz` and `nb.get_authed_user()`.
 
 Anonymous registration never reopens, even if the owner row is deleted.
@@ -347,7 +350,7 @@ python -m coverage run --source=api,views,main -m pytest tests
 python -m coverage report --show-missing --fail-under=90
 ```
 
-CI runs the suite and the exact one-worker Gunicorn command on Python 3.11 and
+CI runs the suite and the exact four-worker Gunicorn command on Python 3.11 and
 3.14. It also checks that an allowed host reaches `/healthz` and an unlisted
 host is rejected.
 

@@ -100,7 +100,7 @@ async def _validate_catalog(connection):
 
 
 async def migrate():
-    """Upgrade before serving requests; the supported topology has one worker."""
+    """Upgrade before serving requests under the shared host-level writer lock."""
     connection = connections.get("default")
     if not isinstance(connection, SqliteClient):
         raise RuntimeError("Versioned server state supports SQLite only.")
