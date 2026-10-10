@@ -61,7 +61,7 @@ def test_collision_preview_is_authenticated_read_only_and_checks_entire_plan(cli
     assert len(list((web_storage.pages / ".blobs").glob("*.html"))) == 1
 
 
-@pytest.mark.parametrize("claim", [{"name": "api/note"}, {"name": "a%2fb"}, {"name": "n/books"}, {"name": "nested/next", "previous_name": "absent"}, {"name": "next", "aliases": ["/contact"]}])
+@pytest.mark.parametrize("claim", [{"name": "api/note"}, {"name": "appearance"}, {"name": "a%2fb"}, {"name": "n/books"}, {"name": "nested/next", "previous_name": "absent"}, {"name": "next", "aliases": ["/contact"]}])
 def test_invalid_claim_preview_returns_actionable_conflict(client, auth_headers, claim):
     preview = client.post("/api/routes/preview", headers=auth_headers, json=[claim]).json()
     assert preview["valid"] is False and preview["conflicts"][0]["detail"]
@@ -122,6 +122,17 @@ def test_prefix_deployment_routes_assets_navigation_forms_and_redirects(web_stor
         assert theme.headers["location"] == "/notes/python/functions"
         assert "Path=/notes/" in theme.headers["set-cookie"]
         assert client.post("/notes/theme", data={"darkmode": "darkmode", "return_to": "/outside"}).status_code == 400
+        preferences = client.get('/notes/appearance')
+        assert preferences.status_code == 200
+        assert 'action="/notes/appearance"' in preferences.text
+        assert '/notes/static/js/appearance-preferences.js' in preferences.text
+        saved_appearance = client.post('/notes/appearance', data={
+            'theme': 'midnight', 'font': 'serif', 'radius': 10, 'density': 'compact',
+            'accent': 'default', 'return_to': '/notes/appearance?saved=1'}, follow_redirects=False)
+        assert saved_appearance.status_code == 303
+        assert saved_appearance.headers['location'] == '/notes/appearance?saved=1'
+        assert 'Path=/notes/' in saved_appearance.headers['set-cookie']
+        assert 'data-palette="midnight"' in client.get('/notes/').text
         assert client.get("/notes/api/unknown").json() == {"detail": "Not Found"}
 
 

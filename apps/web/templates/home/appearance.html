@@ -1,0 +1,80 @@
+{% extends 'shared/layout.html' %}
+{% block appearance_styles %}
+  {% for family in theme_families if family != APPEARANCE.palette %}
+    <link href="{{ root_path }}/static/css/themes/{{ family }}.css" rel="stylesheet">
+  {% endfor %}
+  <link href="{{ root_path }}/static/css/appearance-preferences.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<section class="appearance-page" aria-labelledby="appearance-title">
+  <h1 id="appearance-title">Appearance preferences</h1>
+  {% if preference_saved %}<p class="notice" role="status">Appearance saved.</p>{% endif %}
+  <div class="theme-families" aria-label="Example theme families">
+    {% for family, description in [('paper', 'A warm reading surface'), ('midnight', 'Blue-tinted dark mode'), ('forest', 'Soft botanical colors'), ('dark', 'Neutral charcoal')] %}
+      <article class="theme-example" data-preview-palette="{{ family }}" data-preview-mode="{{ theme_families[family] }}">
+        <h2>{{ family | title }}</h2>
+        <div class="theme-example-notebook">Notebook<span class="theme-example-lines" aria-hidden="true"></span></div>
+        <p>{{ description }}</p>
+      </article>
+    {% endfor %}
+  </div>
+  <div class="appearance-workspace">
+    <form action="{{ root_path }}/appearance" method="POST" class="appearance-controls stack" data-appearance-form>
+      <input type="hidden" name="return_to" value="{{ root_path }}/appearance?saved=1">
+      <label class="field" for="preference-theme">Theme
+        <select id="preference-theme" name="theme">
+          {% for family in theme_families %}<option value="{{ family }}"{% if preference_theme == family %} selected{% endif %}>{{ family | title }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field" for="preference-font">Font family
+        <select id="preference-font" name="font">
+          {% for value, label in [('serif', 'Serif'), ('sans', 'Sans-serif'), ('mono', 'Monospace')] %}<option value="{{ value }}"{% if appearance_font == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field" for="preference-density">Content density
+        <select id="preference-density" name="density">
+          {% for value in ['comfortable', 'compact'] %}<option value="{{ value }}"{% if APPEARANCE.density == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="field">
+        <label for="preference-accent">Accent color</label>
+        <div class="accent-control">
+          <input id="preference-accent" type="color" name="accent" value="{{ APPEARANCE.accent or '#275d3e' }}" data-default-accent="{{ 'false' if APPEARANCE.accent else 'true' }}">
+          <button type="button" class="button button-secondary" data-accent-reset hidden>Use theme color</button>
+        </div>
+        <input type="hidden" name="accent" value="default" data-accent-default disabled>
+      </div>
+      <label class="field" for="preference-radius">Corner radius: <span><output for="preference-radius" data-radius-output>{{ APPEARANCE.radius }}</output> px</span>
+        <input id="preference-radius" name="radius" type="range" min="0" max="20" step="2" value="{{ APPEARANCE.radius }}">
+      </label>
+      <button type="submit" class="button">Save appearance</button>
+    </form>
+    <div class="appearance-preview-column">
+      <article class="appearance-preview" aria-label="Notebook appearance preview" data-appearance-preview
+               data-preview-palette="{{ preference_theme }}" data-preview-mode="{{ theme_families[preference_theme] }}"
+               data-font="{{ appearance_font }}" data-density="{{ APPEARANCE.density }}" style="{{ appearance_tokens | safe }}">
+        <header class="preview-header"><span>Pretty Notebook</span><span aria-hidden="true">{{ icon('book') | safe }}</span></header>
+        <div class="preview-note">
+          <p class="preview-eyebrow">MY NOTEBOOK / WRITING</p>
+          <h2 data-preview-title>Every good idea begins somewhere.</h2>
+          <p data-preview-body>A place to collect thoughts, stories, and discoveries.</p>
+          <div class="preview-actions">
+            <button type="button" class="button" data-preview-new hidden>New note</button>
+            <button type="button" class="button button-secondary" data-preview-edit hidden>Edit notebook</button>
+          </div>
+        </div>
+      </article>
+      <div class="configuration-actions">
+        <button type="button" class="button button-secondary" data-copy-appearance hidden>Copy configuration</button>
+        <p role="status" aria-live="polite" data-appearance-status></p>
+      </div>
+      <label class="field" data-configuration-fallback hidden>Configuration
+        <textarea rows="9" readonly data-configuration-text aria-label="Appearance configuration"></textarea>
+      </label>
+      <p class="text-muted">Preview your choices, then save to use them throughout this site.</p>
+      <noscript><p class="notice">Save appearance to apply your choices. Live preview and copying require JavaScript.</p></noscript>
+    </div>
+  </div>
+</section>
+<script defer src="{{ root_path }}/static/js/appearance-preferences.js"></script>
+{% endblock %}

@@ -1,6 +1,6 @@
 import pytest
 
-from pretty_notebook.appearance import validate_appearance
+from pretty_notebook.appearance import validate_appearance, appearance_tokens
 from pretty_notebook.settings import NotebookSettings, SettingsError
 from pretty_notebook import Notebook
 from pretty_notebook._internal import publishing
@@ -24,6 +24,11 @@ def test_appearance_is_portable_and_independent():
     portable['APPEARANCE']['font'] = 'serif'
     assert settings.appearance['font'] == 'mono'
     assert validate_appearance({})['palette'] == 'slate'
+
+
+@pytest.mark.parametrize('accent,foreground', [('#ffee88', '#000000'), ('#111111', '#ffffff')])
+def test_custom_accent_uses_readable_button_text(accent, foreground):
+    assert f'--color-on-primary:{foreground}' in appearance_tokens({'palette': 'dark', 'accent': accent})
 
 
 def test_publishing_preserves_appearance_without_sending_credentials(tmp_path, monkeypatch):

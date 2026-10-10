@@ -1,5 +1,6 @@
 /* Outside palette: color tokens only. */
-:root {
+:root:where([data-palette="outside"]),
+[data-preview-palette="outside"] {
   color-scheme: light;
   --color-bg: #ffffff;
   --color-surface: #f1f1f1;
@@ -15,7 +16,8 @@
   --nav-bg: #212529;
   --nav-text: #f8f9fa;
 }
-[data-theme="dark"] {
+:root:where([data-palette="outside"][data-theme="dark"]),
+[data-preview-palette="outside"][data-preview-mode="dark"] {
   color-scheme: dark;
   --color-bg: #000000;
   --color-surface: #212529;

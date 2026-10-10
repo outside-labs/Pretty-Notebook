@@ -62,8 +62,8 @@ def luminance(color):
 
 def test_theme_colors_have_readable_text_and_visible_control_boundaries():
     css = '\n'.join(path.read_text() for path in (Path(__file__).resolve().parents[1] / 'static/css/themes').glob('*.css'))
-    themes = re.findall(r'(?:^:root|\[data-theme="dark"\])\s*\{([^}]+)', css, re.MULTILINE)
-    assert len(themes) == 10
+    themes = re.findall(r'\{([^}]+)\}', css)
+    assert len(themes) == 12
     for theme in themes:
         colors = dict(re.findall(r'(--[\w-]+):\s*(#[a-f0-9]{6})', theme))
         pairs = [('color-text', 'color-bg', 4.5), ('color-text', 'color-surface', 4.5), ('color-primary', 'color-surface', 4.5),

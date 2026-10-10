@@ -2,7 +2,8 @@
 
 import re
 
-PALETTES = ("slate", "outside", "paper", "forest", "midnight")
+PALETTES = ("slate", "outside", "paper", "forest", "midnight", "dark")
+THEME_FAMILIES = {"forest": "light", "paper": "light", "dark": "dark", "midnight": "dark"}
 FONTS = ("sans", "serif", "mono")
 DEFAULT_APPEARANCE = {
     "palette": "slate", "mode": None, "font": "sans", "heading_font": "sans",
@@ -48,4 +49,15 @@ def appearance_tokens(value):
                        "footer_text": "--footer-text"}.items():
         if value[key] is not None:
             tokens[token] = value[key]
+    if value["accent"] is not None:
+        tokens["--color-on-primary"] = accent_text_color(value["accent"])
     return ";".join(f"{key}:{item}" for key, item in tokens.items())
+
+
+def accent_text_color(color):
+    """Choose black or white text with the greater contrast on a validated accent."""
+    channels = [int(color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+    linear = [channel / 12.92 if channel <= 0.04045 else ((channel + 0.055) / 1.055) ** 2.4
+              for channel in channels]
+    luminance = sum(channel * weight for channel, weight in zip(linear, (0.2126, 0.7152, 0.0722)))
+    return "#000000" if luminance > 0.179 else "#ffffff"

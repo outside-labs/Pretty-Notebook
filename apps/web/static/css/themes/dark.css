@@ -1,0 +1,31 @@
+/* Dark palette: neutral charcoal, with a light counterpart for the mode toggle. */
+:root:where([data-palette="dark"]),
+[data-preview-palette="dark"] {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-surface: #f1f1f1;
+  --color-text: #242424;
+  --color-text-muted: #505050;
+  --color-border: #777777;
+  --color-primary: #404040;
+  --color-on-primary: #ffffff;
+  --color-focus: #a34200;
+  --color-error: #9b1c31;
+  --color-error-surface: #fff0f2;
+  --color-code: #eeeeee;
+}
+:root:where([data-palette="dark"][data-theme="dark"]),
+[data-preview-palette="dark"][data-preview-mode="dark"] {
+  color-scheme: dark;
+  --color-bg: #181818;
+  --color-surface: #252525;
+  --color-text: #f2f2f2;
+  --color-text-muted: #bfbfbf;
+  --color-border: #858585;
+  --color-primary: #d5d5d5;
+  --color-on-primary: #181818;
+  --color-focus: #ffc27a;
+  --color-error: #ffb8c3;
+  --color-error-surface: #38212b;
+  --color-code: #252525;
+}

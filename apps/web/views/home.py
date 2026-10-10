@@ -1,7 +1,7 @@
 """Public pages, theme preference, and fixed routes."""
 
 from pathlib import Path
-from pretty_notebook.appearance import FONTS, appearance_tokens
+from pretty_notebook.appearance import FONTS, THEME_FAMILIES, appearance_tokens, validate_appearance
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -26,7 +26,23 @@ async def get_template_content(request: Request, *, page_title: str | None = Non
     cookie_value = request.cookies.get("darkmode")
     if cookie_value in {"True", "False"}:
         content["darkmode"] = cookie_value == "True"
-    appearance = content["APPEARANCE"]
+    appearance = dict(content["APPEARANCE"])
+    # Cookies are untrusted and must never become filenames or arbitrary CSS.
+    for key in ("palette", "density", "accent", "radius"):
+        value = request.cookies.get("appearance_" + key)
+        if value is None:
+            continue
+        if key == "radius":
+            if not value.isascii() or not value.isdecimal() or len(value) > 2:
+                continue
+            value = int(value)
+        elif key == "accent" and value == "default":
+            value = None
+        try:
+            appearance = validate_appearance({**appearance, key: value})
+        except ValueError:
+            continue
+    content["APPEARANCE"] = appearance
     mode = request.cookies.get("appearance_mode")
     if mode not in {"light", "dark", "system"}:
         mode = appearance["mode"] or ("dark" if content["darkmode"] else "light")
@@ -102,13 +118,47 @@ async def set_theme(
 
 
 @router.post("/appearance", include_in_schema=False)
-async def set_appearance(request: Request, mode: Literal["light", "dark", "system"] = Form(...),
-                         font: Literal["sans", "serif", "mono"] = Form(...), return_to: str = Form("/")):
+async def set_appearance(
+    request: Request,
+    font: Literal["sans", "serif", "mono"] = Form(...),
+    mode: Literal["light", "dark", "system"] | None = Form(None),
+    theme: Literal["forest", "paper", "dark", "midnight"] | None = Form(None),
+    density: Literal["comfortable", "compact"] | None = Form(None),
+    accent: str | None = Form(None),
+    radius: int | None = Form(None),
+    return_to: str = Form("/"),
+):
+    if theme is None and mode is None:
+        raise HTTPException(422, "Choose a theme or mode.")
+    if theme is not None:
+        mode = THEME_FAMILIES[theme]
+    overrides = {key: value for key, value in
+                 (("palette", theme), ("density", density), ("radius", radius)) if value is not None}
+    if accent is not None:
+        overrides["accent"] = None if accent == "default" else accent
+    try:
+        validate_appearance(overrides)
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
     response = await set_theme(request, "darkmode" if mode == "dark" else "lightmode", return_to)
     prefix = request.scope.get("root_path", "")
     for name, value in (("appearance_mode", mode), ("appearance_font", font)):
         response.set_cookie(name, value, httponly=True, max_age=31_536_000, samesite="lax", path=prefix + "/")
+    for key, value in overrides.items():
+        response.set_cookie("appearance_" + key, "default" if value is None else str(value),
+                            httponly=True, max_age=31_536_000, samesite="lax", path=prefix + "/")
     return response
+
+
+@router.get("/appearance", include_in_schema=False)
+async def appearance_preferences(request: Request):
+    content = await get_template_content(request, page_title="Appearance preferences")
+    palette = content["APPEARANCE"]["palette"]
+    content["preference_theme"] = palette if palette in THEME_FAMILIES else (
+        "dark" if content["darkmode"] else "paper")
+    content["theme_families"] = THEME_FAMILIES
+    content["preference_saved"] = request.query_params.get("saved") == "1"
+    return templates.TemplateResponse(request, "home/appearance.html", content)
 
 
 @router.get("/favicon.ico", include_in_schema=False)

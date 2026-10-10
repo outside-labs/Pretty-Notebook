@@ -4,8 +4,10 @@ Layout and component rules live in `apps/web/static/css/site.css`. Each file in
 `static/css/themes` contains color tokens only. The available palettes are
 `slate` (the previous blue-gray style), `outside` (black and charcoal in dark
 mode, with a charcoal header in both modes), `paper` (warm cream and green),
-`forest` (green), and `midnight` (deep blue). Each supports light and dark mode.
-Only the selected palette is loaded. Themes never control navigation behavior.
+`forest` (green), `midnight` (deep blue), and `dark` (neutral charcoal). Each
+supports light and dark mode. Normal pages load only the selected palette;
+the preferences page also loads the four example families, scoped to their
+preview cards. Themes never control navigation behavior.
 
 Set `APPEARANCE` in portable notebook settings, then publish it with
 `pnbp commit-settings`. The same validated contract is used by the library and
@@ -29,7 +31,7 @@ Set `APPEARANCE` in portable notebook settings, then publish it with
 
 | Setting | Accepted values |
 | --- | --- |
-| `palette` | `slate`, `outside`, `paper`, `forest`, `midnight` |
+| `palette` | `slate`, `outside`, `paper`, `forest`, `midnight`, `dark` |
 | `mode` | `light`, `dark`, `system`; null preserves the legacy `darkmode` default |
 | `font`, `heading_font` | `sans`, `serif`, `mono`; local system fonts |
 | `density` | `comfortable`, `compact` |
@@ -45,9 +47,30 @@ Missing fields get defaults. Unknown keys, arbitrary filenames, CSS expressions
 and out-of-range values are rejected. Owner-selected color overrides should be
 checked for readable contrast; the built-in palette pairs are tested.
 
-Visitors can choose light, dark or system mode and an independent body font in
-the Appearance disclosure. Preferences persist for one year in cookies scoped
-to the configured URL prefix. System mode follows operating-system changes;
+Visitors can open **Appearance** in the navigation to reach `/appearance`
+(including any deployment prefix). The page shows Paper (a warm reading
+surface), Midnight (blue-tinted dark mode), Forest (soft botanical colors), and
+Dark (neutral charcoal), with the notebook sample and independent controls:
+
+- Theme: Forest, Paper, Dark, Midnight. Forest and Paper start in light mode;
+  Dark and Midnight start in dark mode. The existing toggle can switch either.
+- Font family: Serif, Sans-serif, Monospace, using local system fonts.
+- Content density: Comfortable or Compact.
+- Accent color, or **Use theme color** to restore the palette default.
+- Corner radius: 0–20 pixels, in steps of 2.
+
+Changes update only the live preview until **Save appearance** applies them
+throughout the site. Preferences are per visitor/browser and do not change the
+owner's published settings. **Copy configuration** copies the portable
+appearance mapping (`palette`, `mode`, `font`, `density`, `accent`, `radius`),
+which can be placed under `APPEARANCE` in notebook settings. If clipboard access
+is unavailable, a selectable text field provides the same JSON. New note and
+Edit notebook edit only the sample. Without JavaScript, the save form works;
+preview editing and copy controls are hidden.
+
+Quick appearance retains light, dark or system mode and body-font selection.
+Preferences persist for one year in HttpOnly cookies scoped to the configured
+URL prefix. Invalid cookie values fall back to owner defaults. System mode follows operating-system changes;
 code highlighting and diagram themes follow the displayed mode. The existing
 light/dark toggle and older `darkmode` cookies remain supported.
 
@@ -73,7 +96,7 @@ appearance overrides. Replacing application code preserves the stylesheet.
 The served URL is `/static/custom/appearance.css`, including any URL prefix.
 
 Custom CSS is an advanced owner-controlled feature, like existing owner HTML;
-visitors can only choose the documented mode/font preferences. Back up the CSS
+visitors can only choose the documented appearance preferences. Back up the CSS
 with the rest of the data root. An unset or missing stylesheet returns 404.
 
 ## Responsive navigation
