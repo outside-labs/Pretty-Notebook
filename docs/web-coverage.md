@@ -20,7 +20,6 @@ is not silently counted as parent-process Python coverage.
 | Before this block, with configuration/branches measured | 1,753 | 51 | 97.09% | 92.98% | 96.08% |
 | New 0.10 features, before the final audit tests | 1,853 | 59 | 96.82% | 92.88% | 95.87% |
 | After the audit tests (345 web tests) | 1,853 | 32 | 98.27% | 95.25% | 97.54% |
-
 | After the startup follow-up (347 web tests) | 1,862 | 30 | 98.39% | 95.25% | 97.63% |
 
 The final branch denominator is 590, with 562 covered and 28 missing branches.
