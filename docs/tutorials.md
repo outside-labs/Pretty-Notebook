@@ -1,6 +1,6 @@
 # A notebook from first note to published reading
 
-These examples use the **0.10 development checkout**. Install it as described in
+These examples use the **0.10 release candidate checkout**. Install it as described in
 the [package guide](pnbp.md); use the published release's documentation when
 working with its wheel. Local Python examples below run in a temporary notebook
 during the strict documentation build. Remote steps require a separately

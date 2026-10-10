@@ -5,14 +5,13 @@ CLI on Python 3.11 or newer. Its [release notes](release-0.9.0.md) define the
 installed-wheel contract. The [candidate notes](release-0.9.0rc1.md) and
 [readiness record](release-0.9.0-readiness.md) retain their historical meaning.
 
-The current repository contains features targeting **0.10 development**:
-explicit notebook settings/profiles, current-content editing, identities,
-checked moves/routes/publication, field/tag search, navigation and managed
-favicons. Package metadata now prepares `pretty-notebook==0.10.0.dev0`, with
-`pretty_notebook` as the canonical import and compatible `pnbp` imports/CLI.
-See [package migration](package-migration.md); no 0.10 release is announced.
-Use an editable checkout for these APIs; the 0.9.0 wheel cannot be assumed to
-provide them merely because a development page describes them.
+The 0.10 candidate is `pretty-notebook==0.10.0rc1`. It includes explicit
+settings/profiles, current-content editing, identities, checked moves/routes/
+publication, search/navigation, managed favicons and appearance preferences.
+`pretty_notebook` is the canonical import; `pnbp` imports and the CLI remain
+compatible. See [package migration](package-migration.md) and
+[0.10 notes](release-0.10.0.md). A final release follows the installed-candidate
+exercise; optional and later features remain explicitly deferred.
 
 The repository Markdown is the canonical documentation. The documentation
 build reads that source and the current package for API signatures and CLI help.

@@ -18,14 +18,19 @@ macOS URL handlers remain unsupported.
 
 [Documentation index](docs/index.md) · [Workflow tutorial](docs/tutorials.md) · [0.9.0 release notes](docs/release-0.9.0.md) · [Web deployment](docs/web.md) · [Development roadmap](docs/roadmap.md)
 
-The current checkout includes features targeting **0.10 development**, while
-package metadata prepares `pretty-notebook==0.10.0.dev0`. Use an editable
-checkout for current settings/profiles, identities, checked moves/publication,
-field/tag search, navigation and favicon management. Those APIs are not promised
-by the published 0.9.0 wheel. [Versions and support](docs/versions.md) defines the
-distinction; [building the documentation](docs/building.md) checks the same
-canonical Markdown with strict references, emitted HTML links and runnable local
-examples. Hosted documentation publication remains pending separately.
+The 0.10 release candidate is `pretty-notebook==0.10.0rc1`. It includes current
+settings/profiles, identities, checked publication, search/navigation, appearance
+preferences and coordinated worker deployments. Candidate installation:
+
+```sh
+python -m pip uninstall pnbp
+python -m pip install pretty-notebook==0.10.0rc1
+```
+
+The old stable release remains `pnbp==0.9.0` until the candidate exercise passes.
+[0.10 release notes](docs/release-0.10.0.md) and
+[versions/support](docs/versions.md) define the included scope. Hosted
+documentation remains separate; tagged GitHub documentation is the release reference.
 
 New code uses `from pretty_notebook import Notebook, Note`; existing `pnbp`
 imports and the `pnbp` executable remain compatible. See the

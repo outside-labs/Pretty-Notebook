@@ -1,4 +1,4 @@
-# Stable identities (0.10 development)
+# Stable identities (0.10 release candidate)
 
 `pnbp init PATH` now explicitly creates a version-1 `.pnbp/metadata.json` index
 alongside settings. It assigns one notebook UUID and a distinct UUID to each

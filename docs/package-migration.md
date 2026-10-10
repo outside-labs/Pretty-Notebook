@@ -1,4 +1,4 @@
-# Package naming in 0.10 development
+# Package naming in 0.10 release candidate
 
 The canonical distribution is prepared as `pretty-notebook`, with the import
 package `pretty_notebook`. The executable remains `pnbp`:
@@ -7,9 +7,18 @@ package `pretty_notebook`. The executable remains `pnbp`:
 from pretty_notebook import Notebook, Note
 ```
 
-The development version is `0.10.0.dev0`. Install the checkout with
-`python -m pip install --editable .`; this page does not announce a published
-0.10 package. The released `pnbp==0.9.0` remains a separate historical release.
+The candidate version is `0.10.0rc1`. Remove an old `pnbp` installation
+before installing it:
+
+```sh
+python -m pip uninstall pnbp
+python -m pip install pretty-notebook==0.10.0rc1
+```
+
+The final `pnbp==0.10.0` will be a metadata-only compatibility distribution
+that depends on `pretty-notebook==0.10.0`. It will not contain implementation
+modules or its own executable. The canonical package owns all imports and CLI
+files. New installations should request `pretty-notebook` directly.
 
 The new distribution includes compatibility wrappers for `pnbp`, its models,
 helpers, commands, CLI and former private modules. Existing imports resolve to
@@ -22,14 +31,16 @@ ordinary descriptive module names. The underscore marks a private package;
 applications should use the documented public API. The compatibility package
 retains old private module spellings for the transition.
 
-Distribution names and import names are independent. PyPI will not redirect
-`pip install pnbp` to the new distribution. Before publishing, confirm ownership
-of the new PyPI name and configure its trusted publisher. A later transitional
-`pnbp` distribution should depend on `pretty-notebook` and contain no competing
-implementation modules. Upgrade environments by uninstalling the old `pnbp`
-distribution before installing the new one; installing both old wheels can
-overwrite their shared compatibility paths. Publishing either distribution is
-a separate release operation.
+Distribution names and import names are independent. Upgrading directly from
+an old `pnbp` wheel can install the canonical dependency before removing the old
+wheel's shared files. Always uninstall the old distribution first; notebooks
+and settings remain outside the package installation. If the new package was
+installed before that removal, reinstall `pretty-notebook` afterward to restore
+its recorded compatibility files.
+
+Both release distributions use `release.yaml` and the `pypi` environment.
+Candidate releases upload only `pretty-notebook`. Final releases upload the
+canonical package first and the metadata-only `pnbp` package afterward.
 
 `uv.lock` is committed for reproducible development installations. It pins
 development resolution without constraining downstream library users beyond

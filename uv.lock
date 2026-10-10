@@ -208,7 +208,7 @@ wheels = [
 
 [[package]]
 name = "pretty-notebook"
-version = "0.10.0.dev0"
+version = "0.10.0rc1"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

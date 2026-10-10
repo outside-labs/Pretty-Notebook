@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > `apps/web` is supported for public deployment only in the constrained
 > topology described here. A deployment outside this profile has not passed
-> the documented 0.10 development checks. The released 0.9 contract remains
+> the documented 0.10 release candidate checks. The released 0.9 contract remains
 > a single-worker deployment.
 
 The FastAPI application publishes HTML and images produced by `pnbp`, serves a
@@ -38,7 +38,7 @@ and stopped-service upgrade bundles. The manual contract below remains available
 
 ## Install a reviewed checkout
 
-Use a dedicated service account and an explicitly reviewed 0.10 development
+Use a dedicated service account and an explicitly reviewed 0.10 release candidate
 commit. Set `PNBP_REVISION` to that full commit SHA. The released `v0.9.0`
 tag retains its historical single-worker contract.
 
@@ -188,7 +188,7 @@ pnbp commit-stage --json --mode checked
 pnbp commit-remote --mode checked
 ```
 
-The 0.10 development client compares source/rendered/image hashes and checked
+The 0.10 release candidate client compares source/rendered/image hashes and checked
 remote revisions. Preview writes no local receipts or remote content, and a
 conflict requires a fresh reviewed plan. See [checked publishing](checked-publishing.md)
 for preconditions, retries and legacy fallback. The published 0.9.0 client uses
@@ -219,7 +219,7 @@ settings and send it with `pnbp commit-settings` or authenticated
 their configured publication title followed by the site title. Contact and
 missing-page responses have their own page titles. Titles are escaped as text.
 
-The 0.10 development client adds a dedicated favicon command:
+The 0.10 release candidate client adds a dedicated favicon command:
 
 ```bash
 pnbp favicon ./site.png
@@ -268,7 +268,7 @@ backup access, and rate-limit the public form at the reverse proxy.
 
 ## Persistent data and migration
 
-The 0.10 development application applies [versioned SQLite migrations](server-state.md)
+The 0.10 release candidate application applies [versioned SQLite migrations](server-state.md)
 before serving requests. Existing databases receive a private pre-migration
 snapshot; upgrades preserve account and token state rather than regenerating it.
 
