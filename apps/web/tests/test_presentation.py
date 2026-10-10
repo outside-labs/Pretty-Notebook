@@ -25,7 +25,7 @@ def test_shared_pages_have_landmarks_focus_target_and_local_layout(client, path)
     assert 'href="#main-content">Skip to content' in response.text
     assert '<main id="main-content"' in response.text
     assert 'tabindex="-1"' in response.text
-    assert '<nav class="shell site-nav" aria-label="Main navigation">' in response.text
+    assert '<nav class="shell site-nav" aria-label="Main navigation"' in response.text
     assert '<footer class="site-footer">' in response.text
     assert '/static/css/site.css' in response.text
     assert '650px' not in response.text and 'bootstrap.bundle' not in response.text

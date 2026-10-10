@@ -1,26 +1,33 @@
 <header class="site-header">
-  <nav class="shell site-nav" aria-label="Main navigation">
+  <nav class="shell site-nav" aria-label="Main navigation" data-nav-breakpoint="{{ APPEARANCE.nav_breakpoint }}">
     <a class="site-brand" href="{{ root_path }}/">{{ NAV_BRAND | safe }}</a>
-    <ul class="nav-list">{{ NAV_PAGES | safe }}<li><a class="nav-link" href="{{ root_path }}/n/search">Search</a></li></ul>
     <form class="theme-form" action="{{ root_path }}/theme" method="POST">
       <input type="hidden" name="return_to" value="{{ request.url.path }}">
-      <button type="submit" class="button button-secondary" name="darkmode" value="{{ 'lightmode' if darkmode else 'darkmode' }}">
-        {{ icon('sun' if darkmode else 'moon') | safe }}
-        {{ 'Light theme' if darkmode else 'Dark theme' }}
+      <button type="submit" class="button button-secondary" name="darkmode" data-theme-toggle
+              aria-label="{{ 'Light theme' if darkmode else 'Dark theme' }}" value="{{ 'lightmode' if darkmode else 'darkmode' }}">
+        <span data-theme-sun{% if not darkmode %} hidden{% endif %}>{{ icon('sun') | safe }}</span>
+        <span data-theme-moon{% if darkmode %} hidden{% endif %}>{{ icon('moon') | safe }}</span>
+        <span data-theme-label class="control-label{% if not APPEARANCE.button_labels %} visually-hidden{% endif %}">{{ 'Light theme' if darkmode else 'Dark theme' }}</span>
       </button>
     </form>
-    <details class="appearance-picker">
-      <summary>Appearance</summary>
-      <form action="{{ root_path }}/appearance" method="POST" class="stack">
-        <input type="hidden" name="return_to" value="{{ request.url.path }}">
-        <label>Mode<select name="mode">
-          {% for value in ['light', 'dark', 'system'] %}<option value="{{ value }}"{% if appearance_mode == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
-        </select></label>
-        <label>Font<select name="font">
-          {% for value in ['sans', 'serif', 'mono'] %}<option value="{{ value }}"{% if appearance_font == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
-        </select></label>
-        <button class="button" type="submit">Save appearance</button>
-      </form>
-    </details>
+    <button type="button" class="button button-secondary nav-toggle" hidden aria-expanded="true" aria-controls="site-navigation" aria-label="Menu">
+      {{ icon('menu') | safe }}<span class="control-label{% if not APPEARANCE.button_labels %} visually-hidden{% endif %}">Menu</span>
+    </button>
+    <div id="site-navigation" class="nav-panel">
+      <ul class="nav-list">{{ NAV_PAGES | safe }}<li><a class="nav-link" href="{{ root_path }}/n/search">Search</a></li></ul>
+      <details class="appearance-picker">
+        <summary>Appearance</summary>
+        <form action="{{ root_path }}/appearance" method="POST" class="stack">
+          <input type="hidden" name="return_to" value="{{ request.url.path }}">
+          <label>Mode<select name="mode">
+            {% for value in ['light', 'dark', 'system'] %}<option value="{{ value }}"{% if appearance_mode == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
+          </select></label>
+          <label>Font<select name="font">
+            {% for value in ['sans', 'serif', 'mono'] %}<option value="{{ value }}"{% if appearance_font == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
+          </select></label>
+          <button class="button" type="submit">Save appearance</button>
+        </form>
+      </details>
+    </div>
   </nav>
 </header>
