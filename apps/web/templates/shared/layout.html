@@ -8,13 +8,25 @@
     {% if favicon_url %}<link rel="icon" type="image/png" href="{{ favicon_url }}">{% endif %}
     <link href="{{ root_path }}/static/css/site.css" rel="stylesheet">
     <link href="{{ root_path }}/static/css/themes/{{ APPEARANCE.palette }}.css" rel="stylesheet">
-    <style>:root { {{ appearance_tokens | safe }} }</style>
+    <style>
+      :root { {{ appearance_tokens | safe }} }
+      @media (max-width: {{ APPEARANCE.nav_breakpoint }}px) {
+        .site-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.5rem; }
+        .site-brand { max-width: 100%; min-width: 0; }
+        .nav-panel { grid-column: 1 / -1; order: 4; flex-direction: column; align-items: stretch; }
+        .nav-list { flex-direction: column; }
+        .appearance-picker form { position: static; width: 100%; }
+        .site-nav .button { padding-inline: 0.5rem; }
+        .theme-form .control-label { max-width: 3.5em; }
+      }
+    </style>
     {% if APPEARANCE.custom_css %}<link href="{{ root_path }}/static/custom/appearance.css" rel="stylesheet">{% endif %}
     <script src="{{ root_path }}/static/js/appearance.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
     {% include 'shared/navbar.html' %}
+    <script defer src="{{ root_path }}/static/js/site-navigation.js"></script>
     <main id="main-content" class="shell page-content" tabindex="-1">
       {% block content %}{% endblock %}
     </main>

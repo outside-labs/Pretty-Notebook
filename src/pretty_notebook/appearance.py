@@ -8,7 +8,7 @@ DEFAULT_APPEARANCE = {
     "palette": "slate", "mode": None, "font": "sans", "heading_font": "sans",
     "density": "comfortable", "radius": 6, "reading_width": 58,
     "site_width": 72, "accent": None, "header_bg": None, "header_text": None,
-    "footer_bg": None, "footer_text": None, "custom_css": False,
+    "footer_bg": None, "footer_text": None, "custom_css": False, "button_labels": True, "nav_breakpoint": 992,
 }
 
 
@@ -23,7 +23,7 @@ def validate_appearance(value):
     for key, options in choices.items():
         if result[key] not in options:
             raise ValueError(f"Invalid appearance {key}.")
-    for key, bounds in {"radius": (0, 20), "reading_width": (30, 90), "site_width": (48, 120)}.items():
+    for key, bounds in {"radius": (0, 20), "reading_width": (30, 90), "site_width": (48, 120), "nav_breakpoint": (480, 1440)}.items():
         if type(result[key]) is not int or not bounds[0] <= result[key] <= bounds[1]:
             raise ValueError(f"Appearance {key} must be an integer from {bounds[0]} to {bounds[1]}.")
     if result["reading_width"] > result["site_width"]:
@@ -31,8 +31,9 @@ def validate_appearance(value):
     for key in ("accent", "header_bg", "header_text", "footer_bg", "footer_text"):
         if result[key] is not None and (not isinstance(result[key], str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", result[key])):
             raise ValueError(f"Appearance {key} must be a six-digit hex color.")
-    if type(result["custom_css"]) is not bool:
-        raise ValueError("Appearance custom_css must be a boolean.")
+    for key in ("custom_css", "button_labels"):
+        if type(result[key]) is not bool:
+            raise ValueError(f"Appearance {key} must be a boolean.")
     return result
 
 

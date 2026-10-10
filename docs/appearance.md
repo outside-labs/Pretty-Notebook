@@ -37,6 +37,8 @@ Set `APPEARANCE` in portable notebook settings, then publish it with
 | `reading_width` | Integer 30–90 rem, no greater than `site_width` |
 | `site_width` | Integer 48–120 rem; still constrained by the viewport |
 | `accent`, `header_bg`, `header_text`, `footer_bg`, `footer_text` | Six-digit hex colors or null |
+| `button_labels` | Boolean; show icon text or retain it only as an accessible name |
+| `nav_breakpoint` | Integer 480–1440 pixels; default 992 |
 | `custom_css` | Boolean; enable the persistent owner stylesheet |
 
 Missing fields get defaults. Unknown keys, arbitrary filenames, CSS expressions
@@ -73,3 +75,12 @@ The served URL is `/static/custom/appearance.css`, including any URL prefix.
 Custom CSS is an advanced owner-controlled feature, like existing owner HTML;
 visitors can only choose the documented mode/font preferences. Back up the CSS
 with the rest of the data root. An unset or missing stylesheet returns 404.
+
+## Responsive navigation
+
+Branding and compact controls remain visible. Below `nav_breakpoint`, a Menu
+button opens the links and Appearance panel. Its expanded state is announced;
+Escape closes an open native dropdown first, then the panel, restoring focus.
+Desktop links remain visible. Without JavaScript, links stay visible and wrap
+within the viewport. The behavior is shared by every palette. `button_labels`
+controls visible icon labels while accessible names remain available.
