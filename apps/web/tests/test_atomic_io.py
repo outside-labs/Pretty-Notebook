@@ -153,3 +153,34 @@ def test_reader_sees_complete_file_during_replacement(
 
     assert {target.read_text(encoding="utf-8") for _ in range(20)} == {new}
     assert_no_temporary_file(target)
+
+
+def test_first_settings_publish_is_complete_and_private(tmp_path, monkeypatch):
+    from api import atomic_io
+    target = tmp_path / 'web-settings.json'
+    content = '{"TITLE": "Complete defaults"}'
+    original_link = atomic_io.link
+    def observe_publish(source, destination):
+        assert not target.exists()
+        assert source.read_text() == content
+        original_link(source, destination)
+    monkeypatch.setattr(atomic_io, 'link', observe_publish)
+    assert atomic_io.create_text_once(target, content) is True
+    assert target.read_text() == content
+    assert target.stat().st_mode & 0o777 == 0o600
+    assert list(tmp_path.glob('.*.tmp')) == []
+
+
+def test_competing_initialization_preserves_the_winner_and_its_mode(tmp_path, monkeypatch):
+    from api import atomic_io
+    target = tmp_path / 'web-settings.json'
+    original_link = atomic_io.link
+    def competing_publish(source, destination):
+        target.write_text('Owner settings')
+        target.chmod(0o640)
+        original_link(source, destination)
+    monkeypatch.setattr(atomic_io, 'link', competing_publish)
+    assert atomic_io.create_text_once(target, 'Default settings') is False
+    assert target.read_text() == 'Owner settings'
+    assert target.stat().st_mode & 0o777 == 0o640
+    assert list(tmp_path.glob('.*.tmp')) == []

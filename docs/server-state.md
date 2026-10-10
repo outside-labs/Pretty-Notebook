@@ -115,3 +115,7 @@ appear healthy while simultaneous writes or fresh startup still raced. The
 race owner claims and stale writes, verify reads through every worker, and
 restart the same state. Full-version upgrades still stop the service before
 backing up and migrating; do not mix different application versions.
+
+Fresh default settings are created from a private complete sibling file and
+published with an atomic create-if-absent link. Concurrent startup preserves
+the first winner and existing modes; no reader sees partly written defaults.

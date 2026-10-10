@@ -1,11 +1,29 @@
 """Atomic replacement for the web app's small text files."""
 
-from os import fchmod, fdopen, replace
+from os import fchmod, fdopen, replace, fsync, link
 from pathlib import Path
 from stat import S_IMODE
 from tempfile import mkstemp
 
 import aiofiles
+
+
+def create_text_once(target: Path, content: str) -> bool:
+    """Publish complete private defaults atomically; an existing target wins."""
+    descriptor, name = mkstemp(prefix=f".{target.name}.", suffix=".tmp", dir=target.parent)
+    temporary = Path(name)
+    try:
+        with fdopen(descriptor, "w", encoding="utf-8") as pending:
+            pending.write(content)
+            pending.flush()
+            fsync(pending.fileno())
+        try:
+            link(temporary, target)
+        except FileExistsError:
+            return False
+        return True
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 async def atomic_write_text(target: Path, content: str) -> None:

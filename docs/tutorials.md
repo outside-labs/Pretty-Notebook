@@ -241,7 +241,7 @@ the deployment guide, verify the reviewed assets and start the four-worker serve
 ```bash
 cd apps/web
 python install_assets.py --check
-PNBP_ASSET_MODE=local gunicorn main:api --workers 4 \
+PNBP_ASSET_MODE=local gunicorn main:api --no-control-socket --workers 4 \
   --worker-class uvicorn_worker.UvicornWorker --bind 127.0.0.1:8000
 ```
 

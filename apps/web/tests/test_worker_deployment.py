@@ -42,6 +42,7 @@ async def identify(request, call_next):
                    'PYTHONPATH': os.pathsep.join((str(tmp_path), str(WEB_ROOT)))}
     with (tmp_path / 'server.log').open('w') as log:
         process = subprocess.Popen([sys.executable, '-m', 'gunicorn', 'worker_fixture:api',
+                                    '--no-control-socket', '--control-socket', str(tmp_path / 'administration.ctl'),
                                     '--workers', '4', '--worker-class', 'uvicorn_worker.UvicornWorker',
                                     '--bind', f'127.0.0.1:{port}'], cwd=WEB_ROOT,
                                    env=environment, stdout=log, stderr=log, start_new_session=True)
@@ -52,6 +53,7 @@ async def identify(request, call_next):
                 if process.poll() is not None: break
                 try:
                     if requests.get(base + '/healthz', timeout=1).status_code == 200:
+                        assert not (tmp_path / "administration.ctl").exists()
                         yield base
                         return
                 except requests.RequestException:

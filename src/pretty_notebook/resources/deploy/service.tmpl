@@ -9,7 +9,7 @@ Group=@USER@
 WorkingDirectory=@CHECKOUT@/apps/web
 EnvironmentFile=@ENV_FILE@
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStart=@CHECKOUT@/.venv/bin/gunicorn main:api --workers @WORKERS@ --worker-class uvicorn_worker.UvicornWorker --bind 127.0.0.1:@PORT@ --forwarded-allow-ips 127.0.0.1 --timeout 30 --graceful-timeout 30 --access-logfile -
+ExecStart=@CHECKOUT@/.venv/bin/gunicorn main:api --no-control-socket --workers @WORKERS@ --worker-class uvicorn_worker.UvicornWorker --bind 127.0.0.1:@PORT@ --forwarded-allow-ips 127.0.0.1 --timeout 30 --graceful-timeout 30 --access-logfile -
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=45

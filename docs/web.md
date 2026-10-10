@@ -115,7 +115,7 @@ Run from `apps/web` with a restrictive umask:
 ```bash
 cd apps/web
 umask 077
-exec ../../.venv/bin/gunicorn main:api \
+exec ../../.venv/bin/gunicorn main:api --no-control-socket \
   --workers 4 \
   --worker-class uvicorn_worker.UvicornWorker \
   --bind 127.0.0.1:8000 \

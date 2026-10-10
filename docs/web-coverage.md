@@ -21,6 +21,8 @@ is not silently counted as parent-process Python coverage.
 | New 0.10 features, before the final audit tests | 1,853 | 59 | 96.82% | 92.88% | 95.87% |
 | After the audit tests (345 web tests) | 1,853 | 32 | 98.27% | 95.25% | 97.54% |
 
+| After the startup follow-up (347 web tests) | 1,862 | 30 | 98.39% | 95.25% | 97.63% |
+
 The final branch denominator is 590, with 562 covered and 28 missing branches.
 `coverage report` rounds the combined result to **98%**. Reports can vary when
 code, Python or dependency behavior changes; the reproduction command below is
@@ -38,7 +40,7 @@ contracts or establish coverage of every possible threat.
 
 ## Remaining gaps and support boundaries
 
-The 32 residual statements are concentrated in these paths:
+The 30 residual statements are concentrated in these paths:
 
 | Area | Remaining paths |
 | --- | --- |
@@ -48,7 +50,7 @@ The 32 residual statements are concentrated in these paths:
 | Publishing paths | Defensive path/name/type branches and oversized stored images |
 | Migrations | Backup integrity failure, unsupported backend and malformed/incompatible history structures |
 | Browser asset validation | Inconsistent manifest/version/license metadata |
-| Program startup | A competing default-settings create and direct development `__main__` entry points |
+| Program startup | Direct development `__main__` entry points |
 | URL-prefix redirect | A return path inconsistent with the configured prefix |
 
 These guards remain enabled. Several represent manual corruption or filesystem
