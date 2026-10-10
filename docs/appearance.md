@@ -10,8 +10,9 @@ the preferences page also loads the four example families, scoped to their
 preview cards. Themes never control navigation behavior.
 
 The inner theme-card box represents the note content surface
-(`--color-surface`). Published note articles and the full notebook preview
-use that same surface, inside the surrounding page background (`--color-bg`).
+(`--color-surface`). Published note articles use that same surface, inside the
+surrounding page background (`--color-bg`). The preferences preview uses an
+inset note card with the same surface treatment.
 
 Set `APPEARANCE` in portable notebook settings, then publish it with
 `pnbp commit-settings`. The same validated contract is used by the library and
@@ -43,7 +44,7 @@ Set `APPEARANCE` in portable notebook settings, then publish it with
 | `reading_width` | Integer 30–90 rem, no greater than `site_width` |
 | `site_width` | Integer 48–120 rem; still constrained by the viewport |
 | `accent`, `header_bg`, `header_text`, `footer_bg`, `footer_text` | Six-digit hex colors or null |
-| `button_labels` | Boolean; show icon text or retain it only as an accessible name |
+| `button_labels` | Boolean, false by default; optionally show names beside header icons |
 | `nav_breakpoint` | Legacy integer 480–1440 pixels; retained for settings compatibility |
 | `custom_css` | Boolean; enable the persistent owner stylesheet |
 
@@ -56,11 +57,12 @@ Visitors can open **Appearance** in the navigation to reach `/appearance`
 surface), Midnight (blue-tinted dark mode), Forest (soft botanical colors), and
 Dark (neutral charcoal), with the notebook sample and independent controls:
 
-- Theme: Forest, Paper, Dark, Midnight. Forest and Paper start in light mode;
-  Dark and Midnight start in dark mode. The existing toggle can switch either.
+- Theme: Forest, Paper, Dark, Midnight. Paper starts in light mode;
+  Forest, Dark and Midnight start in dark mode. The toggle can switch either.
 - Font family: Serif, Sans-serif, Monospace, using local system fonts.
 - Content density: Comfortable or Compact.
 - Accent color, or **Use theme color** to restore the palette default.
+- Four round accent presets; Custom color retains arbitrary six-digit colors.
 - Corner radius: 0–20 pixels, in steps of 2.
 
 Changes update only the live preview until **Save appearance** applies them
@@ -115,6 +117,7 @@ Branding, the sun toggle and Menu remain visible at every width. The native
 Menu disclosure contains vertically stacked links and quick appearance controls.
 Its expanded state is announced; Escape closes an open native dropdown first,
 then the menu, restoring focus.
-Desktop links remain visible. Without JavaScript, links stay visible and wrap
-within the viewport. The behavior is shared by every palette. `button_labels`
-controls visible icon labels while accessible names remain available.
+The dropdown begins under the brand at the left. The behavior is shared by
+every palette. Header controls default to icons with accessible names;
+`button_labels` can show their names. Legacy `nav_breakpoint` settings remain
+valid, while the menu layout stays consistent at every width.

@@ -88,7 +88,7 @@ def test_preferences_page_has_example_controls_and_preview(client):
     assert 'href="/appearance"' in client.get('/').text
 
 
-@pytest.mark.parametrize('theme,mode', [('forest', 'light'), ('paper', 'light'), ('dark', 'dark'), ('midnight', 'dark')])
+@pytest.mark.parametrize('theme,mode', [('forest', 'dark'), ('paper', 'light'), ('dark', 'dark'), ('midnight', 'dark')])
 def test_full_preferences_persist_across_pages_without_changing_owner_layout(client, web_storage, theme, mode):
     original = web_storage.settings.read_text()
     response = client.post('/appearance', data={'theme': theme, 'font': 'mono', 'density': 'compact',
@@ -134,7 +134,7 @@ def test_invalid_preference_cookies_fall_back_to_owner_defaults(client):
 def test_appearance_icon_sprite_and_visual_preview_structure(client):
     page = client.get('/appearance')
     assert page.status_code == 200
-    for symbol in ('book-open', 'moon', 'leaf', 'contrast', 'menu', 'plus', 'pencil', 'copy'):
+    for symbol in ('book-open', 'moon', 'leaf', 'contrast', 'menu', 'sun', 'copy'):
         assert f'/static/icons/appearance.svg#{symbol}' in page.text
     assert 'class="theme-example-notebook"' in page.text
     assert 'class="preview-brand"' in page.text
@@ -144,5 +144,4 @@ def test_appearance_icon_sprite_and_visual_preview_structure(client):
     for symbol in ('book-open', 'moon', 'sun', 'leaf', 'contrast', 'menu',
                    'plus', 'pencil', 'copy', 'check', 'sliders', 'type', 'notebook'):
         assert f'id="{symbol}"' in sprite.text
-
 

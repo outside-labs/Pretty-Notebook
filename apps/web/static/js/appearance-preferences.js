@@ -1,7 +1,7 @@
 /* Live examples stay inside the preview; the regular POST saves validated preferences. */
 (function (root) {
   "use strict";
-  const modes = { forest: "light", paper: "light", dark: "dark", midnight: "dark" };
+  const modes = { forest: "dark", paper: "light", dark: "dark", midnight: "dark" };
   function accentTextColor(color) {
     const channels = [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16) / 255);
     const linear = channels.map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
@@ -50,6 +50,7 @@
     const defaultInput = form.querySelector("[data-accent-default]");
     const status = document.querySelector("[data-appearance-status]");
     const fallback = document.querySelector("[data-configuration-text]");
+    const swatches = Array.from(form.querySelectorAll?.("[data-accent-swatch]") || []);
     let useThemeAccent = fields.accent.dataset.defaultAccent === "true";
     const update = () => {
       defaultInput.disabled = !useThemeAccent;
@@ -61,6 +62,8 @@
         if (/^#[0-9a-f]{6}$/i.test(color)) fields.accent.value = color;
       }
       document.querySelector("[data-radius-output]").value = value.radius;
+      swatches.forEach(swatch => swatch.setAttribute("aria-pressed", String(
+        swatch.dataset.accentSwatch.toLowerCase() === fields.accent.value.toLowerCase())));
       fallback.parentElement.hidden = true;
       status.textContent = "";
     };
@@ -73,6 +76,14 @@
       update();
     });
     const reset = form.querySelector("[data-accent-reset]");
+    swatches.forEach(swatch => {
+      swatch.hidden = false;
+      swatch.addEventListener("click", () => {
+        fields.accent.value = swatch.dataset.accentSwatch;
+        useThemeAccent = false;
+        update();
+      });
+    });
     reset.hidden = false;
     reset.addEventListener("click", () => { useThemeAccent = true; update(); });
     const copy = document.querySelector("[data-copy-appearance]");

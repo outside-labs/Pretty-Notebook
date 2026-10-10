@@ -3,13 +3,13 @@
 import re
 
 PALETTES = ("slate", "outside", "paper", "forest", "midnight", "dark")
-THEME_FAMILIES = {"forest": "light", "paper": "light", "dark": "dark", "midnight": "dark"}
+THEME_FAMILIES = {"forest": "dark", "paper": "light", "dark": "dark", "midnight": "dark"}
 FONTS = ("sans", "serif", "mono")
 DEFAULT_APPEARANCE = {
     "palette": "slate", "mode": None, "font": "sans", "heading_font": "sans",
     "density": "comfortable", "radius": 6, "reading_width": 58,
     "site_width": 72, "accent": None, "header_bg": None, "header_text": None,
-    "footer_bg": None, "footer_text": None, "custom_css": False, "button_labels": True, "nav_breakpoint": 992,
+    "footer_bg": None, "footer_text": None, "custom_css": False, "button_labels": False, "nav_breakpoint": 992,
 }
 
 
