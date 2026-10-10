@@ -12,6 +12,7 @@ from fastapi.responses import Response
 from .atomic_io import atomic_write_bytes
 from .auth_api import get_current_user
 from .png import MAX_FAVICON_BYTES, validate_png
+from .layout_api import get_layout_content
 
 router = APIRouter()
 VERSION = re.compile(r"[a-f0-9]{64}\Z")
@@ -22,6 +23,40 @@ async def get_site_manager(user=Depends(get_current_user)):
     if user.id != 1:
         raise HTTPException(403, "Site management requires the owner account.")
     return user
+
+
+@router.put("/api/appearance/stylesheet", dependencies=[Depends(get_site_manager)], status_code=204)
+async def stylesheet_put(request: Request):
+    content = bytearray()
+    async for chunk in request.stream():
+        content.extend(chunk)
+        if len(content) > 65_536:
+            raise HTTPException(413, "Stylesheet exceeds the 64 KiB limit.")
+    try:
+        content.decode("utf-8")
+    except UnicodeError as error:
+        raise HTTPException(400, "Stylesheet must be UTF-8.") from error
+    try:
+        await atomic_write_bytes(request.app.state.settings_path.parent / "appearance.css", bytes(content))
+    except OSError as error:
+        raise HTTPException(503, "Stylesheet storage is unavailable.") from error
+    return Response(status_code=204)
+
+
+@router.get("/static/custom/appearance.css", include_in_schema=False)
+async def stylesheet_get(request: Request):
+    if not (await get_layout_content())["APPEARANCE"]["custom_css"]:
+        raise HTTPException(404, "Stylesheet not enabled.")
+    path = request.app.state.settings_path.parent / "appearance.css"
+    try:
+        if path.is_symlink():
+            raise OSError("Stylesheet must be a regular file.")
+        content = await asyncio.to_thread(path.read_bytes)
+    except FileNotFoundError as error:
+        raise HTTPException(404, "Stylesheet not found.") from error
+    except OSError as error:
+        raise HTTPException(503, "Stylesheet storage is unavailable.") from error
+    return Response(content, media_type="text/css", headers={"Cache-Control": "no-cache"})
 
 
 def _read_favicon(path: Path) -> bytes | None:

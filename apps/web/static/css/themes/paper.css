@@ -1,0 +1,29 @@
+/* Paper palette: color tokens only. */
+:root {
+  color-scheme: light;
+  --color-bg: #faf6ec;
+  --color-surface: #eee7d9;
+  --color-text: #262b22;
+  --color-text-muted: #515b49;
+  --color-border: #77806e;
+  --color-primary: #275d3e;
+  --color-on-primary: #ffffff;
+  --color-focus: #a34200;
+  --color-error: #9b1c31;
+  --color-error-surface: #fff0f2;
+  --color-code: #eee7d9;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #1b201a;
+  --color-surface: #2a3228;
+  --color-text: #f3efdf;
+  --color-text-muted: #c7c9b6;
+  --color-border: #87947f;
+  --color-primary: #b4dbab;
+  --color-on-primary: #1b201a;
+  --color-focus: #ffc27a;
+  --color-error: #ffb8c3;
+  --color-error-surface: #38212b;
+  --color-code: #2a3228;
+}

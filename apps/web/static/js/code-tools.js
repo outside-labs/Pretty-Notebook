@@ -2,6 +2,11 @@
 (() => {
   "use strict";
   const options = document.currentScript.dataset;
+  function preferredStyle(style) {
+    const mode = document.documentElement?.dataset?.theme === "dark" ? "Dark" : "Light";
+    style.href = options["highlightStyle" + mode] || options.highlightStyle;
+    style.integrity = options["highlightIntegrity" + mode] || options.highlightStyleIntegrity;
+  }
   if (window.pnbpCodeTools) { window.pnbpCodeTools.render(); return; }
   const states = new WeakMap();
   let libraryPromise = null;
@@ -76,8 +81,8 @@
     if (!libraryPromise) {
       const style = document.createElement("link");
       style.rel = "stylesheet";
-      style.href = options.highlightStyle;
-      style.integrity = options.highlightStyleIntegrity;
+      preferredStyle(style);
+      document.addEventListener("pnbp:appearance", () => preferredStyle(style));
       style.crossOrigin = "anonymous";
       document.head.appendChild(style);
       libraryPromise = new Promise((resolve, reject) => {

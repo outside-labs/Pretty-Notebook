@@ -76,6 +76,8 @@ class AssetResolver:
         style = layout["hljs_dark"] if layout["darkmode"] else layout["hljs_light"]
         result = {name: self.resolve(name, request) for name in ("highlight-js", "mermaid-js")}
         result["highlight-css"] = self.resolve("highlight-style-" + style, request)
+        for mode in ("light", "dark"):
+            result["highlight-css-" + mode] = self.resolve("highlight-style-" + layout["hljs_" + mode], request)
         return result
 
     def validate_layout(self, layout):

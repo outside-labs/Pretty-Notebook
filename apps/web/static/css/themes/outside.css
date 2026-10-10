@@ -1,0 +1,33 @@
+/* Outside palette: color tokens only. */
+:root {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-surface: #f1f1f1;
+  --color-text: #242424;
+  --color-text-muted: #505050;
+  --color-border: #777777;
+  --color-primary: #174b91;
+  --color-on-primary: #ffffff;
+  --color-focus: #a34200;
+  --color-error: #9b1c31;
+  --color-error-surface: #fff0f2;
+  --color-code: #eeeeee;
+  --nav-bg: #212529;
+  --nav-text: #f8f9fa;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #000000;
+  --color-surface: #212529;
+  --color-text: #f8f9fa;
+  --color-text-muted: #bfc3c7;
+  --color-border: #85898d;
+  --color-primary: #a9cfff;
+  --color-on-primary: #000000;
+  --color-focus: #ffc27a;
+  --color-error: #ffb8c3;
+  --color-error-surface: #38212b;
+  --color-code: #212529;
+  --nav-bg: #212529;
+  --nav-text: #f8f9fa;
+}

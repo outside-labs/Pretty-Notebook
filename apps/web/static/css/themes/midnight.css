@@ -1,0 +1,29 @@
+/* Midnight palette: color tokens only. */
+:root {
+  color-scheme: light;
+  --color-bg: #f6f8ff;
+  --color-surface: #e8edf9;
+  --color-text: #263148;
+  --color-text-muted: #4d5b76;
+  --color-border: #7785a0;
+  --color-primary: #244d99;
+  --color-on-primary: #ffffff;
+  --color-focus: #a34200;
+  --color-error: #9b1c31;
+  --color-error-surface: #fff0f2;
+  --color-code: #e8edf9;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0b1220;
+  --color-surface: #162235;
+  --color-text: #e3ecff;
+  --color-text-muted: #b4c5e6;
+  --color-border: #8598b8;
+  --color-primary: #a9cfff;
+  --color-on-primary: #0b1220;
+  --color-focus: #ffc27a;
+  --color-error: #ffb8c3;
+  --color-error-surface: #38212b;
+  --color-code: #162235;
+}

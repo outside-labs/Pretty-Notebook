@@ -1,6 +1,7 @@
 """Public pages, theme preference, and fixed routes."""
 
 from pathlib import Path
+from pretty_notebook.appearance import FONTS, appearance_tokens
 from typing import Literal
 from urllib.parse import urlsplit
 
@@ -25,6 +26,16 @@ async def get_template_content(request: Request, *, page_title: str | None = Non
     cookie_value = request.cookies.get("darkmode")
     if cookie_value in {"True", "False"}:
         content["darkmode"] = cookie_value == "True"
+    appearance = content["APPEARANCE"]
+    mode = request.cookies.get("appearance_mode")
+    if mode not in {"light", "dark", "system"}:
+        mode = appearance["mode"] or ("dark" if content["darkmode"] else "light")
+    content["appearance_mode"] = mode
+    if mode != "system":
+        content["darkmode"] = mode == "dark"
+    font = request.cookies.get("appearance_font")
+    content["appearance_font"] = font if font in FONTS else appearance["font"]
+    content["appearance_tokens"] = appearance_tokens(appearance)
     content["request"] = request
     content["icon"] = render_icon
     content["highlight_code"] = request.app.state.code_highlight
@@ -85,6 +96,18 @@ async def set_theme(
         samesite="lax",
         path=prefix + "/",
     )
+    response.set_cookie("appearance_mode", "dark" if darkmode == "darkmode" else "light",
+                        httponly=True, max_age=31_536_000, samesite="lax", path=prefix + "/")
+    return response
+
+
+@router.post("/appearance", include_in_schema=False)
+async def set_appearance(request: Request, mode: Literal["light", "dark", "system"] = Form(...),
+                         font: Literal["sans", "serif", "mono"] = Form(...), return_to: str = Form("/")):
+    response = await set_theme(request, "darkmode" if mode == "dark" else "lightmode", return_to)
+    prefix = request.scope.get("root_path", "")
+    for name, value in (("appearance_mode", mode), ("appearance_font", font)):
+        response.set_cookie(name, value, httponly=True, max_age=31_536_000, samesite="lax", path=prefix + "/")
     return response
 
 

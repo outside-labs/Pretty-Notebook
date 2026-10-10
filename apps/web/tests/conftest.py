@@ -10,6 +10,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 from starlette.templating import Jinja2Templates
+from pretty_notebook.appearance import DEFAULT_APPEARANCE
 
 WEB_ROOT = Path(__file__).resolve().parents[1]
 if str(WEB_ROOT) not in sys.path:
@@ -26,6 +27,7 @@ home = importlib.import_module("views.home")
 
 
 DEFAULT_LAYOUT = {
+    "APPEARANCE": dict(DEFAULT_APPEARANCE),
     "NAV_BRAND": "Pretty Notebook",
     "NAV_PAGES": {"home": "/"},
     "FOOTER": "Test footer",
