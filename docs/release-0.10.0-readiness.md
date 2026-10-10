@@ -20,4 +20,27 @@ Preserve source and data backups. A final GO requires no unresolved data-loss,
 migration or publication-conflict defect. Hosted documentation and actual VPS
 activation are deferred; tagged GitHub documentation provides the release reference.
 
-Candidate and final evidence will be recorded here after their exercises pass.
+## Current evidence and publication gate
+
+- Candidate source: `b66c671730cd20a4b5f0994c95651dffe6263496`, tag `v0.10.0rc2`.
+- Library, web/coverage, JavaScript, packaging, deployment and strict docs CI
+  passed before candidate publication.
+- The [rc2 release build](https://github.com/outside-labs/Pretty-Notebook/actions/runs/38091094329)
+  passed on supported Python 3.14, including both distribution builds, strict
+  metadata/ownership checks and the installed-wheel notebook exercise.
+- The earlier rc1 build stopped on the inherited Python 3.12 deployment check;
+  [the correction](https://github.com/outside-labs/Pretty-Notebook/pull/165)
+  moved release builds to supported Python 3.14. No rc1 packages were uploaded.
+- The rc2 upload was rejected by PyPI with HTTP 400, reporting that a non-user
+  identity cannot create the requested project. Package metadata correctly names
+  `pretty-notebook`; the saved pending publisher fields must be verified against
+  `outside-labs`, `Pretty-Notebook`, `release.yaml`, and `pypi`.
+- Both prepared final `0.10.0` wheel/source distributions pass strict metadata
+  and ownership checks. The local notebook migration/edit/route/search exercise
+  passes for the prepared final library.
+
+**GO remains pending.** Resolve the publisher registration, rerun only the failed
+rc2 upload, then exercise the actual PyPI candidate on Python 3.11 and 3.14,
+including the prepared notebooks saved by the published 0.9 wheel. Final tagging
+and upload follow that evidence and passing final-version CI. Hosted docs and
+live VPS activation remain separate operations.

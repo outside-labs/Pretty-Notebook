@@ -1,4 +1,4 @@
-# VPS deployment and upgrades (0.10 release candidate)
+# VPS deployment and upgrades (0.10)
 
 `pnbp deploy` prepares inspectable Linux VPS bundles for the
 [supported web profile](web.md). It uses systemd and nginx, one dedicated service

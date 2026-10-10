@@ -1,6 +1,6 @@
 # Published notebook navigation
 
-**0.10 release candidate:** this guide describes the current checkout, rather than
+**0.10:** this guide describes the current checkout, rather than
 the published 0.9.0 package.
 
 The public site provides a generated notebook index at `/n`, with directory

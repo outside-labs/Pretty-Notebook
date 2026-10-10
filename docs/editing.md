@@ -1,4 +1,4 @@
-# Note commands and pending edits (0.10 release candidate)
+# Note commands and pending edits (0.10)
 
 The development checkout adds explicit note commands and notebook selection:
 

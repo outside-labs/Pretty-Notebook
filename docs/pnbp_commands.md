@@ -14,7 +14,7 @@ pnbp --profile work search 'recipe' --field any --tag food --json
 Only one of `--notebook` and `--profile` may be supplied. Environment-based
 selection continues to work. [Settings](settings.md) documents profile registration
 and configuration; [versions and support](versions.md) distinguishes the published
-0.9.0 package from the current 0.10 release candidate commands.
+0.9.0 package from the current 0.10 commands.
 
 ## Everyday workflow
 

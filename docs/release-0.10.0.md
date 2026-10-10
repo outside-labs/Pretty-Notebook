@@ -48,6 +48,10 @@ the new Markdown engine and macOS protocol handlers are deferred. Hosted
 documentation activation and live VPS deployment remain separate operations.
 Versioned GitHub source documentation is the canonical release reference.
 
+The new `/appearance` endpoint is reserved. An older public note using that
+route needs a different explicit publication route or a managed rename before
+republishing; its source remains intact.
+
 ## Candidate and final release process
 
 `v0.10.0rc2` publishes only the canonical candidate. Exercise its actual PyPI
