@@ -10,8 +10,6 @@
     const label = dark ? "Light theme" : "Dark theme";
     button.setAttribute("aria-label", label);
     button.querySelector('[data-theme-label]').textContent = label;
-    button.querySelector('[data-theme-sun]').hidden = !dark;
-    button.querySelector('[data-theme-moon]').hidden = dark;
   }
   function applySystem(document, media) {
     if (document.documentElement.dataset.mode !== "system") return;

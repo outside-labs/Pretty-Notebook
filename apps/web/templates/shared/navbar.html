@@ -1,18 +1,18 @@
 <header class="site-header">
-  <nav class="shell site-nav" aria-label="Main navigation" data-nav-breakpoint="{{ APPEARANCE.nav_breakpoint }}">
-    <a class="site-brand" href="{{ root_path }}/">{{ NAV_BRAND | safe }}</a>
+  <nav class="shell site-nav" aria-label="Main navigation">
+    <a class="site-brand" href="{{ root_path }}/"><svg class="appearance-icon" aria-hidden="true" focusable="false"><use href="{{ root_path }}/static/icons/appearance.svg#book-open"></use></svg><span>{{ NAV_BRAND | safe }}</span></a>
     <form class="theme-form" action="{{ root_path }}/theme" method="POST">
       <input type="hidden" name="return_to" value="{{ request.url.path }}">
       <button type="submit" class="button button-secondary" name="darkmode" data-theme-toggle
               aria-label="{{ 'Light theme' if darkmode else 'Dark theme' }}" value="{{ 'lightmode' if darkmode else 'darkmode' }}">
-        <span data-theme-sun{% if not darkmode %} hidden{% endif %}>{{ icon('sun') | safe }}</span>
-        <span data-theme-moon{% if darkmode %} hidden{% endif %}>{{ icon('moon') | safe }}</span>
+        <svg class="appearance-icon" aria-hidden="true" focusable="false"><use href="{{ root_path }}/static/icons/appearance.svg#sun"></use></svg>
         <span data-theme-label class="control-label{% if not APPEARANCE.button_labels %} visually-hidden{% endif %}">{{ 'Light theme' if darkmode else 'Dark theme' }}</span>
       </button>
     </form>
-    <button type="button" class="button button-secondary nav-toggle" hidden aria-expanded="true" aria-controls="site-navigation" aria-label="Menu">
-      {{ icon('menu') | safe }}<span class="control-label{% if not APPEARANCE.button_labels %} visually-hidden{% endif %}">Menu</span>
-    </button>
+    <details class="site-menu">
+    <summary class="button button-secondary nav-toggle" aria-controls="site-navigation" aria-label="Menu">
+      <svg class="appearance-icon" aria-hidden="true" focusable="false"><use href="{{ root_path }}/static/icons/appearance.svg#menu"></use></svg><span class="control-label{% if not APPEARANCE.button_labels %} visually-hidden{% endif %}">Menu</span>
+    </summary>
     <div id="site-navigation" class="nav-panel">
       <ul class="nav-list">{{ NAV_PAGES | safe }}<li><a class="nav-link" href="{{ root_path }}/n/search">Search</a></li><li><a class="nav-link" href="{{ root_path }}/appearance">Appearance</a></li></ul>
       <details class="appearance-picker">
@@ -30,5 +30,6 @@
         </form>
       </details>
     </div>
+    </details>
   </nav>
 </header>

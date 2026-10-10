@@ -4,7 +4,7 @@ const { configuration, applyPreview, accentTextColor, copyConfiguration, initial
 
 test('theme families have the expected mode and independently chosen preferences', () => {
   const fields = Object.fromEntries(Object.entries({ theme: 'midnight', font: 'serif', density: 'compact', accent: '#ffee88', radius: '12' }).map(([key, value]) => [key, { value }]));
-  for (const [theme, mode] of Object.entries({ forest: 'light', paper: 'light', dark: 'dark', midnight: 'dark' })) {
+  for (const [theme, mode] of Object.entries({ forest: 'dark', paper: 'light', dark: 'dark', midnight: 'dark' })) {
     fields.theme.value = theme;
     assert.deepEqual(configuration(fields, false), { palette: theme, mode, font: 'serif', density: 'compact', accent: '#ffee88', radius: 12 });
     assert.equal(configuration(fields, true).accent, null);
@@ -49,6 +49,7 @@ test('page controls wire live changes, theme accent reset, copy fallback and sam
     return { hidden: true, listeners, addEventListener: (name, handler) => { listeners[name] = handler; }, ...extra };
   }
   const fields = Object.fromEntries(Object.entries({ theme: 'paper', font: 'serif', density: 'comfortable', accent: '#275d3e', radius: '6' }).map(([name, value]) => [name, element({ name, value, dataset: { defaultAccent: 'true' } })]));
+  const swatch = element({ dataset: { accentSwatch: '#8cb9df' }, setAttribute(name, value) { this[name] = value; } });
   const defaultInput = element({ disabled: true });
   const reset = element();
   const properties = new Map();
@@ -58,7 +59,7 @@ test('page controls wire live changes, theme accent reset, copy fallback and sam
   const newNote = element();
   const previewNodes = { '[data-preview-title]': title, '[data-preview-body]': body, '[data-preview-edit]': edit, '[data-preview-new]': newNote };
   const preview = element({ dataset: {}, style: { setProperty: (key, value) => properties.set(key, value), removeProperty: key => properties.delete(key) }, querySelector: selector => previewNodes[selector] });
-  const form = element({ querySelector: selector => selector === '[data-accent-default]' ? defaultInput : selector === '[data-accent-reset]' ? reset : fields[selector.match(/name="(\w+)"/)[1]] });
+  const form = element({ querySelectorAll: () => [swatch], querySelector: selector => selector === '[data-accent-default]' ? defaultInput : selector === '[data-accent-reset]' ? reset : fields[selector.match(/name="(\w+)"/)[1]] });
   const fallback = element({ parentElement: { hidden: true }, focus() {}, select() {} });
   const status = element();
   const output = element();
@@ -71,6 +72,13 @@ test('page controls wire live changes, theme accent reset, copy fallback and sam
     assert.equal(defaultInput.disabled, false);
     assert.equal(fields.accent.name, '');
     assert.equal(copy.hidden, false);
+    assert.equal(swatch.hidden, false);
+    swatch.listeners.click();
+    assert.equal(fields.accent.value, '#8cb9df');
+    assert.equal(swatch['aria-pressed'], 'true');
+    assert.equal(fields.accent.name, 'accent');
+    assert.equal(defaultInput.disabled, true);
+    reset.listeners.click();
     fields.theme.value = 'midnight';
     fields.font.value = 'mono';
     fields.density.value = 'compact';

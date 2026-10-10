@@ -17,15 +17,15 @@
 :root:where([data-palette="forest"][data-theme="dark"]),
 [data-preview-palette="forest"][data-preview-mode="dark"] {
   color-scheme: dark;
-  --color-bg: #12221a;
-  --color-surface: #20392b;
+  --color-bg: #1c271f;
+  --color-surface: #2e3c2f;
   --color-text: #e9f5eb;
   --color-text-muted: #b5d1bd;
-  --color-border: #87a58f;
-  --color-primary: #a4deb7;
-  --color-on-primary: #12221a;
+  --color-border: #768e7c;
+  --color-primary: #8ab894;
+  --color-on-primary: #1c271f;
   --color-focus: #ffc27a;
   --color-error: #ffb8c3;
   --color-error-surface: #38212b;
-  --color-code: #20392b;
+  --color-code: #2e3c2f;
 }

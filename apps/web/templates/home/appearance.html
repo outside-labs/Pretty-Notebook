@@ -17,9 +17,10 @@
       </article>
     {% endfor %}
   </div>
-  <div class="appearance-workspace">
-    <form action="{{ root_path }}/appearance" method="POST" class="appearance-controls stack" data-appearance-form>
-      <input type="hidden" name="return_to" value="{{ root_path }}/appearance?saved=1">
+  <form action="{{ root_path }}/appearance" method="POST" class="appearance-workspace" data-appearance-form>
+    <h2 class="preferences-title">Appearance preferences</h2>
+    <input type="hidden" name="return_to" value="{{ root_path }}/appearance?saved=1">
+    <div class="appearance-controls">
       <label class="field" for="preference-theme">Theme
         <select id="preference-theme" name="theme">
           {% for family in theme_families %}<option value="{{ family }}"{% if preference_theme == family %} selected{% endif %}>{{ family | title }}</option>{% endfor %}
@@ -35,45 +36,52 @@
           {% for value in ['comfortable', 'compact'] %}<option value="{{ value }}"{% if APPEARANCE.density == value %} selected{% endif %}>{{ value | title }}</option>{% endfor %}
         </select>
       </label>
-      <div class="field">
-        <label for="preference-accent">Accent color</label>
-        <div class="accent-control">
-          <input id="preference-accent" type="color" name="accent" value="{{ APPEARANCE.accent or '#275d3e' }}" data-default-accent="{{ 'false' if APPEARANCE.accent else 'true' }}">
-          <button type="button" class="button button-secondary" data-accent-reset hidden>Use theme color</button>
+      <div class="field accent-field">
+        <span id="accent-label">Accent color</span>
+        <div class="accent-swatches" role="group" aria-labelledby="accent-label">
+          {% for label, color in [('Green', '#8ab894'), ('Blue', '#8cb7e2'), ('Lavender', '#b59be4'), ('Sand', '#dba871')] %}
+          <button type="button" class="accent-swatch" style="--swatch-color:{{ color }}" data-accent-swatch="{{ color }}" aria-label="{{ label }} accent" aria-pressed="false" hidden></button>
+          {% endfor %}
         </div>
+        <details class="custom-accent">
+          <summary>Custom color</summary>
+          <label for="preference-accent">Choose a color</label>
+          <input id="preference-accent" type="color" name="accent" value="{{ APPEARANCE.accent or '#8ab894' }}" data-default-accent="{{ 'false' if APPEARANCE.accent else 'true' }}">
+        </details>
+        <button type="button" class="theme-accent-reset" data-accent-reset hidden>Use theme color</button>
         <input type="hidden" name="accent" value="default" data-accent-default disabled>
       </div>
-      <label class="field" for="preference-radius">Corner radius: <span><output for="preference-radius" data-radius-output>{{ APPEARANCE.radius }}</output> px</span>
-        <input id="preference-radius" name="radius" type="range" min="0" max="20" step="2" value="{{ APPEARANCE.radius }}">
-      </label>
-      <button type="submit" class="button">Save appearance</button>
-    </form>
-    <div class="appearance-preview-column">
-      <article class="appearance-preview" aria-label="Notebook appearance preview" data-appearance-preview
-               data-preview-palette="{{ preference_theme }}" data-preview-mode="{{ theme_families[preference_theme] }}"
-               data-font="{{ appearance_font }}" data-density="{{ APPEARANCE.density }}" style="{{ appearance_tokens | safe }}">
-        <header class="preview-header"><span class="preview-brand"><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#book-open"></use></svg> Pretty Notebook</span><span class="preview-menu"><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#menu"></use></svg></span></header>
-        <div class="preview-note">
-          <p class="preview-eyebrow">MY NOTEBOOK / WRITING</p>
-          <h2 data-preview-title>Every good idea begins somewhere.</h2>
-          <p data-preview-body>A place to collect thoughts, stories, and discoveries.</p>
-          <div class="preview-actions">
-            <button type="button" class="button" data-preview-new hidden><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#plus"></use></svg> New note</button>
-            <button type="button" class="button button-secondary" data-preview-edit hidden><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#pencil"></use></svg> Edit notebook</button>
-          </div>
-        </div>
-      </article>
-      <div class="configuration-actions">
-        <button type="button" class="button button-secondary" data-copy-appearance hidden><svg class="appearance-icon" aria-hidden="true"><use href="{{ root_path }}/static/icons/appearance.svg#copy"></use></svg> Copy configuration</button>
-        <p role="status" aria-live="polite" data-appearance-status></p>
+      <div class="radius-field">
+        <label for="preference-radius">Corner radius: <output for="preference-radius" data-radius-output>{{ APPEARANCE.radius }}</output>px</label>
+        <input id="preference-radius" name="radius" type="range" min="0" max="20" step="2" value="{{ APPEARANCE.radius }}" list="radius-stops">
+        <datalist id="radius-stops">{% for value in range(0, 21, 2) %}<option value="{{ value }}"></option>{% endfor %}</datalist>
       </div>
-      <label class="field" data-configuration-fallback hidden>Configuration
-        <textarea rows="9" readonly data-configuration-text aria-label="Appearance configuration"></textarea>
-      </label>
-      <p class="text-muted">Preview your choices, then save to use them throughout this site.</p>
-      <noscript><p class="notice">Save appearance to apply your choices. Live preview and copying require JavaScript.</p></noscript>
     </div>
-  </div>
+    <article class="appearance-preview" aria-label="Notebook appearance preview" data-appearance-preview
+             data-preview-palette="{{ preference_theme }}" data-preview-mode="{{ theme_families[preference_theme] }}"
+             data-font="{{ appearance_font }}" data-density="{{ APPEARANCE.density }}" style="{{ appearance_tokens | safe }}">
+      <header class="preview-header"><span class="preview-brand"><svg class="appearance-icon" aria-hidden="true" focusable="false"><use href="{{ root_path }}/static/icons/appearance.svg#book-open"></use></svg> Pretty Notebook</span><span class="preview-menu"><svg class="appearance-icon" aria-hidden="true" focusable="false"><use href="{{ root_path }}/static/icons/appearance.svg#menu"></use></svg></span></header>
+      <div class="preview-note">
+        <p class="preview-eyebrow">MY NOTEBOOK / WRITING</p>
+        <h2 data-preview-title>A quiet little notebook</h2>
+        <p data-preview-body>Every good idea begins somewhere. A place to collect thoughts, stories, and discoveries.</p>
+        <div class="preview-actions">
+          <button type="button" class="button" data-preview-new hidden>New note</button>
+          <button type="button" class="button button-secondary" data-preview-edit hidden>Edit notebook</button>
+        </div>
+      </div>
+    </article>
+    <div class="configuration-actions">
+      <button type="submit" class="button">Save appearance</button>
+      <button type="button" class="button button-secondary" data-copy-appearance hidden><svg class="appearance-icon" aria-hidden="true" focusable="false"><use href="{{ root_path }}/static/icons/appearance.svg#copy"></use></svg> Copy configuration</button>
+    </div>
+    <p role="status" aria-live="polite" data-appearance-status></p>
+    <label class="field" data-configuration-fallback hidden>Configuration
+      <textarea rows="9" readonly data-configuration-text aria-label="Appearance configuration"></textarea>
+    </label>
+    <p class="appearance-help">Preview independent appearance settings, then save to use them throughout this site. New note and Edit notebook change only the sample.</p>
+    <noscript><p class="notice">Save appearance to apply your choices. Live preview and copying require JavaScript; Custom color remains available.</p></noscript>
+  </form>
 </section>
 <script defer src="{{ root_path }}/static/js/appearance-preferences.js"></script>
 {% endblock %}
