@@ -1,4 +1,4 @@
-# Notebook settings (0.10 development)
+# Notebook settings (0.10 release candidate)
 
 These APIs and commands are available in the development checkout. The released
 0.9 package still uses the legacy configuration described in its release docs.

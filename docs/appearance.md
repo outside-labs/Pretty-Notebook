@@ -1,4 +1,4 @@
-# Appearance in 0.10 development
+# Appearance in 0.10 release candidate
 
 Layout and component rules live in `apps/web/static/css/site.css`. Each file in
 `static/css/themes` contains color tokens only. The available palettes are

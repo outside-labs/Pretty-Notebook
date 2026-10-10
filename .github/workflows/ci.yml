@@ -40,10 +40,10 @@ jobs:
           python -m pip install --editable . pytest ruff
 
       - name: Compile Python sources
-        run: python -W error -m compileall -q src apps/web tests
+        run: python -W error -m compileall -q src apps/web tests scripts
 
       - name: Check release-blocking lint rules
-        run: python -m ruff check --select E9,F63,F7,F82,W605 src apps/web tests
+        run: python -m ruff check --select E9,F63,F7,F82,W605 src apps/web tests scripts
 
       - name: Run tests
         run: python -m pytest
@@ -68,10 +68,13 @@ jobs:
         run: python -m pip install --upgrade build twine
 
       - name: Build wheel and source distribution
-        run: python -m build
+        run: |
+          python -m build --outdir dist/pretty-notebook
+          python -m build packages/pnbp-transition --outdir dist/pnbp
+          python scripts/check_release_distributions.py
 
       - name: Check distribution metadata
-        run: python -m twine check --strict dist/*
+        run: python -m twine check --strict dist/pretty-notebook/* dist/pnbp/*
 
       - name: Test the installed wheel
         shell: bash
@@ -81,11 +84,15 @@ jobs:
 
           python -m venv "$test_venv"
           "$test_venv/bin/python" -m pip install --upgrade pip
-          "$test_venv/bin/python" -m pip install dist/*.whl
+          "$test_venv/bin/python" -m pip install dist/pretty-notebook/*.whl
+          "$test_venv/bin/python" -m pip install --no-deps dist/pnbp/*.whl
+          "$test_venv/bin/python" -m pip check
           "$test_venv/bin/python" -c "import pretty_notebook, pnbp; assert pretty_notebook.Notebook is pnbp.Notebook"
           "$test_venv/bin/pnbp" --help
           "$test_venv/bin/pnbp" deploy plan --domain notes.example.com \
             --revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa > "${RUNNER_TEMP}/deployment-plan.json"
+
+          "$test_venv/bin/python" scripts/exercise_release.py "$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
 
           mkdir -p "$note_path"
           printf '#public\nHello.\n' > "$note_path/example.md"

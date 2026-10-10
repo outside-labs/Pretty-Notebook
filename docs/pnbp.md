@@ -7,33 +7,27 @@ models, while ordinary Markdown remains the authoritative content.
 
 ## Choose a version
 
-The published `pnbp==0.9.0` package runs on Python 3.11 or newer:
+The 0.10 candidate is `pretty-notebook==0.10.0rc1` on Python 3.11 or newer.
+It supplies canonical `pretty_notebook` imports, compatible `pnbp` imports,
+and the `pnbp` executable.
 
-```bash
-python -m pip install pnbp==0.9.0
+```sh
+python -m pip uninstall pnbp
+python -m pip install pretty-notebook==0.10.0rc1
 pnbp --help
 ```
 
-The current checkout contains features targeting **0.10 development**. Its
-package metadata prepares `pretty-notebook==0.10.0.dev0`. See the
-[package migration](package-migration.md) for the canonical import and compatibility. Do not
-assume development APIs exist in the published 0.9.0 wheel. See
-[versions and support](versions.md) and the [0.9.0 release notes](release-0.9.0.md).
+Uninstall the old distribution before installing the candidate to preserve the
+compatibility modules. See [package migration](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/package-migration.md) and
+[0.10 release notes](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/release-0.10.0.md). The historical stable package is
+`pnbp==0.9.0`; its versioned [release notes](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/release-0.9.0.md) retain that contract.
 
-For development features, use a full checkout and install it locally:
-
-```bash
-git clone https://github.com/outside-labs/Pretty-Notebook.git
-cd Pretty-Notebook
-python -m venv .venv
-.venv/bin/python -m pip install --editable .
-```
-
-On Windows, use `.venv\Scripts\python.exe` for the installation command.
+For source development, install the checkout with
+`python -m pip install --editable .`.
 
 ## First notebook and existing notebooks
 
-Follow the [notebook workflow tutorial](tutorials.md) for a temporary notebook,
+Follow the [notebook workflow tutorial](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/tutorials.md) for a temporary notebook,
 initialization, pending edits, checked renames, search and navigation. Its local
 examples are executed by the documentation build.
 
@@ -46,17 +40,17 @@ note = nb.get("guides/overview", fuzzy=False)
 
 The path must already exist. Opening reads files without prompting or creating
 configuration. Initialize deliberately with `pnbp init PATH`; see the canonical
-[settings and profile guide](settings.md) for precedence, migration and credentials.
+[settings and profile guide](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/settings.md) for precedence, migration and credentials.
 `Notebook()` continues to use `NOTE_PATH` for existing environment-based setups.
 
 ## Continue by topic
 
-- [Note commands and pending edits](editing.md): add/edit, empty bodies, saves and recovery drafts.
-- [Models and methods](pnbp_models.md) and [generated API reference](reference.md): public imports and signatures.
-- [Local search](local-search.md), [navigation](navigation.md) and [links](links.md): read-only projections and explicit traversal.
-- [Stable identities](identities.md) and [publication routes](routes.md): identity, source paths and URLs remain separate.
-- [Checked publishing](checked-publishing.md): dry-run plans, ETags, retries and explicit pruning.
-- [Web deployment](web.md): separate application, bootstrap, durable state and the supported local-host worker profile.
+- [Note commands and pending edits](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/editing.md): add/edit, empty bodies, saves and recovery drafts.
+- [Models and methods](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/pnbp_models.md) and [generated API reference](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/reference.md): public imports and signatures.
+- [Local search](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/local-search.md), [navigation](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/navigation.md) and [links](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/links.md): read-only projections and explicit traversal.
+- [Stable identities](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/identities.md) and [publication routes](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/routes.md): identity, source paths and URLs remain separate.
+- [Checked publishing](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/checked-publishing.md): dry-run plans, ETags, retries and explicit pruning.
+- [Web deployment](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/web.md): separate application, bootstrap, durable state and the supported local-host worker profile.
 
-The macOS URL handlers are [unsupported](pnano.md). The FastAPI app and its
+The macOS URL handlers are [unsupported](https://github.com/outside-labs/Pretty-Notebook/blob/v0.10.0rc1/docs/pnano.md). The FastAPI app and its
 optional dependencies are absent from the `pnbp` wheel.

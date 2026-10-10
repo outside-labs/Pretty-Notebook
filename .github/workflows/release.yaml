@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pnbp-pypi-release
+  group: pretty-notebook-pypi-release
   cancel-in-progress: false
 
 jobs:
@@ -44,17 +44,20 @@ jobs:
 
       - name: Check Python source
         run: |
-          python -W error -m compileall -q src apps/web tests
-          python -m ruff check --select E9,F63,F7,F82,W605 src apps/web tests
+          python -W error -m compileall -q src apps/web tests scripts
+          python -m ruff check --select E9,F63,F7,F82,W605 src apps/web tests scripts
 
       - name: Run core regression suite
         run: python -m pytest -q
 
       - name: Build wheel and source distribution
-        run: python -m build
+        run: |
+          python -m build --outdir dist/pretty-notebook
+          python -m build packages/pnbp-transition --outdir dist/pnbp
+          python scripts/check_release_distributions.py
 
       - name: Check distribution metadata
-        run: python -m twine check --strict dist/*
+        run: python -m twine check --strict dist/pretty-notebook/* dist/pnbp/*
 
       - name: Test installed wheel
         shell: bash
@@ -64,12 +67,15 @@ jobs:
 
           python -m venv "$test_venv"
           "$test_venv/bin/python" -m pip install --upgrade pip
-          "$test_venv/bin/python" -m pip install dist/*.whl
+          "$test_venv/bin/python" -m pip install dist/pretty-notebook/*.whl
+          "$test_venv/bin/python" -m pip install --no-deps dist/pnbp/*.whl
           "$test_venv/bin/python" -m pip check
           "$test_venv/bin/python" -c "import pretty_notebook, pnbp; assert pretty_notebook.Notebook is pnbp.Notebook"
           "$test_venv/bin/pnbp" --help
           "$test_venv/bin/pnbp" deploy plan --domain notes.example.com \
             --revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa > "${RUNNER_TEMP}/deployment-plan.json"
+
+          "$test_venv/bin/python" scripts/exercise_release.py "$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
 
           mkdir -p "$note_path"
           printf '#public\nHello.\n' > "$note_path/example.md"
@@ -82,7 +88,15 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: python-package-distributions
-          path: dist/
+          path: dist/pretty-notebook/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Store compatibility distribution
+        uses: actions/upload-artifact@v5
+        with:
+          name: pnbp-transition-distributions
+          path: dist/pnbp/
           if-no-files-found: error
           retention-days: 7
 
@@ -106,4 +120,23 @@ jobs:
           path: dist/
 
       - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-compatibility:
+    name: Publish final pnbp compatibility distribution
+    if: ${{ !github.event.release.prerelease }}
+    needs: [build, publish]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/pnbp/
+    permissions:
+      id-token: write
+    steps:
+      - name: Download compatibility distribution
+        uses: actions/download-artifact@v6
+        with:
+          name: pnbp-transition-distributions
+          path: dist/
+      - name: Publish compatibility distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,6 +1,6 @@
 # Links and graph lookup
 
-The 0.10 development API exposes a read-only graph and shared resolver:
+The 0.10 release candidate API exposes a read-only graph and shared resolver:
 
 ```python
 from pretty_notebook import Notebook

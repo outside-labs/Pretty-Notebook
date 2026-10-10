@@ -1,4 +1,4 @@
-# Web coverage audit (0.10 development)
+# Web coverage audit (0.10 release candidate)
 
 Coverage measures executed code, not a percentage of security or correctness.
 The former 95–96% figure did not mean that 4–5% of the site was exposed. Missing

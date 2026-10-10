@@ -1,4 +1,4 @@
-# Versioned server state (0.10 development)
+# Versioned server state (0.10 release candidate)
 
 The supported web profile is one Gunicorn instance with up to four workers, one local
 SQLite database, and one owning notebook. Starting the application now runs ordered schema migrations before
