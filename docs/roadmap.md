@@ -9,9 +9,11 @@ and verification; current status comes from GitHub.
 
 ## Release scope
 
-- **0.10:** 17 required notebook/publishing tasks and 3 optional builder/operations
+- **0.10:** 17 original required tasks plus 6 required tasks in the final
+  package/appearance/deployment/coverage block, and 3 optional builder/operations
   tasks. Optional work can move intact to a later release.
-- **0.11 proposed:** 9 collaboration tasks and 1 optional packaging task.
+- **0.11 proposed:** 9 collaboration tasks, the operation-logging proposal,
+  and 1 optional packaging task.
 - **0.12 proposed:** 4 Markdown-engine tasks with explicit compatibility gates.
 - **Later:** 8 follow-on tasks. Later version labels are planning buckets.
 
