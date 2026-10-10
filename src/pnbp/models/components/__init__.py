@@ -1,13 +1,2 @@
-from .codeblock import CodeBlock
-from .link import Link
-from .tag import Tag
-from .url import Url
-
-
-
-
-
-
-
-
-
+"""Compatibility exports; prefer pretty_notebook.models.components."""
+from pretty_notebook.models.components import *  # noqa: F403

@@ -6,7 +6,8 @@ from urllib.parse import urlsplit
 import pytest
 import requests
 from api import publishing_api
-from pnbp import Notebook, _publication_plan as plans
+from pretty_notebook import Notebook
+from pretty_notebook._internal import publication_plan as plans
 
 
 class RequestsResponse:

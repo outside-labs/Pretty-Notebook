@@ -3,8 +3,8 @@ import subprocess
 import click
 import pytest
 
-from pnbp import Notebook
-from pnbp.commands import commit as commit_commands
+from pretty_notebook import Notebook
+from pretty_notebook.commands import commit as commit_commands
 
 
 def _git(path, *args, check=True):

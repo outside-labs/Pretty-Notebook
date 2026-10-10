@@ -6,8 +6,9 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from pnbp import Notebook, IdentityError, _identities, _journal, _moves
-from pnbp.cli import cli
+from pretty_notebook import Notebook, IdentityError
+from pretty_notebook._internal import identities as _identities, journal as _journal, moves as _moves
+from pretty_notebook.cli import cli
 
 
 @pytest.fixture

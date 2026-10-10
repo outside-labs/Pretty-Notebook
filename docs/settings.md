@@ -6,7 +6,7 @@ These APIs and commands are available in the development checkout. The released
 ## Open without initialization
 
 ```python
-from pnbp import Notebook, NotebookSettings
+from pretty_notebook import Notebook, NotebookSettings
 
 nb = Notebook(path="~/notes")
 nb = Notebook.open("~/notes", settings={"NOTE_NESTED": "recurs"})

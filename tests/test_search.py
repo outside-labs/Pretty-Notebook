@@ -4,8 +4,8 @@ from dataclasses import replace
 import pytest
 from click.testing import CliRunner
 
-from pnbp import Notebook, SearchHit
-from pnbp.cli import cli
+from pretty_notebook import Notebook, SearchHit
+from pretty_notebook.cli import cli
 
 
 @pytest.fixture

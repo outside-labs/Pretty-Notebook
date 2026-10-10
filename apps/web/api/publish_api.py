@@ -9,7 +9,7 @@ from web_config import IMAGES_PATH, PAGES_PATH
 
 from .atomic_io import atomic_write_bytes
 from .auth_api import get_current_user
-from pnbp._routes import validate_route
+from pretty_notebook._internal.routes import validate_route
 from .catalog import RouteConflict
 from .catalog import publication_body as publication_body
 from .catalog import LEGACY_PAGE_PREFIX as LEGACY_PAGE_PREFIX, LEGACY_PAGE_SUFFIX as LEGACY_PAGE_SUFFIX

@@ -13,7 +13,7 @@ available. Identity-changing operations and saves with invalid identity state
 fail clearly rather than silently inventing replacements.
 
 ```python
-from pnbp import Notebook
+from pretty_notebook import Notebook
 
 nb = Notebook("~/notes")
 nb.initialize_identities(dry_run=True)

@@ -4,8 +4,8 @@ import pytest
 import requests
 from click.testing import CliRunner
 
-from pnbp import Notebook
-from pnbp.cli import cli
+from pretty_notebook import Notebook
+from pretty_notebook.cli import cli
 
 
 @pytest.fixture

@@ -38,7 +38,7 @@ class CliHelp(SphinxDirective):
 
     def run(self):
         import click
-        from pnbp.cli import cli
+        from pretty_notebook.cli import cli
 
         command = cli
         context = click.Context(command, info_name="pnbp")

@@ -1,0 +1,504 @@
+import os
+import re
+
+from collections import namedtuple
+from contextlib import nullcontext
+from pathlib import Path
+
+from .components import Link, Tag, Url, CodeBlock
+
+from pretty_notebook.helpers import _convert_datetime
+from pretty_notebook._internal import storage as _storage, identities as _identities
+
+
+class Note(namedtuple('Note', ['name', 'md', 'links', 'tags', 'urls', 'codeblocks', 'mtime'])):
+
+	def __new__(cls, name, md, links, tags, urls, codeblocks, mtime):
+		"""
+		:param str name: the filename stripped of .md
+		:param str md: the in mem note context read from file
+		:param list links: all regex found [[links]] 's in md
+		:param list tags: all regex found #tag 's in md
+		:param list urls: all regex found http/https links in md
+		:param list codeblocks: all regex found ```backtick code blocks```
+		:param str mtime: the local md most recent modification date
+			-> used against remote blog api to determine if POST required
+		"""
+		tag_values = dict.fromkeys(f"#{str(tag).lstrip('#')}" for tag in tags)
+		tags = [Tag(tag) for tag in tag_values]
+		urls = [Url(u) for u in set(urls)]
+		links = [Link(l) for l in set(links)]
+
+		codeblocks = [CodeBlock(cb) for cb in codeblocks if cb.split()]
+
+		if "#pnbp" in tags:
+			tags = [Tag("#pnbp")]
+			urls = []
+			links = []
+			codeblocks = []
+
+		return super().__new__(cls, name, md, links, tags, urls, codeblocks, mtime)
+
+	def __init__(self, *args, **kwargs):
+		""" 
+		:param md_out: safety first, make it hard to overwrite any note file
+			-> set self.md_out = "as example, correct as is string instance"
+			-> update file via self.save()
+		"""
+		self.md_out: str | None = None
+		self.pprotect = {}
+		self.source_path: str | None = None
+		self._source_exists = False
+		self._source_signature = None
+		self._identity_record = None
+
+	def __str__(self):
+		""" """
+		return self.name
+
+	@property
+	def identity(self):
+		"""The loaded optional identity record; it never grants access."""
+		return self._identity_record
+
+	@property
+	def note_id(self):
+		return self.identity.id if self.identity is not None else None
+
+	@property
+	def md_out(self) -> str | None:
+		"""Pending source text; None means no staged content, while '' stages an empty note."""
+		return getattr(self, "_md_out", None)
+
+	@md_out.setter
+	def md_out(self, value):
+		if value is not None and not isinstance(value, str):
+			raise TypeError("Note.md_out must be a string or None.")
+		self._md_out = value
+		self._current_content_cache = None
+
+	@property
+	def current_content(self) -> _storage.ContentView:
+		"""A cached projection of current_md, separate from the loaded tuple fields."""
+		cached = getattr(self, "_current_content_cache", None)
+		if cached is None or cached.md != self.current_md:
+			cached = self._current_content_cache = _storage.parse_content(self.current_md)
+		return cached
+
+	@property
+	def current_links(self):
+		return self.current_content.links
+
+	@property
+	def current_tags(self):
+		return self.current_content.tags
+
+	@property
+	def current_urls(self):
+		return self.current_content.urls
+
+	@property
+	def current_codeblocks(self):
+		return self.current_content.codeblocks
+	
+	@property
+	def current_md(self) -> str:
+		""" 
+		:return: the most updated (between self.md and self.md_out) Markdown content
+		"""
+		return self.md if self.md_out is None else self.md_out
+
+	@property
+	def is_unsaved(self) -> bool:
+		""" the content of self.md is different (i.e. req self.save())
+			as compared to self.md_out
+		"""
+		return self.md_out is not None and self.md_out != self.md
+
+	def discard_changes(self):
+		""" flush self.md_out, without self.save() -ing changes
+		"""
+		self.md_out = None
+		return self
+
+	@property
+	def subdirs(self):
+		"""
+		"""
+		_name = Link(self.name)
+		return _name.subdirs
+	
+	@property
+	def slugname(self):
+		""" My Note Name -> my-note-name
+		"""
+		_name = Link(self.name)
+		return _name.slugname
+
+	@property
+	def linkname(self):
+		""" self.name -> [[self.name]]
+		"""
+		_name = Link(self.name)
+		return _name.aslink
+
+	@property
+	def sections(self)->list:
+		"""	"""
+		return [x.strip() for x in self.current_md.split('---') if x]
+
+	@property
+	def header(self):
+		""" """
+		NOTE_HEADER = os.environ.get('NOTE_HEADER')
+
+		if not NOTE_HEADER:
+			NOTE_HEADER = r'^Links'
+		else:
+			NOTE_HEADER = fr'{NOTE_HEADER}'
+
+		try:
+			for i in (0, 1):
+				if re.match(NOTE_HEADER, self.sections[i]):
+					return self.sections[i]
+
+		except IndexError:
+			# an empty note 
+			pass
+		
+		return None
+
+	@property
+	def aliases(self):
+		"""Return whether the first section is an aliases section."""
+		sections = self.sections
+		if sections and sections[0].startswith('aliases: '):
+			return True
+		return None
+
+	@property
+	def footnotes(self):
+		"""Return whether the final section is a footnotes section."""
+		sections = self.sections
+		if sections and re.match(r'\[\^\d+\]: ', sections[-1]):
+			return True
+		return None
+
+	def save(self, nb):
+		""" save note to .md file on NOTE_PATH,
+			if provided self.md_out has been updated.
+
+		:param nb: the Notebook instance must be passed to save!
+		"""
+		
+		if self.md_out is None:
+			return self
+
+		if self.md_out == self.md and self._source_exists:
+			self.md_out = None
+			return self
+
+		if not isinstance(self.md_out, str):
+			raise TypeError(f'{self.__class__.__name__}.md_out must be a str, not {type(self.md_out)}')
+
+		root = Path(nb.NOTE_PATH).expanduser().resolve()
+		relative_path = self.source_path or f"{self.name}.md"
+		path = (root / relative_path).resolve()
+
+		try:
+			path.relative_to(root)
+		except ValueError as e:
+			raise ValueError("Note path escapes NOTE_PATH") from e
+
+		if path.suffix.lower() != ".md":
+			raise ValueError(f"Not a Markdown note: {path}")
+
+		has_identity_state = nb.notebook_id is not None or (root / ".pnbp" / "metadata.json").exists()
+		operation = _identities.identity_operation(root) if has_identity_state else nullcontext()
+		with operation as expected_bytes:
+			index = _identities.check_note_write(root, self, nb.notebook_id)
+			path.parent.mkdir(parents=True, exist_ok=True)
+			if self._source_exists:
+				source_stat = self._require_unchanged_source(path)
+				self._atomic_replace(path, self.md_out, source_stat)
+			else:
+				self._exclusive_create(path, self.md_out)
+			saved = nb.open_note(path, notes={})
+			if index is not None:
+				nb._set_identity_index(_identities.record_saved_note(root, saved, index, expected_bytes))
+				saved._identity_record = nb._identity_paths.get(saved.source_path)
+			nb.notes[saved.name] = saved
+		self.source_path = saved.source_path
+		self._source_exists = True
+		self._identity_record = saved.identity
+		self.md_out = None
+		return saved
+
+	@staticmethod
+	def _stat_signature(file_stat):
+		return (
+			file_stat.st_dev,
+			file_stat.st_ino,
+			file_stat.st_size,
+			file_stat.st_mtime_ns,
+		)
+
+	def _require_unchanged_source(self, path):
+		try:
+			before = path.stat()
+			text = path.read_text(encoding="utf-8")
+			after = path.stat()
+		except FileNotFoundError as e:
+			raise RuntimeError(f"Cannot save {self.name}: source changed on disk.") from e
+
+		if (
+			self._stat_signature(before) != self._stat_signature(after)
+			or (
+				self._source_signature is not None
+				and self._stat_signature(after) != self._source_signature
+			)
+			or text != self.md
+		):
+			raise RuntimeError(f"Cannot save {self.name}: source changed on disk.")
+
+		return after
+
+	@staticmethod
+	def _exclusive_create(path, text):
+		return _storage.exclusive_create(path, text)
+
+	def _atomic_replace(self, path, text, source_stat):
+		return _storage.atomic_replace(self, path, text, source_stat)
+
+	def is_tagged(self, tag: str="", tags: list | None=None, to_all=False, at_all=False)->bool:
+		""" check if note.md contains a #tag
+
+		:param tag: the #tag in question
+		:param tags: a list of possible tags
+		:param to_all: to_all=True requires that all entered param tags are found in self.md
+		:param at_all: at_all=True as the only paramater will return False if note has no tags at all
+		"""
+		queries = list(tags) if tags else []
+		if not queries and isinstance(tag, (list, tuple, set, frozenset)):
+			queries = list(tag)
+		elif not queries and tag:
+			queries = [tag]
+
+		if not queries and at_all:
+			return bool(self.tags)
+
+		if not queries:
+			msg = "Did you mean to call is_tagged(at_all=True)? Otherwise,\n"
+			raise ValueError(f"{msg}provide e.g. is_tagged(tag='#examp'), or is_tagged(tags=['#find', '#us'], to_all=True)")
+
+		results = (
+			any(note_tag.matches(query) for note_tag in self.tags)
+			for query in queries
+		)
+		return all(results) if to_all else any(results)
+
+	def is_linked(self, link: str="", links: list | None=None, to_all=False, at_all=False)->bool:
+		""" check if note.md contains a [[link]]
+
+		:param link: the [[link]] in question
+		:param links: 
+		:param to_all:
+		:param at_all:
+		"""
+		queries = list(links) if links else []
+		if not queries and isinstance(link, (list, tuple, set, frozenset)):
+			queries = list(link)
+		elif not queries and link:
+			queries = [link]
+
+		if not queries and at_all:
+			return bool(self.links)
+
+		if not queries:
+			msg = "Did you mean to call is_linked(at_all=True)? Otherwise,\n"
+			raise ValueError(f"{msg}provide e.g. is_linked('some-note'), or is_linked(links=['note-a', 'note-b'], to_all=True)")
+
+		results = (
+			any(note_link.matches(query) for note_link in self.links)
+			for query in queries
+		)
+		return all(results) if to_all else any(results)
+
+	def remove_links(self, links: list):
+		""" if [[my link]] in links, -> if my link in links
+			*stage* removal to self.md_out
+
+		:param links: the [[link]] names to remove
+		"""
+		ns = self.current_md
+		
+		for name in links:
+			name = re.escape(str(name))
+			p = re.compile(fr'(?<!!)(\[\[\s*)({name})(\s*\]\])')
+
+			if (ml := p.findall(ns)):
+				for m in ml:
+					print(f'[[{m[1]}]] --> ', m[1])
+
+			ns = p.sub(Link.remove_link_mention, ns)
+
+		self.md_out = ns
+
+		return self 
+
+	def md_out_to_html(self, nb):
+		""" 
+		"""
+		nb.convert_to_html(self) # ...
+
+	def prime_md_out_protect(self):
+		""" Replace links, tags, urls, codeblocks
+			w/ an _key, saving all actual .md item values at
+			self.pprotect[_key], and the repl'd skeleton .md 
+			content to self.md_out.
+			This allows for safe parsing/repl against .md "body content"
+			exclusively. -> ... -> self.prime_md_out_release()
+		"""
+		if self.md_out is not None:
+			raise RuntimeError(
+				f"{self.name} already has pending content. "
+				"Save it or call discard_changes() before protecting the note."
+			)
+
+		patterns = (
+			re.compile(r'```[^`]*```'),
+			re.compile(Url.MD_EXT_LINK),
+			re.compile(r'!?\[\[[^]]+\]\]'),
+			re.compile(r'https?://[^;,\s\]\*]+'),
+			re.compile(r"(?<![\\/)>\'\w])#[A-Za-z]+"),
+		)
+		spans = []
+		for pattern in patterns:
+			for match in pattern.finditer(self.md):
+				start, end = match.span()
+				if any(start < used_end and end > used_start for used_start, used_end in spans):
+					continue
+				spans.append((start, end))
+
+		spans.sort()
+		parts = []
+		protected = {}
+		cursor = 0
+		for index, (start, end) in enumerate(spans):
+			token = f'\x00PNBPPROTECTED{index}\x00'
+			while token in self.md or token in protected:
+				index += 1
+				token = f'\x00PNBPPROTECTED{index}\x00'
+
+			parts.extend((self.md[cursor:start], token))
+			protected[token] = self.md[start:end]
+			cursor = end
+		parts.append(self.md[cursor:])
+
+		self.md_out = ''.join(parts)
+		self.pprotect = protected
+		return self
+
+	def prime_md_out_release(self, nb=None):
+		""" Replace the _keys at self.pprotect to prepare
+			the note to be saved.
+
+		:param nb: lazy accept Notebook to save Note inline
+		"""
+		if self.md_out is None and self.pprotect:
+			raise Exception("Can't return prime note context that was never protected to begin with!")
+
+		ns = self.md_out
+		try:
+			for token, original in self.pprotect.items():
+				if ns.count(token) != 1:
+					raise RuntimeError(
+						f"Protected content marker changed while processing {self.name}."
+					)
+				ns = ns.replace(token, original)
+		except Exception:
+			# Keep both the protected skeleton and its mapping available for recovery.
+			raise
+
+		self.md_out = ns
+		self.pprotect = {}
+		if nb:
+			# save the note:
+			return self.save(nb)
+		else:
+			print("Sucessful pprotect release. Don't forget to save!")
+		return self
+
+	def prepend_section(self, content):
+		""" add an section to the beginning of the .md content
+			(or .md_out content instead if exists)
+
+			reccomended save immediately (aka don't prepend 
+			again inline expecting updated sections)
+
+		:param content: should itself shouldn't start with section header "\n\n--- "
+		:returns: updated self.md_out 
+		"""
+		sheader = "\n\n--- "
+
+		if content.startswith(sheader):
+			content = content.lstrip(sheader)
+
+		_md_out = self.sections.copy()
+
+		pos = 0
+		if self.header:
+			pos += 1
+		if self.aliases:
+			pos += 1
+
+		_md_out.insert(pos, content)
+
+		self.md_out = '\n\n--- \n'.join(_md_out)
+
+		if self.aliases:
+			self.md_out = '--- \n' + self.md_out
+
+	def append_section(self, content):
+		"""
+		:param content: should itself shouldn't start with section header "\n\n--- "
+		:returns: updated self.md_out 
+		""" 
+		_md_out = self.sections.copy()
+		
+		if self.footnotes:
+			_md_out.insert(-1, content)
+		else:
+			_md_out.append(content)
+
+		self.md_out = '\n\n--- \n'.join(_md_out)
+
+		if self.aliases:
+			self.md_out = '--- \n' + self.md_out
+
+	def insert_section(self, pos: int, content: str):
+		""" 
+		:param pos: the 0-index position to insert content to new section
+		:param content: the content to generate a section out of
+		"""
+		_md_out = self.sections.copy()
+		_md_out.insert(pos, content)
+
+		self.md_out = '\n\n--- \n'.join(_md_out)
+
+	def prepend_today_section(self, nb=None):
+		""" 
+		"""
+		new_day = True
+		d_today = _convert_datetime("now", as_date=True)
+		for i,s in enumerate(self.sections):
+			if s.startswith(d_today):
+				new_day = False
+
+		if new_day:
+			cont = f'\n\n--- \n{d_today}\n\n'
+			self.prepend_section(cont)
+			self.save(nb)
+
+
+

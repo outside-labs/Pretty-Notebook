@@ -5,7 +5,7 @@ import posixpath
 from urllib.parse import quote, urlencode, urlsplit
 
 from fastapi import HTTPException
-from pnbp._routes import SEGMENT, validate_prefix, validate_route
+from pretty_notebook._internal.routes import SEGMENT, validate_prefix, validate_route
 
 from .public_index import IndexCapacityError
 

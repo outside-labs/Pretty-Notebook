@@ -4,9 +4,9 @@ from stat import S_IMODE
 import pytest
 from click.testing import CliRunner
 
-from pnbp import Notebook, NotebookSettings, SettingsError
-from pnbp.cli import cli
-from pnbp.settings import initialize_notebook, load_settings, save_api_token
+from pretty_notebook import Notebook, NotebookSettings, SettingsError
+from pretty_notebook.cli import cli
+from pretty_notebook.settings import initialize_notebook, load_settings, save_api_token
 
 
 @pytest.fixture(autouse=True)
@@ -160,7 +160,7 @@ def test_migration_preview_and_repeatable_apply(tmp_path, capsys):
 def test_failed_migration_preserves_original_and_can_retry(monkeypatch, tmp_path):
 	write_json(tmp_path / "pnbp_settings.json", {"API_TOKEN": "original-token", "TITLE": "Original"})
 	original = (tmp_path / "pnbp_settings.json").read_bytes()
-	import pnbp.settings as settings_module
+	import pretty_notebook.settings as settings_module
 	real_write = settings_module._write_exclusive
 	def fail_backup(path, content):
 		if path.name == "legacy-settings.json":
@@ -178,7 +178,7 @@ def test_failed_migration_preserves_original_and_can_retry(monkeypatch, tmp_path
 def test_external_settings_change_aborts_migration(monkeypatch, tmp_path):
 	legacy = tmp_path / "pnbp_settings.json"
 	write_json(legacy, {"TITLE": "Original"})
-	import pnbp.settings as settings_module
+	import pretty_notebook.settings as settings_module
 	real_write = settings_module._write_exclusive
 	def edit_during_write(path, content):
 		real_write(path, content)
@@ -193,7 +193,7 @@ def test_external_settings_change_aborts_migration(monkeypatch, tmp_path):
 
 def test_racing_initialization_never_overwrites_existing_settings(monkeypatch, tmp_path):
 	write_json(tmp_path / "pnbp_settings.json", {"API_TOKEN": "legacy-token"})
-	import pnbp.settings as settings_module
+	import pretty_notebook.settings as settings_module
 	real_write = settings_module._write_exclusive
 	def create_during_write(path, content):
 		if path.name == "settings.json":

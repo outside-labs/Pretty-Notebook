@@ -6,7 +6,7 @@ no network requests, and does not record visits. Local search includes private
 notes; publication eligibility is handled separately by published-site search.
 
 ```python
-from pnbp import Notebook, SearchHit
+from pretty_notebook import Notebook, SearchHit
 
 nb = Notebook.open("/path/to/notes")
 hits = nb.search("literal [café]", limit=20)

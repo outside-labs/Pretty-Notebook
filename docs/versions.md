@@ -8,7 +8,9 @@ installed-wheel contract. The [candidate notes](release-0.9.0rc1.md) and
 The current repository contains features targeting **0.10 development**:
 explicit notebook settings/profiles, current-content editing, identities,
 checked moves/routes/publication, field/tag search, navigation and managed
-favicons. Package metadata stays at 0.9.0 until release preparation is approved.
+favicons. Package metadata now prepares `pretty-notebook==0.10.0.dev0`, with
+`pretty_notebook` as the canonical import and compatible `pnbp` imports/CLI.
+See [package migration](package-migration.md); no 0.10 release is announced.
 Use an editable checkout for these APIs; the 0.9.0 wheel cannot be assumed to
 provide them merely because a development page describes them.
 

@@ -1,10 +1,10 @@
 import pytest
 from click.testing import CliRunner
 
-from pnbp import Notebook
-from pnbp.cli import cli
-from pnbp.helpers import pass_nb
-from pnbp.models.components import Link
+from pretty_notebook import Notebook
+from pretty_notebook.cli import cli
+from pretty_notebook.helpers import pass_nb
+from pretty_notebook.models.components import Link
 
 
 @pytest.fixture

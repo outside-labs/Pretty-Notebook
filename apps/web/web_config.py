@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from decouple import config
-from pnbp._routes import validate_prefix
+from pretty_notebook._internal.routes import validate_prefix
 
 WEB_ROOT = Path(__file__).resolve().parent
 DEFAULT_SETTINGS_PATH = WEB_ROOT / "web-settings.json"

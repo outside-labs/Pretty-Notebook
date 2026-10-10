@@ -3,9 +3,9 @@ from stat import S_IMODE
 
 from click.testing import CliRunner
 
-import pnbp.cli as cli_module
-from pnbp import Notebook
-from pnbp.cli import cli
+import pretty_notebook.cli as cli_module
+from pretty_notebook import Notebook
+from pretty_notebook.cli import cli
 
 
 def test_settings_off_ignores_existing_settings_file(monkeypatch, tmp_path):

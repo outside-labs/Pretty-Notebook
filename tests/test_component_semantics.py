@@ -1,7 +1,7 @@
 import pytest
 
-from pnbp import Notebook
-from pnbp.models.components import CodeBlock, Link, Tag, Url
+from pretty_notebook import Notebook
+from pretty_notebook.models.components import CodeBlock, Link, Tag, Url
 
 
 def test_component_instances_have_stable_types_and_string_equality():

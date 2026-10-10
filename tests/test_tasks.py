@@ -1,8 +1,8 @@
 import pytest
 
-from pnbp import Notebook
-from pnbp.commands.tasks import _task_settle
-from pnbp.models import Note
+from pretty_notebook import Notebook
+from pretty_notebook.commands.tasks import _task_settle
+from pretty_notebook.models import Note
 
 
 @pytest.fixture
