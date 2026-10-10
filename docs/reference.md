@@ -76,3 +76,14 @@ Command help reads the command registry without opening or modifying a notebook.
 
 ```{pnbp-cli-help} favicon
 ```
+
+### VPS deployment
+
+See [VPS setup and upgrades](vps-deployment.md). Commands generate inspectable
+bundles and read-only diagnostics without opening a notebook.
+
+```{pnbp-cli-help} deploy
+```
+
+```{pnbp-cli-help} deploy upgrade
+```

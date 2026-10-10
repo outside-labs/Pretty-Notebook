@@ -35,6 +35,7 @@ pnbp_commands
 :caption: Web application
 
 web
+vps-deployment
 server-state
 assets
 appearance

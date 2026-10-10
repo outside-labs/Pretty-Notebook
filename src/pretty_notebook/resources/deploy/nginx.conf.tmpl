@@ -1,0 +1,33 @@
+# Install in nginx's http context (normally /etc/nginx/conf.d).
+limit_req_zone $binary_remote_addr zone=@SERVICE@_auth:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=@SERVICE@_writes:10m rate=10r/s;
+server {
+    listen 80;
+    server_name @DOMAIN@;
+    return 308 https://@DOMAIN@$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name @DOMAIN@;
+    ssl_certificate @TLS_CERT@;
+    ssl_certificate_key @TLS_KEY@;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    client_max_body_size 11m;
+    client_body_timeout 15s;
+    client_header_timeout 15s;
+    send_timeout 35s;
+    limit_req_status 429;
+@PREFIX_REDIRECT@
+    location ~ ^@PREFIX@/(api/(token|users)|forms/contact)$ {
+        limit_req zone=@SERVICE@_auth burst=5 nodelay;
+@PROXY@
+    }
+    location @PREFIX@/api/ {
+        limit_req zone=@SERVICE@_writes burst=20 nodelay;
+@PROXY@
+    }
+    location @PREFIX@/ {
+@PROXY@
+    }
+}

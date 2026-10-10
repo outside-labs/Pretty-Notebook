@@ -33,6 +33,9 @@ trusted owner-authored HTML. They are not safe contribution surfaces for
 untrusted users. Published page content is stored as data and is never compiled
 as a server-side Jinja template.
 
+Use [VPS deployment commands](vps-deployment.md) to generate systemd/nginx setup
+and stopped-service upgrade bundles. The manual contract below remains available.
+
 ## Install a reviewed checkout
 
 Use a dedicated service account and an explicitly reviewed 0.10 development

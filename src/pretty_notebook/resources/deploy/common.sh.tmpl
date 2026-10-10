@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+checkout=@CHECKOUT_SH@
+data_dir=@DATA_DIR_SH@
+env_file=@ENV_FILE_SH@
+backup_dir=@BACKUP_DIR_SH@
+revision=@REVISION_SH@
+service=@SERVICE_SH@
+service_user=@USER_SH@
+python_bin=@PYTHON_SH@
+domain=@DOMAIN_SH@
+port=@PORT_SH@
+bundle_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+die() { printf '%s\n' "$1" >&2; exit 1; }
+[[ "$EUID" -eq 0 ]] || die 'Run this reviewed bundle as root on the target VPS.'
+for command in git systemctl nginx curl "$python_bin"; do
+    command -v "$command" >/dev/null || die "Install required system command: $command"
+done
+[[ -f "$env_file" && ! -L "$env_file" ]] || die 'Create the private environment file first.'
+[[ -r @TLS_CERT_SH@ && -r @TLS_KEY_SH@ ]] || die 'Provide the existing TLS certificate and key first.'
+[[ ! -L "$checkout" && ! -L "$data_dir" && ! -L "$backup_dir" ]] || die 'Deployment directories must not be symlinks.'
+git_site() { git -c safe.directory="$checkout" -C "$checkout" "$@"; }
+clean_checkout() {
+    [[ -d "$checkout/.git" ]] || die 'A dedicated repository checkout is required.'
+    [[ -z "$(git_site status --porcelain --untracked-files=all)" ]] || die 'Preserve local checkout changes before deploying.'
+}
+install_dependencies() {
+    (
+        umask 022
+        [[ -x "$checkout/.venv/bin/python" ]] || "$python_bin" -m venv "$checkout/.venv"
+        "$checkout/.venv/bin/python" -m pip install --require-hashes --only-binary=:all: -r "$checkout/apps/web/requirements.lock"
+        "$checkout/.venv/bin/python" -m pip uninstall -y pnbp
+        "$checkout/.venv/bin/python" -m pip install --editable "$checkout" --no-deps --no-build-isolation
+    )
+}
+check_site() {
+    "$checkout/.venv/bin/pnbp" deploy check --revision "$revision" --domain "$domain" \
+      --checkout "$checkout" --data-dir "$data_dir" --env-file "$env_file" --backup-dir "$backup_dir" \
+      --tls-cert @TLS_CERT_SH@ --tls-key @TLS_KEY_SH@ --service "$service" --user "$service_user" \
+      --python "$python_bin" --port "$port" --workers @WORKERS_SH@ --prefix @PREFIX_SH@ "$@"
+}
+install_configuration() {
+    install -m 0644 "$bundle_dir/$service.service" "/etc/systemd/system/$service.service"
+    install -m 0644 "$bundle_dir/nginx.conf" "/etc/nginx/conf.d/$service.conf"
+    nginx -t
+    systemctl daemon-reload
+}
+wait_healthy() {
+    for attempt in {1..30}; do
+        if curl --fail --silent --output /dev/null --max-time 2 --header "Host: $domain" "http://127.0.0.1:$port/healthz"; then return; fi
+        sleep 1
+    done
+    printf '%s\n' 'Health check failed; inspect the service journal privately.' >&2
+    return 1
+}

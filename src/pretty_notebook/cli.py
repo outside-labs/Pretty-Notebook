@@ -17,6 +17,7 @@ from .commands import graph
 from .commands import pprint
 from .commands import subl
 from .commands import tasks
+from .commands.deploy import deploy
 
 from .models import Notebook
 from .helpers import arrow_call
@@ -35,6 +36,9 @@ def cli(context, notebook_path, notebook_profile):
 		raise click.UsageError("Choose --notebook or --profile, not both.")
 	selection = {"path": notebook_path} if notebook_path is not None else {"profile": notebook_profile} if notebook_profile is not None else {}
 	context.obj = {"selection": selection, "notebook": None}
+
+
+cli.add_command(deploy)
 
 
 def _open_notebook():

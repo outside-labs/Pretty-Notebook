@@ -49,6 +49,9 @@ where = ["src"]
 include = ["pretty_notebook*", "pnbp*"]
 namespaces = false
 
+[tool.setuptools.package-data]
+pretty_notebook = ["resources/deploy/*.tmpl"]
+
 [tool.pytest.ini_options]
 addopts = ["-ra", "--strict-config", "--strict-markers"]
 testpaths = ["tests"]
