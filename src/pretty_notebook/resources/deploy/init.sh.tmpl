@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+if [[ -e "$checkout" ]]; then
+    clean_checkout
+    [[ "$(git_site rev-parse HEAD)" == "$revision" ]] || die 'Use the upgrade bundle to change an existing checkout revision.'
+else
+    install -d -m 0755 "$(dirname -- "$checkout")"
+    (umask 022; git clone --no-checkout https://github.com/outside-labs/Pretty-Notebook.git "$checkout")
+    git_site fetch origin "$revision"
+    git_site checkout --detach "$revision"
+fi
+if systemctl is-active --quiet "$service"; then
+    cmp -s "$bundle_dir/$service.service" "/etc/systemd/system/$service.service" || die 'Use an upgrade bundle to change a running service.'
+    cmp -s "$bundle_dir/nginx.conf" "/etc/nginx/conf.d/$service.conf" || die 'Use an upgrade bundle to change a running proxy.'
+    check_site --health
+    exit 0
+fi
+id "$service_user" >/dev/null 2>&1 || useradd --system --user-group --no-create-home --shell /usr/sbin/nologin "$service_user"
+if [[ ! -e "$data_dir" ]]; then install -d -o "$service_user" -g "$service_user" -m 0700 "$data_dir"; fi
+install_dependencies
+if [[ -e "$data_dir/db.sqlite3" ]]; then check_site; else check_site --require-bootstrap; fi
+install_configuration
+trap 'systemctl stop "$service" || true' ERR
+systemctl enable --now "$service"
+wait_healthy
+systemctl enable --now nginx
+systemctl reload nginx
+trap - ERR
+printf '%s\n' 'Setup verified. Claim the initial owner, remove the bootstrap token, and restart the service.'

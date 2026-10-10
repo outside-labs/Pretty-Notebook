@@ -1,0 +1,42 @@
+"""Private stopped-site checkpoint receipts; never print credentials or data."""
+import hashlib
+import json
+import sqlite3
+import sys
+from contextlib import closing
+from pathlib import Path
+
+
+def checksum(path):
+    result = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''): result.update(block)
+    return result.hexdigest()
+
+
+def inspect(root):
+    database = root / 'state/db.sqlite3'
+    if not database.is_file(): raise ValueError('Checkpoint database is missing.')
+    with closing(sqlite3.connect(database.as_uri() + '?mode=ro', uri=True)) as connection:
+        if connection.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+            raise ValueError('Checkpoint database failed integrity validation.')
+    result = {}
+    for path in sorted(root.rglob('*')):
+        if path.is_symlink(): raise ValueError('Checkpoint contains unsupported symlinks.')
+        if path.is_file() and path != root / 'checksums.json':
+            result[path.relative_to(root).as_posix()] = checksum(path)
+    return result
+
+
+try:
+    operation, location = sys.argv[1:]
+    root = Path(location).resolve()
+    result = inspect(root)
+    if operation == 'record':
+        (root / 'checksums.json').write_text(json.dumps(result, indent=2, sort_keys=True))
+    elif operation == 'verify':
+        if result != json.loads((root / 'checksums.json').read_text()):
+            raise ValueError('Checkpoint contents do not match their receipt.')
+    else: raise ValueError('Unknown checkpoint operation.')
+except (ValueError, OSError, sqlite3.Error):
+    raise SystemExit('Checkpoint verification failed; preserve the original state and inspect the private backup.')

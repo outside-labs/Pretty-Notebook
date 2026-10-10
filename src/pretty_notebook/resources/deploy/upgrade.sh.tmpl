@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+clean_checkout
+[[ -d "$data_dir" ]] || die 'Persistent state is missing; use an initial setup bundle.'
+git_site fetch origin "$revision"
+git_site cat-file -e "$revision^{commit}"
+old_revision="$(git_site rev-parse HEAD)"
+systemctl stop "$service"
+checkpoint=''
+failed_upgrade() {
+    code=$?
+    trap - ERR
+    systemctl stop "$service" || true
+    printf 'Upgrade stopped; preserved checkpoint: %s\nRun the reviewed rollback.sh with that checkpoint to restore.\n' "$checkpoint" >&2
+    exit "$code"
+}
+trap failed_upgrade ERR
+install -d -m 0700 "$backup_dir"
+checkpoint="$(mktemp -d "$backup_dir/upgrade-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
+cp -a "$data_dir" "$checkpoint/state"
+cp -p "$env_file" "$checkpoint/environment"
+printf '%s\n' "$old_revision" > "$checkpoint/revision"
+cp "$checkout/apps/web/requirements.lock" "$checkpoint/requirements.lock"
+cp -p "/etc/systemd/system/$service.service" "$checkpoint/service"
+cp -p "/etc/nginx/conf.d/$service.conf" "$checkpoint/nginx.conf"
+"$python_bin" "$bundle_dir/checkpoint.py" record "$checkpoint"
+git_site checkout --detach "$revision"
+install_dependencies
+check_site
+install_configuration
+systemctl start "$service"
+wait_healthy
+check_site --health
+systemctl reload nginx
+trap - ERR
+printf 'Upgrade verified. Retain the private checkpoint: %s\n' "$checkpoint"

@@ -1,0 +1,25 @@
+[Unit]
+Description=Pretty Notebook web publisher
+After=network.target
+
+[Service]
+Type=simple
+User=@USER@
+Group=@USER@
+WorkingDirectory=@CHECKOUT@/apps/web
+EnvironmentFile=@ENV_FILE@
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=@CHECKOUT@/.venv/bin/gunicorn main:api --workers @WORKERS@ --worker-class uvicorn_worker.UvicornWorker --bind 127.0.0.1:@PORT@ --forwarded-allow-ips 127.0.0.1 --timeout 30 --graceful-timeout 30 --access-logfile -
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+KillMode=mixed
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=@DATA_DIR@
+
+[Install]
+WantedBy=multi-user.target

@@ -84,6 +84,8 @@ jobs:
           "$test_venv/bin/python" -m pip install dist/*.whl
           "$test_venv/bin/python" -c "import pretty_notebook, pnbp; assert pretty_notebook.Notebook is pnbp.Notebook"
           "$test_venv/bin/pnbp" --help
+          "$test_venv/bin/pnbp" deploy plan --domain notes.example.com \
+            --revision aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa > "${RUNNER_TEMP}/deployment-plan.json"
 
           mkdir -p "$note_path"
           printf '#public\nHello.\n' > "$note_path/example.md"
@@ -185,3 +187,24 @@ jobs:
           test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
             --header 'Host: untrusted.example' \
             http://127.0.0.1:8765/healthz)" = 400
+
+  deployment-config:
+    name: Linux deployment configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Install platform validators and test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes nginx
+          python -m pip install --editable . pytest
+      - name: Verify generated Linux deployment files
+        run: python -m pytest tests/test_deploy.py -q

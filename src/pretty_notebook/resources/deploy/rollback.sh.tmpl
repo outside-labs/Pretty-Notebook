@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
+checkpoint="${1:?Pass the private checkpoint printed by upgrade.sh}"
+[[ -d "$checkpoint/state" && -f "$checkpoint/environment" && -f "$checkpoint/revision" && -f "$checkpoint/service" && -f "$checkpoint/nginx.conf" ]] || die 'Checkpoint is incomplete.'
+read -r revision < "$checkpoint/revision"
+[[ "$revision" =~ ^[0-9a-f]{40}$ || "$revision" =~ ^[0-9a-f]{64}$ ]] || die 'Invalid checkpoint revision.'
+"$python_bin" "$bundle_dir/checkpoint.py" verify "$checkpoint"
+clean_checkout
+git_site cat-file -e "$revision^{commit}"
+systemctl stop "$service"
+trap 'systemctl stop "$service" || true' ERR
+failed_state="$(mktemp -d "$backup_dir/failed-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
+mv "$data_dir" "$failed_state/state"
+cp -a "$checkpoint/state" "$data_dir"
+cp -p "$env_file" "$failed_state/environment"
+cp -p "$checkpoint/environment" "$env_file"
+git_site checkout --detach "$revision"
+install_dependencies
+install -m 0644 "$checkpoint/service" "/etc/systemd/system/$service.service"
+install -m 0644 "$checkpoint/nginx.conf" "/etc/nginx/conf.d/$service.conf"
+nginx -t
+systemctl daemon-reload
+systemctl start "$service"
+wait_healthy
+systemctl reload nginx
+trap - ERR
+printf 'Version-matched state restored. Failed state retained at: %s\n' "$failed_state"
