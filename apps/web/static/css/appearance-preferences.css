@@ -17,10 +17,10 @@
 .preview-menu { display: inline-flex; align-items: center; }
 .preview-actions .button, .configuration-actions .button { display: inline-flex; align-items: center; gap: .45rem; }
 
-.appearance-workspace { max-width: 44rem; margin-inline: auto; padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid var(--color-border); border-radius: 1.5rem; }
+.appearance-workspace { color-scheme: dark; --color-bg: #070808; --color-surface: #171817; --color-text: #f0f1ed; --color-text-muted: #a8aaa5; --color-border: #383c37; --color-primary: #8ab894; --color-on-primary: #18251c; --color-focus: #f5e8aa; max-width: 44rem; margin-inline: auto; padding: clamp(1rem, 3vw, 1.5rem); background: var(--color-bg); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 1.5rem; }
 .preferences-title { font-size: 1.15rem; font-weight: 500; margin-block: 0 1rem; }
 .appearance-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 0.75rem; margin-block-end: 1.5rem; }
-.appearance-controls .field { margin: 0; min-width: 0; color: var(--color-text-muted); font-weight: 400; }
+.appearance-controls .field { margin: 0; min-width: 0; color: var(--color-text-muted); font-weight: 400; align-content: start; }
 .appearance-controls select { border-radius: 999px; min-width: 0; padding: 0.65rem 1rem; background: var(--color-bg); color: var(--color-text); font-weight: 500; }
 .accent-swatches { display: flex; align-items: center; flex-wrap: wrap; gap: 0.45rem; min-height: 2.75rem; }
 .accent-swatch { appearance: none; width: 1.6rem; height: 1.6rem; padding: 0; flex: none; border: 2px solid transparent; border-radius: 50%; background: var(--swatch-color); box-shadow: 0 0 0 1px var(--color-border); cursor: pointer; }
@@ -31,7 +31,7 @@
 .custom-accent input[type="color"] { width: 3.5rem; height: 2rem; padding: 0.15rem; cursor: pointer; }
 .theme-accent-reset { justify-self: start; background: none; border: none; padding: 0; color: var(--color-text-muted); font: inherit; font-size: 0.75rem; text-decoration: underline; cursor: pointer; }
 .radius-field { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 0.75rem; margin-block: 0.5rem; }
-.radius-field label { color: var(--color-text-muted); font-weight: 400; }
+.radius-field label { color: var(--color-text-muted); font-weight: 400; font-size: 0.85rem; white-space: nowrap; }
 .radius-field input[type="range"] { appearance: none; padding: 0; border: 0; height: 1.75rem; background: transparent; cursor: pointer; }
 .radius-field input::-webkit-slider-runnable-track { height: 0.35rem; background: var(--color-border); border-radius: 1rem; }
 .radius-field input::-webkit-slider-thumb { appearance: none; width: 2.1rem; height: 1.4rem; margin-block-start: -0.525rem; border: 0; border-radius: 1rem; background: var(--color-text); }
